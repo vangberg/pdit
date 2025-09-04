@@ -1,4 +1,4 @@
-import {EditorView, Decoration, WidgetType, DecorationSet} from "@codemirror/view"
+import {EditorView, Decoration, WidgetType, DecorationSet, ViewUpdate, ViewPlugin} from "@codemirror/view"
 import {StateField, StateEffect, RangeSetBuilder} from "@codemirror/state"
 
 class Spacer extends WidgetType {
@@ -40,6 +40,8 @@ export interface LineHeight {
   line: number;
   height: number;
 }
+
+export type LineHeightChangeCallback = (heights: LineHeight[]) => void
 
 function findSpacerForLine(spacers: DecorationSet, lineInfo: any): Spacer | null {
   const spacerIter = spacers.iter()
@@ -96,6 +98,26 @@ export function getLineHeights(view: EditorView): LineHeight[] {
   }
   
   return result
+}
+
+export function lineHeightChangeListener(callback: LineHeightChangeCallback) {
+  return ViewPlugin.fromClass(class {
+    constructor(view: EditorView) {
+      // Initial call
+      setTimeout(() => callback(getLineHeights(view)), 0)
+    }
+    
+    update(update: ViewUpdate) {
+      // Skip if this update contains adjustSpacers effects to avoid loops
+      const hasSpacerEffects = update.transactions.some(tr => 
+        tr.effects.some(effect => effect.is(adjustSpacers))
+      )
+      
+      if (!hasSpacerEffects && (update.docChanged || update.viewportChanged || update.geometryChanged)) {
+        callback(getLineHeights(update.view))
+      }
+    }
+  })
 }
 
 // Include spacersField in your editor extensions
