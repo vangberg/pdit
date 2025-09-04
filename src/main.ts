@@ -2,7 +2,7 @@ import './style.css'
 import { EditorView, basicSetup } from 'codemirror'
 import { EditorState } from '@codemirror/state'
 import { javascript } from '@codemirror/lang-javascript'
-import {lineHeightExtension, setLineHeights} from "./line-heights"
+import {lineHeightExtension, setLineHeights, getLineHeights} from "./line-heights"
 
 const initialCode = `// Welcome to CodeMirror!
 function fibonacci(n) {
@@ -45,6 +45,11 @@ document.getElementById('update-heights-btn')?.addEventListener('click', () => {
     { line: 5, height: 60 },
     { line: 8, height: 50 }
   ])
+})
+
+document.getElementById('get-heights-btn')?.addEventListener('click', () => {
+  const heights = getLineHeights(view)
+  console.table(heights)
 })
 
 console.log('CodeMirror editor initialized!')

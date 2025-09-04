@@ -41,21 +41,24 @@ export interface LineHeight {
   height: number;
 }
 
+function findSpacerForLine(spacers: DecorationSet, lineInfo: any): Spacer | null {
+  const spacerIter = spacers.iter()
+  while (spacerIter.value) {
+    if (spacerIter.to === lineInfo.to) {
+      return spacerIter.value.spec.widget as Spacer
+    }
+    spacerIter.next()
+  }
+  return null
+}
+
 export function setLineHeights(view: EditorView, lineHeights: LineHeight[]) {
   const builder = new RangeSetBuilder<Decoration>()
+  const spacers = view.state.field(spacersField)
 
   for (const {line, height} of lineHeights) {
     const lineInfo = view.state.doc.line(line)
-
-    const spacers = view.state.field(spacersField).iter()
-    let spacer
-    while (spacers.value) {
-      if (spacers.to == lineInfo.to) {
-        spacer = spacers.value.spec.widget as Spacer
-        break;
-      }
-      spacers.next();
-    }
+    const spacer = findSpacerForLine(spacers, lineInfo)
 
     const currentHeight = view.lineBlockAt(lineInfo.from).height
     const spacerHeight = spacer ? spacer.height : 0
@@ -71,6 +74,28 @@ export function setLineHeights(view: EditorView, lineHeights: LineHeight[]) {
   }
   
   view.dispatch({effects: adjustSpacers.of(builder.finish())})
+}
+
+export function getLineHeights(view: EditorView): LineHeight[] {
+  const doc = view.state.doc
+  const spacers = view.state.field(spacersField)
+  const result: LineHeight[] = []
+  
+  for (let lineNumber = 1; lineNumber <= doc.lines; lineNumber++) {
+    const lineInfo = doc.line(lineNumber)
+    const lineBlock = view.lineBlockAt(lineInfo.from)
+    const spacer = findSpacerForLine(spacers, lineInfo)
+    
+    const spacerHeight = spacer ? spacer.height : 0
+    const actualHeight = lineBlock.height - spacerHeight
+    
+    result.push({
+      line: lineNumber,
+      height: actualHeight
+    })
+  }
+  
+  return result
 }
 
 // Include spacersField in your editor extensions
