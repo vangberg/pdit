@@ -2,7 +2,8 @@ import './style.css'
 import { Editor } from './Editor'
 import { Preview, PreviewRef, PreviewHeight } from './Preview'
 import { LineHeight } from './line-heights'
-import React, { useRef, useEffect, useState } from 'react'
+import { DebugPanel } from './DebugPanel'
+import React, { useRef, useState, useCallback, useEffect } from 'react'
 
 const initialCode = `// Welcome to CodeMirror, this is a very long, long line!
 function fibonacci(n) {
@@ -24,63 +25,47 @@ function App() {
       { line: 2, height: 300 },  // Example initial target heights
       { line: 4, height: 200 },
   ]);
+  const [targetEditorHeights, setTargetEditorHeights] = useState<LineHeight[]>([]);
   const isSyncing = useRef<boolean>(false);
 
-  const syncHeights = (newEditorHeights: LineHeight[], newPreviewHeights: PreviewHeight[]) => {
-    if (isSyncing.current) return; // Prevent infinite loops
+  // Declarative height syncing - runs automatically when heights change
+  useEffect(() => {
+    if (editorHeights.length === 0 || previewHeights.length === 0) return;
+    if (isSyncing.current) return;
     
     isSyncing.current = true;
     
-    const maxLines = Math.max(newEditorHeights.length, newPreviewHeights.length);
+    const maxLines = Math.max(editorHeights.length, previewHeights.length);
+    const editorTargets: LineHeight[] = [];
     const previewTargets: PreviewHeight[] = [];
     
     for (let line = 1; line <= maxLines; line++) {
-      const editorHeight = newEditorHeights[line-1]?.height || 0;
-      const previewHeight = newPreviewHeights[line-1]?.height || 0;
+      const editorHeight = editorHeights[line-1]?.height || 0;
+      const previewHeight = previewHeights[line-1]?.height || 0;
       const targetHeight = Math.max(editorHeight, previewHeight);
       
       if (targetHeight > 0) {
+        editorTargets.push({ line, height: targetHeight });
         previewTargets.push({ line, height: targetHeight });
       }
     }
     
     // Set target heights via props (declarative)
+    setTargetEditorHeights(editorTargets);
     setTargetPreviewHeights(previewTargets);
     
     requestAnimationFrame(() => {
       isSyncing.current = false;
     });
-  };
+  }, [editorHeights, previewHeights]);
 
-  const handleEditorHeightChange = (heights: LineHeight[]) => {
+  const handleEditorHeightChange = useCallback((heights: LineHeight[]) => {
     setEditorHeights(heights);
-    syncHeights(heights, previewHeights);
-  };
+  }, []);
 
-  const handlePreviewHeightChange = (heights: PreviewHeight[]) => {
-    if (!isSyncing.current) {
-      setPreviewHeights(heights);
-      syncHeights(editorHeights, heights);
-    }
-  };
-
-  const handleGetHeights = () => {
-    if (previewRef.current) {
-      const heights = previewRef.current.getPreviewHeights();
-      console.log('Preview heights:', heights);
-    }
-    console.log('Get heights clicked');
-  };
-
-  const handleUpdateHeights = () => {
-    // Test by setting some example target heights
-    // setTargetPreviewHeights([
-    //   { line: 2, height: 100 },
-    //   { line: 4, height: 80 },
-    //   { line: 7, height: 120 }
-    // ]);
-    console.log('Update heights clicked');
-  };
+  const handlePreviewHeightChange = useCallback((heights: PreviewHeight[]) => {
+    setPreviewHeights(heights);
+  }, []);
 
   return (
     <div id="app">
@@ -88,19 +73,26 @@ function App() {
         <div className="editor-half">
           <Editor 
             initialCode={initialCode}
-            onGetHeights={handleGetHeights}
-            onUpdateHeights={handleUpdateHeights}
-            // onHeightChange={handleEditorHeightChange}
+            onHeightChange={handleEditorHeightChange}
+            targetHeights={targetEditorHeights}
           />
         </div>
         <div className="preview-half">
           <Preview 
             ref={previewRef} 
-            // onHeightChange={handlePreviewHeightChange}
+            onHeightChange={handlePreviewHeightChange}
             targetHeights={targetPreviewHeights}
           />
         </div>
       </div>
+      
+      <DebugPanel
+        editorHeights={editorHeights}
+        previewHeights={previewHeights}
+        targetEditorHeights={targetEditorHeights}
+        targetPreviewHeights={targetPreviewHeights}
+        isSyncing={isSyncing.current}
+      />
     </div>
   )
 }

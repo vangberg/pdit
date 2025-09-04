@@ -9,9 +9,11 @@ interface EditorProps {
   initialCode: string
   onGetHeights?: () => void
   onUpdateHeights?: () => void
+  onHeightChange?: (heights: LineHeight[]) => void
+  targetHeights?: LineHeight[]
 }
 
-export function Editor({ initialCode, onGetHeights, onUpdateHeights }: EditorProps) {
+export function Editor({ initialCode, onGetHeights, onUpdateHeights, onHeightChange, targetHeights }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
 
@@ -25,16 +27,10 @@ export function Editor({ initialCode, onGetHeights, onUpdateHeights }: EditorPro
         javascript(),
         lineHeightExtension,
         lineHeightChangeListener((heights) => {
-          console.log('Line heights changed:', heights.slice(0, 5))
-          window.requestAnimationFrame(() => {
-            if (viewRef.current) {
-              setLineHeights(viewRef.current, [
-                { line: 2, height: 40 },
-                { line: 5, height: 60 },
-                { line: 8, height: 50 }
-              ])
-            }
-          })
+          console.log('Editor line heights changed:', heights.slice(0, 5))
+          if (onHeightChange) {
+            onHeightChange(heights);
+          }
         }),
         EditorView.theme({
           '&': {
@@ -60,26 +56,18 @@ export function Editor({ initialCode, onGetHeights, onUpdateHeights }: EditorPro
       view.destroy()
       viewRef.current = null
     }
-  }, [initialCode])
+  }, [initialCode, onHeightChange])
 
-  const handleUpdateHeights = () => {
-    if (viewRef.current) {
-      setLineHeights(viewRef.current, [
-        { line: 2, height: 40 },
-        { line: 5, height: 60 },
-        { line: 8, height: 50 }
-      ])
+  // Apply target heights when prop changes
+  useEffect(() => {
+    if (targetHeights && targetHeights.length > 0 && viewRef.current) {
+      requestAnimationFrame(() => {
+        if (viewRef.current) {
+          setLineHeights(viewRef.current, targetHeights);
+        }
+      });
     }
-    onUpdateHeights?.()
-  }
-
-  const handleGetHeights = () => {
-    if (viewRef.current) {
-      const heights = getLineHeights(viewRef.current)
-      console.table(heights)
-    }
-    onGetHeights?.()
-  }
+  }, [targetHeights])
 
   return (
     <div id="editor" ref={editorRef} />

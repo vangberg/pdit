@@ -63,8 +63,6 @@ export const PreviewSpacer: React.FC<PreviewSpacerProps> = ({
       <div ref={contentRef}>
         {children}
       </div>
-      {targetHeight} / 
-      {spacerHeight}
       {spacerHeight > 0 && (
         <div 
           className="preview-spacer" 

@@ -102,71 +102,70 @@ export const Preview = forwardRef<PreviewRef, PreviewProps>(({ onHeightChange, t
   const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
-
-  // const getPreviewHeights = (): PreviewHeight[] => {
-  //   return lineRefs.current.map((lineElement, index) => {
-  //     const lineNumber = index + 1;
-  //     if (!lineElement) {
-  //       return { line: lineNumber, height: 0 };
-  //     }
+  const getPreviewHeights = (): PreviewHeight[] => {
+    return lineRefs.current.map((lineElement, index) => {
+      const lineNumber = index + 1;
+      if (!lineElement) {
+        return { line: lineNumber, height: 0 };
+      }
       
-  //     // The lineElement now contains the natural content height
-  //     // (spacers are rendered separately)
-  //     const rect = lineElement.getBoundingClientRect();
+      // The lineElement now contains the natural content height
+      // (spacers are rendered separately)
+      const rect = lineElement.getBoundingClientRect();
       
-  //     return {
-  //       line: lineNumber,
-  //       height: Math.max(0, rect.height)
-  //     };
-  //   });
-  // };
+      return {
+        line: lineNumber,
+        height: Math.max(0, rect.height)
+      };
+    });
+  };
 
-  // useImperativeHandle(ref, () => ({
-  //   getPreviewHeights
-  // }));
+  useImperativeHandle(ref, () => ({
+    getPreviewHeights
+  }));
 
-  // useEffect(() => {
-  //   if (!containerRef.current || !onHeightChange) return;
+  useEffect(() => {
+    if (!containerRef.current || !onHeightChange) return;
 
-  //   // Initial callback (like CodeMirror's setTimeout pattern)
-  //   const initialTimeout = setTimeout(() => {
-  //     onHeightChange(getPreviewHeights());
-  //   }, 0);
+    // Initial callback (like CodeMirror's setTimeout pattern)
+    const initialTimeout = setTimeout(() => {
+      onHeightChange(getPreviewHeights());
+    }, 0);
 
-  //   // ResizeObserver for container size changes (window resize, devtools, etc.)
-  //   const resizeObserver = new ResizeObserver(() => {
-  //     onHeightChange(getPreviewHeights());
-  //   });
+    // ResizeObserver for container size changes (window resize, devtools, etc.)
+    const resizeObserver = new ResizeObserver(() => {
+      onHeightChange(getPreviewHeights());
+    });
 
-  //   // MutationObserver for DOM changes that might affect height
-  //   // But skip changes to spacer elements to avoid loops
-  //   const mutationObserver = new MutationObserver((mutations) => {
-  //     const hasNonSpacerChanges = mutations.some(mutation => {
-  //       const target = mutation.target as Element;
-  //       return !target.classList?.contains('preview-spacer');
-  //     });
+    // MutationObserver for DOM changes that might affect height
+    // But skip changes to spacer elements to avoid loops
+    const mutationObserver = new MutationObserver((mutations) => {
+      const hasNonSpacerChanges = mutations.some(mutation => {
+        const target = mutation.target as Element;
+        return !target.classList?.contains('preview-spacer');
+      });
       
-  //     if (hasNonSpacerChanges) {
-  //       onHeightChange(getPreviewHeights());
-  //     }
-  //   });
+      if (hasNonSpacerChanges) {
+        onHeightChange(getPreviewHeights());
+      }
+    });
 
-  //   if (containerRef.current) {
-  //     resizeObserver.observe(containerRef.current);
-  //     mutationObserver.observe(containerRef.current, {
-  //       childList: true,
-  //       subtree: true,
-  //       attributes: true,
-  //       attributeFilter: ['style', 'class']
-  //     });
-  //   }
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+      mutationObserver.observe(containerRef.current, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
+      });
+    }
 
-  //   return () => {
-  //     clearTimeout(initialTimeout);
-  //     resizeObserver.disconnect();
-  //     mutationObserver.disconnect();
-  //   };
-  // }, [onHeightChange]);
+    return () => {
+      clearTimeout(initialTimeout);
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+    };
+  }, [onHeightChange]);
 
   return (
     <div id="preview" ref={containerRef}>
@@ -179,10 +178,12 @@ export const Preview = forwardRef<PreviewRef, PreviewProps>(({ onHeightChange, t
             <PreviewSpacer key={index} targetHeight={lineTargetHeight}>
               {item.type === 'empty' ? (
                 <div className="preview-line empty-line" ref={el => { lineRefs.current[index] = el; }}>
+                  <span className="line-number">{lineNumber}</span>
                   {/* Empty line content */}
                 </div>
               ) : item.content ? (
                 <div className="preview-line" data-line={lineNumber} ref={el => { lineRefs.current[index] = el; }}>
+                  <span className="line-number">{lineNumber}</span>
                   {item.type === 'table' && item.content.table && (
                     <table className="preview-table">
                       <tbody>

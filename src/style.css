@@ -75,7 +75,6 @@ h1 {
 }
 
 .cm-preview-spacer {
-  background-color: aqua;
 }
 
 .cm-editor {
@@ -87,8 +86,6 @@ h1 {
 }
 
 #preview {
-  padding: 0.5rem;
-  background-color: #fdfdfd;
   height: 100%;
   font-size: 0.85rem;
 }
@@ -96,11 +93,27 @@ h1 {
 .preview-content {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  padding-left: 35px;
+  padding-top: 4px;
 }
 
 .preview-line {
-  margin: 0.1rem 0;
+  position: relative;
+}
+
+.preview-spacer-container:nth-child(even) {
+}
+
+.preview-line .line-number {
+  position: absolute;
+  left: -30px;
+  top: 0;
+  width: 25px;
+  text-align: right;
+  font-size: 0.7rem;
+  color: #9ca3af;
+  font-family: monospace;
+  line-height: 1.4;
 }
 
 .preview-table {
@@ -135,7 +148,6 @@ h1 {
   align-items: end;
   gap: 1px;
   height: 30px;
-  margin: 0.2rem 0;
 }
 
 .plot-bar {
@@ -148,7 +160,6 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
-  margin: 0.2rem 0;
 }
 
 .array-item {
@@ -162,9 +173,81 @@ h1 {
 
 .preview-spacer-container {
   display: block;
+  background: transparent;
 }
 
 .preview-spacer {
-  background-color: lightblue;
   width: 100%;
+}
+
+.debug-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #f8f9fa;
+  border-top: 1px solid #e5e7eb;
+  padding: 1rem;
+  max-height: 300px;
+  overflow-y: auto;
+  font-size: 0.8rem;
+}
+
+.debug-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.debug-header h3 {
+  margin: 0;
+  color: #374151;
+}
+
+.debug-status {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.debug-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.debug-table th {
+  background: #f3f4f6;
+  color: #374151;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.debug-table td {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 0.75rem;
+}
+
+.debug-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.line-number {
+  font-weight: 600;
+  color: #6b7280;
+  text-align: center;
+  width: 60px;
+}
+
+.height-value {
+  font-family: monospace;
+  text-align: right;
+  color: #374151;
 }
