@@ -159,3 +159,8 @@ h1 {
   font-size: 0.65rem;
   font-family: monospace;
 }
+
+.preview-spacer {
+  background-color: lightblue;
+  width: 100%;
+}

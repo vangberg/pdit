@@ -1,4 +1,14 @@
-import React from 'react'
+import React, { useState, useRef, useImperativeHandle, forwardRef } from 'react'
+
+export interface PreviewHeight {
+  line: number;
+  height: number;
+}
+
+export interface PreviewRef {
+  getPreviewHeights: () => PreviewHeight[];
+  setPreviewHeights: (heights: PreviewHeight[]) => void;
+}
 
 const previewData = [
   {
@@ -83,19 +93,74 @@ const previewData = [
   }
 ]
 
-export function Preview() {
+export const Preview = forwardRef<PreviewRef>((props, ref) => {
+  const [spacerHeights, setSpacerHeights] = useState<Map<number, number>>(new Map());
+  const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const getPreviewHeights = (): PreviewHeight[] => {
+    return lineRefs.current.map((lineElement, index) => {
+      const lineNumber = index + 1;
+      if (!lineElement) {
+        return { line: lineNumber, height: 0 };
+      }
+      
+      const rect = lineElement.getBoundingClientRect();
+      const spacerHeight = spacerHeights.get(lineNumber) || 0;
+      const actualHeight = rect.height - spacerHeight;
+      
+      return {
+        line: lineNumber,
+        height: Math.max(0, actualHeight)
+      };
+    });
+  };
+
+  const setPreviewHeights = (heights: PreviewHeight[]): void => {
+    const newSpacerHeights = new Map<number, number>();
+    
+    heights.forEach(({ line, height }) => {
+      const lineElement = lineRefs.current[line - 1];
+      if (!lineElement) return;
+      
+      const currentRect = lineElement.getBoundingClientRect();
+      const currentSpacerHeight = spacerHeights.get(line) || 0;
+      const currentContentHeight = currentRect.height - currentSpacerHeight;
+      const diff = height - currentContentHeight;
+      
+      if (diff > 0.1) {
+        newSpacerHeights.set(line, diff);
+      }
+    });
+    
+    setSpacerHeights(newSpacerHeights);
+  };
+
+  useImperativeHandle(ref, () => ({
+    getPreviewHeights,
+    setPreviewHeights
+  }));
+
   return (
     <div id="preview">
       <div className="preview-content">
         {previewData.map((item, index) => {
+          const lineNumber = index + 1;
+          const spacerHeight = spacerHeights.get(lineNumber) || 0;
+          
           if (item.type === 'empty') {
-            return <div key={index} className="preview-line empty-line"></div>
+            return (
+              <div key={index} className="preview-line empty-line" ref={el => lineRefs.current[index] = el}>
+                {spacerHeight > 0 && (
+                  <div className="preview-spacer" style={{ height: `${spacerHeight}px` }}></div>
+                )}
+              </div>
+            );
           }
 
-          if (!item.content) return null
+          if (!item.content) return null;
 
           return (
-            <div key={index} className="preview-line" data-line={index + 1}>
+            <div key={index} className="preview-line" data-line={lineNumber} ref={el => lineRefs.current[index] = el}>
               {item.type === 'table' && item.content.table && (
                 <table className="preview-table">
                   <tbody>
@@ -131,10 +196,14 @@ export function Preview() {
                   ))}
                 </div>
               )}
+              
+              {spacerHeight > 0 && (
+                <div className="preview-spacer" style={{ height: `${spacerHeight}px` }}></div>
+              )}
             </div>
-          )
+          );
         })}
       </div>
     </div>
-  )
-}
+  );
+});
