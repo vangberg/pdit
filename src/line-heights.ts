@@ -2,19 +2,28 @@ import {EditorView, Decoration, WidgetType, DecorationSet, ViewUpdate, ViewPlugi
 import {StateField, StateEffect, RangeSetBuilder} from "@codemirror/state"
 
 class Spacer extends WidgetType {
-  constructor(readonly height: number) { super() }
+  constructor(readonly height: number, readonly lineNumber: number) { super() }
 
-  eq(other: Spacer) { return this.height == other.height }
+  eq(other: Spacer) { return this.height == other.height && this.lineNumber == other.lineNumber }
 
   toDOM() {
     let elt = document.createElement("div")
     elt.style.height = this.height + "px"
     elt.className = "cm-preview-spacer"
+    // Add zebra stripe class for even-numbered lines (matching zebra stripe logic)
+    if ((this.lineNumber % 2) === 0) {
+      elt.className += " zebra-stripe"
+    }
     return elt
   }
 
   updateDOM(dom: HTMLElement) {
     dom.style.height = this.height + "px"
+    // Ensure zebra stripe class is maintained on updates
+    dom.className = "cm-preview-spacer"
+    if ((this.lineNumber % 2) === 0) {
+      dom.className += " zebra-stripe"
+    }
     return true
   }
 
@@ -68,7 +77,7 @@ export function setLineHeights(view: EditorView, lineHeights: LineHeight[]) {
 
     if (diff > 0.01) {
       builder.add(lineInfo.to, lineInfo.to, Decoration.widget({
-        widget: new Spacer(diff),
+        widget: new Spacer(diff, line),
         block: true,
         side: 1
       }))

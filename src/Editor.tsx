@@ -3,6 +3,7 @@ import { EditorView, basicSetup } from 'codemirror'
 import { EditorState } from '@codemirror/state'
 import { javascript } from '@codemirror/lang-javascript'
 import { lineHeightExtension, setLineHeights, getLineHeights, lineHeightChangeListener, LineHeight } from './line-heights'
+import { zebraStripes } from './zebra-stripes'
 import React from 'react'
 
 interface EditorProps {
@@ -32,10 +33,15 @@ export function Editor({ initialCode, onGetHeights, onUpdateHeights, onHeightCha
             onHeightChange(heights);
           }
         }),
+        zebraStripes(),
         EditorView.theme({
           '&': {
             height: '100%',
-            width: '100%'
+            width: '100%',
+            backgroundColor: 'white'
+          },
+          '&.cm-focused': {
+            outline: 'none'
           },
           '.cm-scroller': {
             fontFamily: 'Fira Code, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'

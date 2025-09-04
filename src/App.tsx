@@ -60,10 +60,12 @@ function App() {
   }, [editorHeights, previewHeights]);
 
   const handleEditorHeightChange = useCallback((heights: LineHeight[]) => {
+    console.log('App received editor heights:', heights.slice(0, 5));
     setEditorHeights(heights);
   }, []);
 
   const handlePreviewHeightChange = useCallback((heights: PreviewHeight[]) => {
+    console.log('App received preview heights:', heights.slice(0, 5));
     setPreviewHeights(heights);
   }, []);
 
@@ -86,13 +88,13 @@ function App() {
         </div>
       </div>
       
-      <DebugPanel
+      {/* <DebugPanel
         editorHeights={editorHeights}
         previewHeights={previewHeights}
         targetEditorHeights={targetEditorHeights}
         targetPreviewHeights={targetPreviewHeights}
         isSyncing={isSyncing.current}
-      />
+      /> */}
     </div>
   )
 }

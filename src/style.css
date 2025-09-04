@@ -39,7 +39,6 @@ body {
 }
 
 .editor-half {
-  border-right: 1px solid #e5e5e5;
 }
 
 .preview-half {
@@ -87,13 +86,13 @@ h1 {
 
 #preview {
   height: 100%;
-  font-size: 0.85rem;
+  font-size: 14px;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 .preview-content {
   display: flex;
   flex-direction: column;
-  padding-left: 35px;
   padding-top: 4px;
 }
 
@@ -102,24 +101,14 @@ h1 {
 }
 
 .preview-spacer-container:nth-child(even) {
+  background-color: #f8f9fa;
 }
 
-.preview-line .line-number {
-  position: absolute;
-  left: -30px;
-  top: 0;
-  width: 25px;
-  text-align: right;
-  font-size: 0.7rem;
-  color: #9ca3af;
-  font-family: monospace;
-  line-height: 1.4;
-}
+
 
 .preview-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.7rem;
   color: #666;
 }
 
@@ -131,7 +120,6 @@ h1 {
 .preview-table .header-row td {
   font-weight: 500;
   color: #555;
-  font-size: 0.65rem;
 }
 
 .preview-table td:last-child {
@@ -167,7 +155,6 @@ h1 {
   color: #666;
   padding: 1px 4px;
   border-radius: 3px;
-  font-size: 0.65rem;
   font-family: monospace;
 }
 

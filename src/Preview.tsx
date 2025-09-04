@@ -178,12 +178,10 @@ export const Preview = forwardRef<PreviewRef, PreviewProps>(({ onHeightChange, t
             <PreviewSpacer key={index} targetHeight={lineTargetHeight}>
               {item.type === 'empty' ? (
                 <div className="preview-line empty-line" ref={el => { lineRefs.current[index] = el; }}>
-                  <span className="line-number">{lineNumber}</span>
                   {/* Empty line content */}
                 </div>
               ) : item.content ? (
                 <div className="preview-line" data-line={lineNumber} ref={el => { lineRefs.current[index] = el; }}>
-                  <span className="line-number">{lineNumber}</span>
                   {item.type === 'table' && item.content.table && (
                     <table className="preview-table">
                       <tbody>
