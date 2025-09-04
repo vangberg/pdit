@@ -1,4 +1,4 @@
-import React, { useState, useRef, useImperativeHandle, forwardRef } from 'react'
+import React, { useState, useRef, useImperativeHandle, forwardRef, useEffect } from 'react'
 
 export interface PreviewHeight {
   line: number;
@@ -8,6 +8,10 @@ export interface PreviewHeight {
 export interface PreviewRef {
   getPreviewHeights: () => PreviewHeight[];
   setPreviewHeights: (heights: PreviewHeight[]) => void;
+}
+
+export interface PreviewProps {
+  onHeightChange?: (heights: PreviewHeight[]) => void;
 }
 
 const previewData = [
@@ -93,9 +97,11 @@ const previewData = [
   }
 ]
 
-export const Preview = forwardRef<PreviewRef>((props, ref) => {
+export const Preview = forwardRef<PreviewRef, PreviewProps>(({ onHeightChange }, ref) => {
   const [spacerHeights, setSpacerHeights] = useState<Map<number, number>>(new Map());
   const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isSettingHeights = useRef<boolean>(false);
 
   const getPreviewHeights = (): PreviewHeight[] => {
     return lineRefs.current.map((lineElement, index) => {
@@ -116,6 +122,8 @@ export const Preview = forwardRef<PreviewRef>((props, ref) => {
   };
 
   const setPreviewHeights = (heights: PreviewHeight[]): void => {
+    isSettingHeights.current = true;
+    
     const newSpacerHeights = new Map<number, number>();
     
     heights.forEach(({ line, height }) => {
@@ -133,6 +141,11 @@ export const Preview = forwardRef<PreviewRef>((props, ref) => {
     });
     
     setSpacerHeights(newSpacerHeights);
+    
+    // Reset flag after state update
+    requestAnimationFrame(() => {
+      isSettingHeights.current = false;
+    });
   };
 
   useImperativeHandle(ref, () => ({
@@ -140,8 +153,49 @@ export const Preview = forwardRef<PreviewRef>((props, ref) => {
     setPreviewHeights
   }));
 
+  useEffect(() => {
+    if (!containerRef.current || !onHeightChange) return;
+
+    // Initial callback (like CodeMirror's setTimeout pattern)
+    const initialTimeout = setTimeout(() => {
+      if (!isSettingHeights.current) {
+        onHeightChange(getPreviewHeights());
+      }
+    }, 0);
+
+    // ResizeObserver for container size changes (window resize, devtools, etc.)
+    const resizeObserver = new ResizeObserver(() => {
+      if (!isSettingHeights.current) {
+        onHeightChange(getPreviewHeights());
+      }
+    });
+
+    // MutationObserver for DOM changes that might affect height
+    const mutationObserver = new MutationObserver(() => {
+      if (!isSettingHeights.current) {
+        onHeightChange(getPreviewHeights());
+      }
+    });
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+      mutationObserver.observe(containerRef.current, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
+      });
+    }
+
+    return () => {
+      clearTimeout(initialTimeout);
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+    };
+  }, [onHeightChange]);
+
   return (
-    <div id="preview">
+    <div id="preview" ref={containerRef}>
       <div className="preview-content">
         {previewData.map((item, index) => {
           const lineNumber = index + 1;
@@ -149,7 +203,7 @@ export const Preview = forwardRef<PreviewRef>((props, ref) => {
           
           if (item.type === 'empty') {
             return (
-              <div key={index} className="preview-line empty-line" ref={el => lineRefs.current[index] = el}>
+              <div key={index} className="preview-line empty-line" ref={el => { lineRefs.current[index] = el; }}>
                 {spacerHeight > 0 && (
                   <div className="preview-spacer" style={{ height: `${spacerHeight}px` }}></div>
                 )}
@@ -160,7 +214,7 @@ export const Preview = forwardRef<PreviewRef>((props, ref) => {
           if (!item.content) return null;
 
           return (
-            <div key={index} className="preview-line" data-line={lineNumber} ref={el => lineRefs.current[index] = el}>
+            <div key={index} className="preview-line" data-line={lineNumber} ref={el => { lineRefs.current[index] = el; }}>
               {item.type === 'table' && item.content.table && (
                 <table className="preview-table">
                   <tbody>

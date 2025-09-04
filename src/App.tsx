@@ -1,6 +1,6 @@
 import './style.css'
 import { Editor } from './Editor'
-import { Preview, PreviewRef } from './Preview'
+import { Preview, PreviewRef, PreviewHeight } from './Preview'
 import React, { useRef, useEffect } from 'react'
 
 const initialCode = `// Welcome to CodeMirror, this is a very long, long line!
@@ -50,6 +50,10 @@ function App() {
     console.log('Update heights clicked');
   };
 
+  const handlePreviewHeightChange = (heights: PreviewHeight[]) => {
+    console.log('Preview heights changed:', heights.slice(0, 5)); // Log first 5 for brevity
+  };
+
   return (
     <div id="app">
       <div className="split-container">
@@ -61,7 +65,7 @@ function App() {
           />
         </div>
         <div className="preview-half">
-          <Preview ref={previewRef} />
+          <Preview ref={previewRef} onHeightChange={handlePreviewHeightChange} />
         </div>
       </div>
     </div>
