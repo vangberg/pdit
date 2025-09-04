@@ -1,4 +1,5 @@
-import React, { useState, useRef, useImperativeHandle, forwardRef, useEffect } from 'react'
+import React, { useRef, useImperativeHandle, forwardRef, useEffect } from 'react'
+import { PreviewSpacer } from './PreviewSpacer'
 
 export interface PreviewHeight {
   line: number;
@@ -7,11 +8,11 @@ export interface PreviewHeight {
 
 export interface PreviewRef {
   getPreviewHeights: () => PreviewHeight[];
-  setPreviewHeights: (heights: PreviewHeight[]) => void;
 }
 
 export interface PreviewProps {
   onHeightChange?: (heights: PreviewHeight[]) => void;
+  targetHeights?: PreviewHeight[];
 }
 
 const previewData = [
@@ -97,164 +98,129 @@ const previewData = [
   }
 ]
 
-export const Preview = forwardRef<PreviewRef, PreviewProps>(({ onHeightChange }, ref) => {
-  const [spacerHeights, setSpacerHeights] = useState<Map<number, number>>(new Map());
+export const Preview = forwardRef<PreviewRef, PreviewProps>(({ onHeightChange, targetHeights }, ref) => {
   const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isSettingHeights = useRef<boolean>(false);
 
-  const getPreviewHeights = (): PreviewHeight[] => {
-    return lineRefs.current.map((lineElement, index) => {
-      const lineNumber = index + 1;
-      if (!lineElement) {
-        return { line: lineNumber, height: 0 };
-      }
+
+  // const getPreviewHeights = (): PreviewHeight[] => {
+  //   return lineRefs.current.map((lineElement, index) => {
+  //     const lineNumber = index + 1;
+  //     if (!lineElement) {
+  //       return { line: lineNumber, height: 0 };
+  //     }
       
-      const rect = lineElement.getBoundingClientRect();
-      const spacerHeight = spacerHeights.get(lineNumber) || 0;
-      const actualHeight = rect.height - spacerHeight;
+  //     // The lineElement now contains the natural content height
+  //     // (spacers are rendered separately)
+  //     const rect = lineElement.getBoundingClientRect();
       
-      return {
-        line: lineNumber,
-        height: Math.max(0, actualHeight)
-      };
-    });
-  };
+  //     return {
+  //       line: lineNumber,
+  //       height: Math.max(0, rect.height)
+  //     };
+  //   });
+  // };
 
-  const setPreviewHeights = (heights: PreviewHeight[]): void => {
-    isSettingHeights.current = true;
-    
-    const newSpacerHeights = new Map<number, number>();
-    
-    heights.forEach(({ line, height }) => {
-      const lineElement = lineRefs.current[line - 1];
-      if (!lineElement) return;
+  // useImperativeHandle(ref, () => ({
+  //   getPreviewHeights
+  // }));
+
+  // useEffect(() => {
+  //   if (!containerRef.current || !onHeightChange) return;
+
+  //   // Initial callback (like CodeMirror's setTimeout pattern)
+  //   const initialTimeout = setTimeout(() => {
+  //     onHeightChange(getPreviewHeights());
+  //   }, 0);
+
+  //   // ResizeObserver for container size changes (window resize, devtools, etc.)
+  //   const resizeObserver = new ResizeObserver(() => {
+  //     onHeightChange(getPreviewHeights());
+  //   });
+
+  //   // MutationObserver for DOM changes that might affect height
+  //   // But skip changes to spacer elements to avoid loops
+  //   const mutationObserver = new MutationObserver((mutations) => {
+  //     const hasNonSpacerChanges = mutations.some(mutation => {
+  //       const target = mutation.target as Element;
+  //       return !target.classList?.contains('preview-spacer');
+  //     });
       
-      const currentRect = lineElement.getBoundingClientRect();
-      const currentSpacerHeight = spacerHeights.get(line) || 0;
-      const currentContentHeight = currentRect.height - currentSpacerHeight;
-      const diff = height - currentContentHeight;
-      
-      if (diff > 0.1) {
-        newSpacerHeights.set(line, diff);
-      }
-    });
-    
-    setSpacerHeights(newSpacerHeights);
-    
-    // Reset flag after state update
-    requestAnimationFrame(() => {
-      isSettingHeights.current = false;
-    });
-  };
+  //     if (hasNonSpacerChanges) {
+  //       onHeightChange(getPreviewHeights());
+  //     }
+  //   });
 
-  useImperativeHandle(ref, () => ({
-    getPreviewHeights,
-    setPreviewHeights
-  }));
+  //   if (containerRef.current) {
+  //     resizeObserver.observe(containerRef.current);
+  //     mutationObserver.observe(containerRef.current, {
+  //       childList: true,
+  //       subtree: true,
+  //       attributes: true,
+  //       attributeFilter: ['style', 'class']
+  //     });
+  //   }
 
-  useEffect(() => {
-    if (!containerRef.current || !onHeightChange) return;
-
-    // Initial callback (like CodeMirror's setTimeout pattern)
-    const initialTimeout = setTimeout(() => {
-      if (!isSettingHeights.current) {
-        onHeightChange(getPreviewHeights());
-      }
-    }, 0);
-
-    // ResizeObserver for container size changes (window resize, devtools, etc.)
-    const resizeObserver = new ResizeObserver(() => {
-      if (!isSettingHeights.current) {
-        onHeightChange(getPreviewHeights());
-      }
-    });
-
-    // MutationObserver for DOM changes that might affect height
-    const mutationObserver = new MutationObserver(() => {
-      if (!isSettingHeights.current) {
-        onHeightChange(getPreviewHeights());
-      }
-    });
-
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
-      mutationObserver.observe(containerRef.current, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['style', 'class']
-      });
-    }
-
-    return () => {
-      clearTimeout(initialTimeout);
-      resizeObserver.disconnect();
-      mutationObserver.disconnect();
-    };
-  }, [onHeightChange]);
+  //   return () => {
+  //     clearTimeout(initialTimeout);
+  //     resizeObserver.disconnect();
+  //     mutationObserver.disconnect();
+  //   };
+  // }, [onHeightChange]);
 
   return (
     <div id="preview" ref={containerRef}>
       <div className="preview-content">
         {previewData.map((item, index) => {
           const lineNumber = index + 1;
-          const spacerHeight = spacerHeights.get(lineNumber) || 0;
+          const lineTargetHeight = targetHeights?.find(t => t.line === lineNumber)?.height;
           
-          if (item.type === 'empty') {
-            return (
-              <div key={index} className="preview-line empty-line" ref={el => { lineRefs.current[index] = el; }}>
-                {spacerHeight > 0 && (
-                  <div className="preview-spacer" style={{ height: `${spacerHeight}px` }}></div>
-                )}
-              </div>
-            );
-          }
-
-          if (!item.content) return null;
-
           return (
-            <div key={index} className="preview-line" data-line={lineNumber} ref={el => { lineRefs.current[index] = el; }}>
-              {item.type === 'table' && item.content.table && (
-                <table className="preview-table">
-                  <tbody>
-                    {item.content.table.map((row, rowIndex) => (
-                      <tr key={rowIndex} className={rowIndex === 0 ? 'header-row' : ''}>
-                        {row.map((cell, cellIndex) => (
-                          <td key={cellIndex}>{cell}</td>
+            <PreviewSpacer key={index} targetHeight={lineTargetHeight}>
+              {item.type === 'empty' ? (
+                <div className="preview-line empty-line" ref={el => { lineRefs.current[index] = el; }}>
+                  {/* Empty line content */}
+                </div>
+              ) : item.content ? (
+                <div className="preview-line" data-line={lineNumber} ref={el => { lineRefs.current[index] = el; }}>
+                  {item.type === 'table' && item.content.table && (
+                    <table className="preview-table">
+                      <tbody>
+                        {item.content.table.map((row, rowIndex) => (
+                          <tr key={rowIndex} className={rowIndex === 0 ? 'header-row' : ''}>
+                            {row.map((cell, cellIndex) => (
+                              <td key={cellIndex}>{cell}</td>
+                            ))}
+                          </tr>
                         ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                      </tbody>
+                    </table>
+                  )}
 
-              {item.type === 'plot' && item.content.data && (
-                <div className="plot-chart">
-                  {item.content.data.map((value, i) => (
-                    <div 
-                      key={i} 
-                      className="plot-bar" 
-                      style={{ 
-                        height: `${(value / Math.max(...item.content.data!)) * 100}%`
-                      }}
-                    ></div>
-                  ))}
-                </div>
-              )}
+                  {item.type === 'plot' && item.content.data && (
+                    <div className="plot-chart">
+                      {item.content.data.map((value, i) => (
+                        <div 
+                          key={i} 
+                          className="plot-bar" 
+                          style={{ 
+                            height: `${(value / Math.max(...item.content.data!)) * 100}%`
+                          }}
+                        ></div>
+                      ))}
+                    </div>
+                  )}
 
-              {item.type === 'array' && item.content.array && (
-                <div className="array-items">
-                  {item.content.array.map((arrayItem, i) => (
-                    <span key={i} className="array-item">{arrayItem}</span>
-                  ))}
+                  {item.type === 'array' && item.content.array && (
+                    <div className="array-items">
+                      {item.content.array.map((arrayItem, i) => (
+                        <span key={i} className="array-item">{arrayItem}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-              
-              {spacerHeight > 0 && (
-                <div className="preview-spacer" style={{ height: `${spacerHeight}px` }}></div>
-              )}
-            </div>
+              ) : null}
+            </PreviewSpacer>
           );
         })}
       </div>

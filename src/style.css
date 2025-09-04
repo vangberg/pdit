@@ -160,6 +160,10 @@ h1 {
   font-family: monospace;
 }
 
+.preview-spacer-container {
+  display: block;
+}
+
 .preview-spacer {
   background-color: lightblue;
   width: 100%;

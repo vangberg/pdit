@@ -1,7 +1,8 @@
 import './style.css'
 import { Editor } from './Editor'
 import { Preview, PreviewRef, PreviewHeight } from './Preview'
-import React, { useRef, useEffect } from 'react'
+import { LineHeight } from './line-heights'
+import React, { useRef, useEffect, useState } from 'react'
 
 const initialCode = `// Welcome to CodeMirror, this is a very long, long line!
 function fibonacci(n) {
@@ -17,19 +18,51 @@ console.log(greeting);`
 
 function App() {
   const previewRef = useRef<PreviewRef>(null);
+  const [editorHeights, setEditorHeights] = useState<LineHeight[]>([]);
+  const [previewHeights, setPreviewHeights] = useState<PreviewHeight[]>([]);
+  const [targetPreviewHeights, setTargetPreviewHeights] = useState<PreviewHeight[]>([
+      { line: 2, height: 300 },  // Example initial target heights
+      { line: 4, height: 200 },
+  ]);
+  const isSyncing = useRef<boolean>(false);
 
-  useEffect(() => {
-    // Set heights on render using requestAnimationFrame
-    requestAnimationFrame(() => {
-      if (previewRef.current) {
-        previewRef.current.setPreviewHeights([
-          { line: 2, height: 100 },
-          { line: 4, height: 80 },
-          { line: 7, height: 120 }
-        ]);
+  const syncHeights = (newEditorHeights: LineHeight[], newPreviewHeights: PreviewHeight[]) => {
+    if (isSyncing.current) return; // Prevent infinite loops
+    
+    isSyncing.current = true;
+    
+    const maxLines = Math.max(newEditorHeights.length, newPreviewHeights.length);
+    const previewTargets: PreviewHeight[] = [];
+    
+    for (let line = 1; line <= maxLines; line++) {
+      const editorHeight = newEditorHeights[line-1]?.height || 0;
+      const previewHeight = newPreviewHeights[line-1]?.height || 0;
+      const targetHeight = Math.max(editorHeight, previewHeight);
+      
+      if (targetHeight > 0) {
+        previewTargets.push({ line, height: targetHeight });
       }
+    }
+    
+    // Set target heights via props (declarative)
+    setTargetPreviewHeights(previewTargets);
+    
+    requestAnimationFrame(() => {
+      isSyncing.current = false;
     });
-  }, []);
+  };
+
+  const handleEditorHeightChange = (heights: LineHeight[]) => {
+    setEditorHeights(heights);
+    syncHeights(heights, previewHeights);
+  };
+
+  const handlePreviewHeightChange = (heights: PreviewHeight[]) => {
+    if (!isSyncing.current) {
+      setPreviewHeights(heights);
+      syncHeights(editorHeights, heights);
+    }
+  };
 
   const handleGetHeights = () => {
     if (previewRef.current) {
@@ -40,18 +73,13 @@ function App() {
   };
 
   const handleUpdateHeights = () => {
-    if (previewRef.current) {
-      previewRef.current.setPreviewHeights([
-        { line: 2, height: 100 },
-        { line: 4, height: 80 },
-        { line: 7, height: 120 }
-      ]);
-    }
+    // Test by setting some example target heights
+    // setTargetPreviewHeights([
+    //   { line: 2, height: 100 },
+    //   { line: 4, height: 80 },
+    //   { line: 7, height: 120 }
+    // ]);
     console.log('Update heights clicked');
-  };
-
-  const handlePreviewHeightChange = (heights: PreviewHeight[]) => {
-    console.log('Preview heights changed:', heights.slice(0, 5)); // Log first 5 for brevity
   };
 
   return (
@@ -62,10 +90,15 @@ function App() {
             initialCode={initialCode}
             onGetHeights={handleGetHeights}
             onUpdateHeights={handleUpdateHeights}
+            // onHeightChange={handleEditorHeightChange}
           />
         </div>
         <div className="preview-half">
-          <Preview ref={previewRef} onHeightChange={handlePreviewHeightChange} />
+          <Preview 
+            ref={previewRef} 
+            // onHeightChange={handlePreviewHeightChange}
+            targetHeights={targetPreviewHeights}
+          />
         </div>
       </div>
     </div>

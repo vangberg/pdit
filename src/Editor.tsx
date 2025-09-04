@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { EditorView, basicSetup } from 'codemirror'
 import { EditorState } from '@codemirror/state'
 import { javascript } from '@codemirror/lang-javascript'
-import { lineHeightExtension, setLineHeights, getLineHeights, lineHeightChangeListener } from './line-heights'
+import { lineHeightExtension, setLineHeights, getLineHeights, lineHeightChangeListener, LineHeight } from './line-heights'
 import React from 'react'
 
 interface EditorProps {
