@@ -26,6 +26,26 @@ body {
   height: 100%;
 }
 
+.split-container {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+}
+
+.editor-half,
+.preview-half {
+  flex: 1;
+  height: 100%;
+}
+
+.editor-half {
+  border-right: 1px solid #e5e5e5;
+}
+
+.preview-half {
+  overflow-y: auto;
+}
+
 h1 {
   font-size: 2.5em;
   line-height: 1.1;
@@ -64,4 +84,78 @@ h1 {
 
 .cm-focused {
   outline: none;
+}
+
+#preview {
+  padding: 0.5rem;
+  background-color: #fdfdfd;
+  height: 100%;
+  font-size: 0.85rem;
+}
+
+.preview-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.preview-line {
+  margin: 0.1rem 0;
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+  color: #666;
+}
+
+.preview-table td {
+  padding: 0.15rem 0.3rem;
+  border: none;
+}
+
+.preview-table .header-row td {
+  font-weight: 500;
+  color: #555;
+  font-size: 0.65rem;
+}
+
+.preview-table td:last-child {
+  text-align: right;
+  font-family: monospace;
+}
+
+.empty-line {
+  height: 18px;
+}
+
+.plot-chart {
+  display: flex;
+  align-items: end;
+  gap: 1px;
+  height: 30px;
+  margin: 0.2rem 0;
+}
+
+.plot-bar {
+  min-width: 6px;
+  background-color: #ccc;
+  opacity: 0.6;
+}
+
+.array-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin: 0.2rem 0;
+}
+
+.array-item {
+  background: #f0f0f0;
+  color: #666;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-family: monospace;
 }

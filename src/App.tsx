@@ -1,5 +1,6 @@
 import './style.css'
 import { Editor } from './Editor'
+import { Preview } from './Preview'
 import React from 'react'
 
 const initialCode = `// Welcome to CodeMirror, this is a very long, long line!
@@ -17,11 +18,18 @@ console.log(greeting);`
 function App() {
   return (
     <div id="app">
-      <Editor 
-        initialCode={initialCode}
-        onGetHeights={() => console.log('Get heights clicked')}
-        onUpdateHeights={() => console.log('Update heights clicked')}
-      />
+      <div className="split-container">
+        <div className="editor-half">
+          <Editor 
+            initialCode={initialCode}
+            onGetHeights={() => console.log('Get heights clicked')}
+            onUpdateHeights={() => console.log('Update heights clicked')}
+          />
+        </div>
+        <div className="preview-half">
+          <Preview />
+        </div>
+      </div>
     </div>
   )
 }
