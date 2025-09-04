@@ -1,5 +1,5 @@
 import './style.css'
-import { CodeMirrorEditor } from './CodeMirrorEditor'
+import { Editor } from './Editor'
 import React from 'react'
 
 const initialCode = `// Welcome to CodeMirror, this is a very long, long line!
@@ -17,8 +17,7 @@ console.log(greeting);`
 function App() {
   return (
     <div id="app">
-      <h1>CodeMirror Editor</h1>
-      <CodeMirrorEditor 
+      <Editor 
         initialCode={initialCode}
         onGetHeights={() => console.log('Get heights clicked')}
         onUpdateHeights={() => console.log('Update heights clicked')}

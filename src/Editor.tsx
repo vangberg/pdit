@@ -3,14 +3,15 @@ import { EditorView, basicSetup } from 'codemirror'
 import { EditorState } from '@codemirror/state'
 import { javascript } from '@codemirror/lang-javascript'
 import { lineHeightExtension, setLineHeights, getLineHeights, lineHeightChangeListener } from './line-heights'
+import React from 'react'
 
-interface CodeMirrorEditorProps {
+interface EditorProps {
   initialCode: string
   onGetHeights?: () => void
   onUpdateHeights?: () => void
 }
 
-export function CodeMirrorEditor({ initialCode, onGetHeights, onUpdateHeights }: CodeMirrorEditorProps) {
+export function Editor({ initialCode, onGetHeights, onUpdateHeights }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
 
@@ -37,7 +38,8 @@ export function CodeMirrorEditor({ initialCode, onGetHeights, onUpdateHeights }:
         }),
         EditorView.theme({
           '&': {
-            height: '400px'
+            height: '100%',
+            width: '100%'
           },
           '.cm-scroller': {
             fontFamily: 'Fira Code, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
@@ -80,8 +82,6 @@ export function CodeMirrorEditor({ initialCode, onGetHeights, onUpdateHeights }:
   }
 
   return (
-    <div className="editor-container">
-      <div ref={editorRef} />
-    </div>
+    <div id="editor" ref={editorRef} />
   )
 }
