@@ -9,6 +9,7 @@ class Spacer extends WidgetType {
   toDOM() {
     let elt = document.createElement("div")
     elt.style.height = this.height + "px"
+    elt.className = "cm-preview-spacer"
     return elt
   }
 
@@ -42,13 +43,25 @@ export interface LineHeight {
 
 export function setLineHeights(view: EditorView, lineHeights: LineHeight[]) {
   const builder = new RangeSetBuilder<Decoration>()
-  
+
   for (const {line, height} of lineHeights) {
     const lineInfo = view.state.doc.line(line)
+
+    const spacers = view.state.field(spacersField).iter()
+    let spacer
+    while (spacers.value) {
+      if (spacers.to == lineInfo.to) {
+        spacer = spacers.value.spec.widget as Spacer
+        break;
+      }
+      spacers.next();
+    }
+
     const currentHeight = view.lineBlockAt(lineInfo.from).height
-    const diff = height - currentHeight
-    
-    if (diff > 0) {
+    const spacerHeight = spacer ? spacer.height : 0
+    const diff = height - currentHeight + spacerHeight
+
+    if (diff > 0.01) {
       builder.add(lineInfo.to, lineInfo.to, Decoration.widget({
         widget: new Spacer(diff),
         block: true,
