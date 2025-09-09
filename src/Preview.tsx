@@ -18,7 +18,7 @@ interface PreviewProps {
   item: PreviewItem;
   index: number;
   targetHeight?: number;
-  ref?: React.RefObject<HTMLDivElement>;
+  ref?: (element: HTMLDivElement | null) => void;
 }
 
 export const Preview: React.FC<PreviewProps> = ({ item, index, targetHeight, ref }) => {

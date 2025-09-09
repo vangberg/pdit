@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, createRef } from 'react'
+import React, { useRef, useEffect } from 'react'
 import { Preview } from './Preview'
 
 export interface PreviewHeight {
@@ -95,20 +95,13 @@ interface PreviewPaneProps {
 }
 
 export const PreviewPane: React.FC<PreviewPaneProps> = ({ onHeightChange, targetHeights }) => {
-  const lineRefs = useRef<React.RefObject<HTMLDivElement>[]>([]);
+  const previewRefs = useRef<{[key: number]: HTMLDivElement | null}>({});
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Manage refs array size based on data length
-  useEffect(() => {
-    lineRefs.current = previewData.map((_, index) => 
-      lineRefs.current[index] || createRef<HTMLDivElement>()
-    );
-  }, [previewData.length]);
-
   const getPreviewHeights = (): PreviewHeight[] => {
-    return lineRefs.current.map((refObject, index) => {
+    return previewData.map((_, index) => {
       const lineNumber = index + 1;
-      const previewElement = refObject?.current;
+      const previewElement = previewRefs.current[index];
       
       if (!previewElement) {
         return { line: lineNumber, height: 0 };
@@ -185,7 +178,7 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({ onHeightChange, target
           return (
             <Preview
               key={index}
-              ref={lineRefs.current[index]}
+              ref={(element) => previewRefs.current[index] = element}
               item={item}
               index={index}
               targetHeight={lineTargetHeight}
