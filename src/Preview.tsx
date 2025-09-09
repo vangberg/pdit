@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React from "react";
 import { useSpacer } from "./hooks/spacer";
 
 // Type for a single preview item - matching the structure from PreviewPane
@@ -32,63 +32,65 @@ export const Preview: React.FC<PreviewProps> = ({
   ref,
 }) => {
   const lineNumber = index + 1;
-  const contentRef = useRef<HTMLDivElement>(null);
-  const spacer = useSpacer(targetHeight, contentRef);
+  const { ref: spacerRef, spacer } = useSpacer(targetHeight);
+  
+  const combinedRef = (element: HTMLDivElement | null) => {
+    spacerRef(element);
+    if (ref) ref(element);
+  };
 
   return [
-    <div key="content" ref={ref} className={`preview-container${isEven ? ' zebra' : ''}`}>
-      <div ref={contentRef}>
-        {item.type === "empty" ? (
-          <div className="preview-line empty-line">
-            {/* Empty line content */}
-          </div>
-        ) : item.content ? (
-          <div className="preview-line" data-line={lineNumber}>
-            {item.type === "table" && item.content.table && (
-              <table className="preview-table">
-                <tbody>
-                  {item.content.table.map((row, rowIndex) => (
-                    <tr
-                      key={rowIndex}
-                      className={rowIndex === 0 ? "header-row" : ""}
-                    >
-                      {row.map((cell, cellIndex) => (
-                        <td key={cellIndex}>{cell}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-
-            {item.type === "plot" && item.content.data && (
-              <div className="plot-chart">
-                {item.content.data.map((value, i) => (
-                  <div
-                    key={i}
-                    className="plot-bar"
-                    style={{
-                      height: `${
-                        (value / Math.max(...item.content.data!)) * 100
-                      }%`,
-                    }}
-                  ></div>
+    <div key="content" ref={combinedRef} className={`preview-container${isEven ? ' zebra' : ''}`}>
+      {item.type === "empty" ? (
+        <div className="preview-line empty-line">
+          {/* Empty line content */}
+        </div>
+      ) : item.content ? (
+        <div className="preview-line" data-line={lineNumber}>
+          {item.type === "table" && item.content.table && (
+            <table className="preview-table">
+              <tbody>
+                {item.content.table.map((row, rowIndex) => (
+                  <tr
+                    key={rowIndex}
+                    className={rowIndex === 0 ? "header-row" : ""}
+                  >
+                    {row.map((cell, cellIndex) => (
+                      <td key={cellIndex}>{cell}</td>
+                    ))}
+                  </tr>
                 ))}
-              </div>
-            )}
+              </tbody>
+            </table>
+          )}
 
-            {item.type === "array" && item.content.array && (
-              <div className="array-items">
-                {item.content.array.map((arrayItem, i) => (
-                  <span key={i} className="array-item">
-                    {arrayItem}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : null}
-      </div>
+          {item.type === "plot" && item.content.data && (
+            <div className="plot-chart">
+              {item.content.data.map((value, i) => (
+                <div
+                  key={i}
+                  className="plot-bar"
+                  style={{
+                    height: `${
+                      (value / Math.max(...item.content.data!)) * 100
+                    }%`,
+                  }}
+                ></div>
+              ))}
+            </div>
+          )}
+
+          {item.type === "array" && item.content.array && (
+            <div className="array-items">
+              {item.content.array.map((arrayItem, i) => (
+                <span key={i} className="array-item">
+                  {arrayItem}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>,
     spacer,
   ];
