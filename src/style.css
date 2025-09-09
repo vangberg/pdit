@@ -98,13 +98,13 @@ h1 {
 
 .preview-line {
   position: relative;
-}
+} 
 
 .preview-line:not(.empty-line) {
   padding: 0.5rem;
 }
 
-.preview-spacer-container:nth-child(even) {
+.preview-container.zebra {
   background-color: #f8f9fa;
 }
 
