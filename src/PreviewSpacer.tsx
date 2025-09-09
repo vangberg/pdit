@@ -1,15 +1,13 @@
-import React, { useRef, useState, useLayoutEffect, useEffect } from 'react'
+import React, { useRef, useState, useLayoutEffect } from 'react'
 
 interface PreviewSpacerProps {
   targetHeight?: number;
   children: React.ReactNode;
-  onNaturalHeightChange?: (height: number) => void;
 }
 
 export const PreviewSpacer: React.FC<PreviewSpacerProps> = ({ 
   targetHeight, 
-  children, 
-  onNaturalHeightChange 
+  children
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [spacerHeight, setSpacerHeight] = useState(0);
@@ -34,29 +32,6 @@ export const PreviewSpacer: React.FC<PreviewSpacerProps> = ({
     }
   }, [targetHeight]);
 
-  // Report natural height changes
-  useEffect(() => {
-    if (!onNaturalHeightChange || !contentRef.current) return;
-
-    const reportHeight = () => {
-      if (contentRef.current) {
-        const rect = contentRef.current.getBoundingClientRect();
-        onNaturalHeightChange(rect.height);
-      }
-    };
-
-    // Initial report
-    const timeout = setTimeout(reportHeight, 0);
-
-    // Set up ResizeObserver to watch for content size changes
-    const resizeObserver = new ResizeObserver(reportHeight);
-    resizeObserver.observe(contentRef.current);
-
-    return () => {
-      clearTimeout(timeout);
-      resizeObserver.disconnect();
-    };
-  }, [onNaturalHeightChange]);
 
   return (
     <div className="preview-spacer-container">

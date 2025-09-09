@@ -98,11 +98,6 @@ export const Preview: React.FC<PreviewProps> = ({ onHeightChange, targetHeights 
   const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleNaturalHeightChange = () => {
-    if (onHeightChange) {
-      onHeightChange(getPreviewHeights());
-    }
-  };
 
   const getPreviewHeights = (): PreviewHeight[] => {
     return lineRefs.current.map((lineElement, index) => {
@@ -144,6 +139,12 @@ export const Preview: React.FC<PreviewProps> = ({ onHeightChange, targetHeights 
       }
     });
 
+    // ResizeObserver to watch for content size changes in line elements
+    const resizeObserver = new ResizeObserver(() => {
+      onHeightChange(getPreviewHeights());
+    });
+
+    // Observe the container for mutations and resizes
     if (containerRef.current) {
       mutationObserver.observe(containerRef.current, {
         childList: true,
@@ -151,11 +152,15 @@ export const Preview: React.FC<PreviewProps> = ({ onHeightChange, targetHeights 
         attributes: true,
         attributeFilter: ['style', 'class']
       });
+
+      // Single ResizeObserver on the container catches all internal size changes
+      resizeObserver.observe(containerRef.current);
     }
 
     return () => {
       clearTimeout(initialTimeout);
       mutationObserver.disconnect();
+      resizeObserver.disconnect();
     };
   }, [onHeightChange]);
 
@@ -167,7 +172,7 @@ export const Preview: React.FC<PreviewProps> = ({ onHeightChange, targetHeights 
           const lineTargetHeight = targetHeights?.find(t => t.line === lineNumber)?.height;
           
           return (
-            <PreviewSpacer key={index} targetHeight={lineTargetHeight} onNaturalHeightChange={handleNaturalHeightChange}>
+            <PreviewSpacer key={index} targetHeight={lineTargetHeight}>
               {item.type === 'empty' ? (
                 <div className="preview-line empty-line" ref={el => { lineRefs.current[index] = el; }}>
                   {/* Empty line content */}
