@@ -1,20 +1,11 @@
-import React, { useRef, useState, useLayoutEffect } from 'react'
+import React, { useState, useLayoutEffect, RefObject } from 'react'
 
-interface PreviewSpacerProps {
-  targetHeight?: number;
-  children: React.ReactNode;
-}
-
-export const PreviewSpacer: React.FC<PreviewSpacerProps> = ({ 
-  targetHeight, 
-  children
-}) => {
-  const contentRef = useRef<HTMLDivElement>(null);
+export const useSpacer = (targetHeight?: number, contentRef?: RefObject<HTMLElement | null>) => {
   const [spacerHeight, setSpacerHeight] = useState(0);
 
   // Calculate spacer height synchronously before paint (no flicker)
   useLayoutEffect(() => {
-    if (!targetHeight || !contentRef.current) {
+    if (!targetHeight || !contentRef?.current) {
       setSpacerHeight(0);
       return;
     }
@@ -30,20 +21,15 @@ export const PreviewSpacer: React.FC<PreviewSpacerProps> = ({
       console.warn('Failed to calculate spacer height:', e);
       setSpacerHeight(0);
     }
-  }, [targetHeight]);
+  }, [targetHeight, contentRef]);
 
+  const spacer = spacerHeight > 0 ? (
+    <div 
+      className="preview-spacer" 
+      style={{ height: `${spacerHeight}px` }}
+    />
+  ) : null;
 
-  return (
-    <div className="preview-spacer-container">
-      <div ref={contentRef}>
-        {children}
-      </div>
-      {spacerHeight > 0 && (
-        <div 
-          className="preview-spacer" 
-          style={{ height: `${spacerHeight}px` }}
-        />
-      )}
-    </div>
-  );
+  return spacer;
 };
+

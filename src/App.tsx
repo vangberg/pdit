@@ -1,6 +1,6 @@
 import './style.css'
 import { Editor } from './Editor'
-import { Preview, PreviewHeight } from './Preview'
+import { PreviewPane, PreviewHeight } from './PreviewPane'
 import { LineHeight } from './line-heights'
 import { DebugPanel } from './DebugPanel'
 import React, { useRef, useState, useCallback, useEffect } from 'react'
@@ -79,7 +79,7 @@ function App() {
           />
         </div>
         <div className="preview-half">
-          <Preview 
+          <PreviewPane 
             onHeightChange={handlePreviewHeightChange}
             targetHeights={targetPreviewHeights}
           />

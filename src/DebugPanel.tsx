@@ -1,6 +1,6 @@
 import React from 'react';
 import { LineHeight } from './line-heights';
-import { PreviewHeight } from './Preview';
+import { PreviewHeight } from './PreviewPane';
 
 interface DebugPanelProps {
   editorHeights: LineHeight[];
