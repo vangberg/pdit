@@ -47,7 +47,6 @@ export function Editor({ initialCode, onGetHeights, onUpdateHeights, onHeightCha
             fontFamily: 'Fira Code, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
           }
         }),
-        EditorView.lineWrapping
       ]
     })
 
