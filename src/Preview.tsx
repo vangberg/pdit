@@ -1,13 +1,9 @@
-import React, { useRef, useImperativeHandle, forwardRef, useEffect } from 'react'
+import React, { useRef, useEffect } from 'react'
 import { PreviewSpacer } from './PreviewSpacer'
 
 export interface PreviewHeight {
   line: number;
   height: number;
-}
-
-export interface PreviewRef {
-  getPreviewHeights: () => PreviewHeight[];
 }
 
 export interface PreviewProps {
@@ -98,7 +94,7 @@ const previewData = [
   }
 ]
 
-export const Preview = forwardRef<PreviewRef, PreviewProps>(({ onHeightChange, targetHeights }, ref) => {
+export const Preview: React.FC<PreviewProps> = ({ onHeightChange, targetHeights }) => {
   const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -126,9 +122,6 @@ export const Preview = forwardRef<PreviewRef, PreviewProps>(({ onHeightChange, t
     });
   };
 
-  useImperativeHandle(ref, () => ({
-    getPreviewHeights
-  }));
 
   useEffect(() => {
     if (!containerRef.current || !onHeightChange) return;
@@ -224,4 +217,4 @@ export const Preview = forwardRef<PreviewRef, PreviewProps>(({ onHeightChange, t
       </div>
     </div>
   );
-});
+};

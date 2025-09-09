@@ -1,6 +1,6 @@
 import './style.css'
 import { Editor } from './Editor'
-import { Preview, PreviewRef, PreviewHeight } from './Preview'
+import { Preview, PreviewHeight } from './Preview'
 import { LineHeight } from './line-heights'
 import { DebugPanel } from './DebugPanel'
 import React, { useRef, useState, useCallback, useEffect } from 'react'
@@ -18,7 +18,6 @@ const greeting = "Hello, CodeMirror!";
 console.log(greeting);`
 
 function App() {
-  const previewRef = useRef<PreviewRef>(null);
   const [editorHeights, setEditorHeights] = useState<LineHeight[]>([]);
   const [previewHeights, setPreviewHeights] = useState<PreviewHeight[]>([]);
   const [targetPreviewHeights, setTargetPreviewHeights] = useState<PreviewHeight[]>([
@@ -81,7 +80,6 @@ function App() {
         </div>
         <div className="preview-half">
           <Preview 
-            ref={previewRef} 
             onHeightChange={handlePreviewHeightChange}
             targetHeights={targetPreviewHeights}
           />
