@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { useSpacer } from "./PreviewSpacer";
+import { useSpacer } from "./hooks/spacer";
 
 // Type for a single preview item - matching the structure from PreviewPane
 type PreviewItem =
