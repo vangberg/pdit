@@ -102,6 +102,12 @@ export const Preview = forwardRef<PreviewRef, PreviewProps>(({ onHeightChange, t
   const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const handleNaturalHeightChange = () => {
+    if (onHeightChange) {
+      onHeightChange(getPreviewHeights());
+    }
+  };
+
   const getPreviewHeights = (): PreviewHeight[] => {
     return lineRefs.current.map((lineElement, index) => {
       const lineNumber = index + 1;
@@ -132,11 +138,6 @@ export const Preview = forwardRef<PreviewRef, PreviewProps>(({ onHeightChange, t
       onHeightChange(getPreviewHeights());
     }, 0);
 
-    // ResizeObserver for container size changes (window resize, devtools, etc.)
-    const resizeObserver = new ResizeObserver(() => {
-      onHeightChange(getPreviewHeights());
-    });
-
     // MutationObserver for DOM changes that might affect height
     // But skip changes to spacer elements to avoid loops
     const mutationObserver = new MutationObserver((mutations) => {
@@ -151,7 +152,6 @@ export const Preview = forwardRef<PreviewRef, PreviewProps>(({ onHeightChange, t
     });
 
     if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
       mutationObserver.observe(containerRef.current, {
         childList: true,
         subtree: true,
@@ -162,7 +162,6 @@ export const Preview = forwardRef<PreviewRef, PreviewProps>(({ onHeightChange, t
 
     return () => {
       clearTimeout(initialTimeout);
-      resizeObserver.disconnect();
       mutationObserver.disconnect();
     };
   }, [onHeightChange]);
@@ -175,7 +174,7 @@ export const Preview = forwardRef<PreviewRef, PreviewProps>(({ onHeightChange, t
           const lineTargetHeight = targetHeights?.find(t => t.line === lineNumber)?.height;
           
           return (
-            <PreviewSpacer key={index} targetHeight={lineTargetHeight}>
+            <PreviewSpacer key={index} targetHeight={lineTargetHeight} onNaturalHeightChange={handleNaturalHeightChange}>
               {item.type === 'empty' ? (
                 <div className="preview-line empty-line" ref={el => { lineRefs.current[index] = el; }}>
                   {/* Empty line content */}
