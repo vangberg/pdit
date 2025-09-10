@@ -1,5 +1,5 @@
 import React, { useImperativeHandle, useRef } from "react";
-import { useSpacer } from "./hooks/spacer";
+import { useSpacerHeight, Spacer } from "./Spacer";
 
 // Type for a single preview item - matching the structure from PreviewPane
 type PreviewItem =
@@ -33,9 +33,8 @@ export const Preview: React.FC<PreviewProps> = ({
 }) => {
   const lineNumber = index + 1;
   const elementRef = useRef<HTMLDivElement | null>(null);
-  const { spacer } = useSpacer(elementRef, targetHeight);
+  const spacerHeight = useSpacerHeight(elementRef, targetHeight);
   
-  // React 19: expose element to parent via useImperativeHandle
   useImperativeHandle(ref, () => elementRef.current as HTMLDivElement, []);
 
   return [
@@ -91,6 +90,6 @@ export const Preview: React.FC<PreviewProps> = ({
         </div>
       ) : null}
     </div>,
-    spacer,
+    <Spacer height={spacerHeight} />,
   ];
 };

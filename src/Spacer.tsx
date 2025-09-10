@@ -1,6 +1,6 @@
-import React, { useState, useLayoutEffect, useCallback } from 'react'
+import React, { useState, useLayoutEffect, useCallback } from 'react';
 
-export const useSpacer = (elementRef: React.RefObject<HTMLElement | null>, targetHeight?: number) => {
+export const useSpacerHeight = (elementRef: React.RefObject<HTMLElement | null>, targetHeight?: number) => {
   const [spacerHeight, setSpacerHeight] = useState(0);
 
   const calculateSpacerHeight = useCallback(() => {
@@ -27,14 +27,23 @@ export const useSpacer = (elementRef: React.RefObject<HTMLElement | null>, targe
     calculateSpacerHeight();
   }, [calculateSpacerHeight]);
 
-  const spacer = spacerHeight > 0 ? (
+  return spacerHeight;
+};
+
+interface SpacerProps {
+  height: number;
+}
+
+export const Spacer: React.FC<SpacerProps> = ({ height }) => {
+  if (height <= 0) {
+    return null;
+  }
+
+  return (
     <div 
       key="spacer"
       className="preview-spacer" 
-      style={{ height: `${spacerHeight}px` }}
+      style={{ height: `${height}px` }}
     />
-  ) : null;
-
-  return { spacer };
+  );
 };
-
