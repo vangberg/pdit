@@ -7,12 +7,11 @@ export interface PreviewHeight {
 }
 
 const usePreviewHeights = (
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  previewRefs: React.RefObject<(HTMLDivElement | null)[]>,
   previewData: any[],
   onHeightChange?: (heights: PreviewHeight[]) => void
 ) => {
-  const previewRefs = useRef<{[key: number]: HTMLDivElement | null}>({});
-  const containerRef = useRef<HTMLDivElement>(null);
-
   const getPreviewHeights = useCallback((): PreviewHeight[] => {
     return previewData.map((_, index) => {
       const lineNumber = index + 1;
@@ -28,10 +27,6 @@ const usePreviewHeights = (
       };
     });
   }, [previewData]);
-
-  const setPreviewRef = useCallback((index: number) => (element: HTMLDivElement | null) => {
-    previewRefs.current[index] = element;
-  }, []);
 
   useEffect(() => {
     if (!containerRef.current || !onHeightChange) return;
@@ -81,7 +76,6 @@ const usePreviewHeights = (
 
   return {
     containerRef,
-    setPreviewRef
   };
 };
 
@@ -174,7 +168,9 @@ interface PreviewPaneProps {
 }
 
 export const PreviewPane: React.FC<PreviewPaneProps> = ({ onHeightChange, targetHeights }) => {
-  const { containerRef, setPreviewRef } = usePreviewHeights(previewData, onHeightChange);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const previewRefs = useRef<(HTMLDivElement | null)[]>([]);
+  usePreviewHeights(containerRef, previewRefs, previewData, onHeightChange);
 
   return (
     <div id="preview" ref={containerRef}>
@@ -186,7 +182,7 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({ onHeightChange, target
           return (
             <Preview
               key={index}
-              ref={setPreviewRef(index)}
+              ref={el => previewRefs.current[index] = el}
               item={item}
               index={index}
               targetHeight={lineTargetHeight}
