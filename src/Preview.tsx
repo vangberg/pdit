@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useImperativeHandle, useRef } from "react";
 import { useSpacer } from "./hooks/spacer";
 
 // Type for a single preview item - matching the structure from PreviewPane
@@ -32,15 +32,14 @@ export const Preview: React.FC<PreviewProps> = ({
   ref,
 }) => {
   const lineNumber = index + 1;
-  const { ref: spacerRef, spacer } = useSpacer(targetHeight);
+  const elementRef = useRef<HTMLDivElement | null>(null);
+  const { spacer } = useSpacer(elementRef, targetHeight);
   
-  const combinedRef = (element: HTMLDivElement | null) => {
-    spacerRef(element);
-    if (ref) ref(element);
-  };
+  // React 19: expose element to parent via useImperativeHandle
+  useImperativeHandle(ref, () => elementRef.current as HTMLDivElement, []);
 
   return [
-    <div key="content" ref={combinedRef} className={`preview-container${isEven ? ' zebra' : ''}`}>
+    <div key="content" ref={elementRef} className={`preview-container${isEven ? ' zebra' : ''}`}>
       {item.type === "empty" ? (
         <div className="preview-line empty-line">
           {/* Empty line content */}
