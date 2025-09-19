@@ -3,7 +3,18 @@ import { Editor } from './Editor'
 import { PreviewPane, PreviewHeight } from './PreviewPane'
 import { LineHeight } from './line-heights'
 import { executeScript, ApiExecuteResponse } from './api'
+import { RangeSet, RangeValue } from '@codemirror/state'
 import React, { useRef, useState, useCallback, useEffect } from 'react'
+
+class ResultIdValue extends RangeValue {
+  constructor(public id: number) {
+    super();
+  }
+
+  eq(other: ResultIdValue) {
+    return this.id === other.id;
+  }
+}
 
 const initialCode = `// Welcome to CodeMirror, this is a very long, long line!
 function fibonacci(n) {
@@ -26,6 +37,7 @@ function App() {
   ]);
   const [targetEditorHeights, setTargetEditorHeights] = useState<LineHeight[]>([]);
   const [executeResults, setExecuteResults] = useState<ApiExecuteResponse | null>(null);
+  const [resultRanges, setResultRanges] = useState<RangeSet<ResultIdValue>>(RangeSet.empty);
   const isSyncing = useRef<boolean>(false);
 
   // Declarative height syncing - runs automatically when heights change
@@ -73,6 +85,10 @@ function App() {
     const result = await executeScript(script);
     console.log('Execute result:', result);
     setExecuteResults(result);
+
+    // Create RangeSet from result positions
+    const ranges = result.results.map(r => ({ from: r.from, to: r.to, value: new ResultIdValue(r.id) }));
+    setResultRanges(RangeSet.of(ranges));
   }, []);
 
   return (
@@ -87,9 +103,10 @@ function App() {
           />
         </div>
         <div className="preview-half">
-          <PreviewPane 
+          <PreviewPane
             onHeightChange={handlePreviewHeightChange}
             targetHeights={targetPreviewHeights}
+            results={executeResults?.results || []}
           />
         </div>
       </div>

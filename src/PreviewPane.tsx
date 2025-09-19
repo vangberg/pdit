@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useCallback } from 'react'
 import { Preview } from './Preview'
+import { ApiExecuteResult } from './api'
 
 export interface PreviewHeight {
   line: number;
@@ -165,23 +166,26 @@ const previewData = [
 interface PreviewPaneProps {
   onHeightChange?: (heights: PreviewHeight[]) => void;
   targetHeights?: PreviewHeight[];
+  results: ApiExecuteResult[];
 }
 
-export const PreviewPane: React.FC<PreviewPaneProps> = ({ onHeightChange, targetHeights }) => {
+export const PreviewPane: React.FC<PreviewPaneProps> = ({ onHeightChange, targetHeights, results }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const previewRefs = useRef<(HTMLDivElement | null)[]>([]);
-  usePreviewHeights(containerRef, previewRefs, previewData, onHeightChange);
+  const dataToRender = results.map((_, index) => previewData[index % previewData.length]);
+  usePreviewHeights(containerRef, previewRefs, dataToRender, onHeightChange);
 
   return (
     <div id="preview" ref={containerRef}>
       <div className="preview-content">
-        {previewData.map((item, index) => {
+        {results.map((result, index) => {
+          const item = previewData[index % previewData.length];
           const lineNumber = index + 1;
           const lineTargetHeight = targetHeights?.find(t => t.line === lineNumber)?.height;
-          
+
           return (
             <Preview
-              key={index}
+              key={result.id}
               ref={el => previewRefs.current[index] = el}
               item={item}
               index={index}

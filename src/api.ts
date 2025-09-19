@@ -8,6 +8,8 @@ export interface ApiExecuteResponse {
   results: ApiExecuteResult[];
 }
 
+let globalIdCounter = 1;
+
 export async function executeScript(script: string): Promise<ApiExecuteResponse> {
   const lines = script.split('\n');
   const results: ApiExecuteResult[] = [];
@@ -24,7 +26,7 @@ export async function executeScript(script: string): Promise<ApiExecuteResponse>
       const to = position + lines[i].length;
 
       results.push({
-        id: results.length + 1,
+        id: globalIdCounter++,
         from,
         to
       });
