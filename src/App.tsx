@@ -2,7 +2,6 @@ import './style.css'
 import { Editor } from './Editor'
 import { PreviewPane, PreviewHeight } from './PreviewPane'
 import { LineHeight } from './line-heights'
-import { DebugPanel } from './DebugPanel'
 import React, { useRef, useState, useCallback, useEffect } from 'react'
 
 const initialCode = `// Welcome to CodeMirror, this is a very long, long line!
