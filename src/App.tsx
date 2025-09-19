@@ -2,6 +2,7 @@ import './style.css'
 import { Editor } from './Editor'
 import { PreviewPane, PreviewHeight } from './PreviewPane'
 import { LineHeight } from './line-heights'
+import { executeScript, ApiExecuteResponse } from './api'
 import React, { useRef, useState, useCallback, useEffect } from 'react'
 
 const initialCode = `// Welcome to CodeMirror, this is a very long, long line!
@@ -24,6 +25,7 @@ function App() {
       { line: 4, height: 200 },
   ]);
   const [targetEditorHeights, setTargetEditorHeights] = useState<LineHeight[]>([]);
+  const [executeResults, setExecuteResults] = useState<ApiExecuteResponse | null>(null);
   const isSyncing = useRef<boolean>(false);
 
   // Declarative height syncing - runs automatically when heights change
@@ -67,14 +69,21 @@ function App() {
     setPreviewHeights(heights);
   }, []);
 
+  const handleExecute = useCallback(async (script: string) => {
+    const result = await executeScript(script);
+    console.log('Execute result:', result);
+    setExecuteResults(result);
+  }, []);
+
   return (
     <div id="app">
       <div className="split-container">
         <div className="editor-half">
-          <Editor 
+          <Editor
             initialCode={initialCode}
             onHeightChange={handleEditorHeightChange}
             targetHeights={targetEditorHeights}
+            onExecute={handleExecute}
           />
         </div>
         <div className="preview-half">

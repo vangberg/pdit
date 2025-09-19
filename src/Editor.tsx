@@ -5,7 +5,6 @@ import { EditorState } from '@codemirror/state'
 import { javascript } from '@codemirror/lang-javascript'
 import { lineHeightExtension, setLineHeights, getLineHeights, lineHeightChangeListener, LineHeight } from './line-heights'
 import { zebraStripes } from './zebra-stripes'
-import { executeScript } from './api'
 import React from 'react'
 
 interface EditorProps {
@@ -14,9 +13,10 @@ interface EditorProps {
   onUpdateHeights?: () => void
   onHeightChange?: (heights: LineHeight[]) => void
   targetHeights?: LineHeight[]
+  onExecute?: (script: string) => void
 }
 
-export function Editor({ initialCode, onGetHeights, onUpdateHeights, onHeightChange, targetHeights }: EditorProps) {
+export function Editor({ initialCode, onGetHeights, onUpdateHeights, onHeightChange, targetHeights, onExecute }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
 
@@ -30,9 +30,7 @@ export function Editor({ initialCode, onGetHeights, onUpdateHeights, onHeightCha
           key: "Cmd-Enter",
           run: (view: EditorView) => {
             const currentText = view.state.doc.toString();
-            executeScript(currentText).then(result => {
-              console.log('Execute result:', result);
-            });
+            onExecute?.(currentText);
             return true;
           }
         }]),
