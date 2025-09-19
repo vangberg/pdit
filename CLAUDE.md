@@ -1,1 +1,2 @@
 - Use React 19 API's
+- Use CodeMirror 6 API

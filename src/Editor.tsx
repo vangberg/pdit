@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { EditorView, basicSetup } from 'codemirror'
+import { keymap } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
 import { javascript } from '@codemirror/lang-javascript'
 import { lineHeightExtension, setLineHeights, getLineHeights, lineHeightChangeListener, LineHeight } from './line-heights'
 import { zebraStripes } from './zebra-stripes'
+import { executeScript } from './api'
 import React from 'react'
 
 interface EditorProps {
@@ -24,6 +26,16 @@ export function Editor({ initialCode, onGetHeights, onUpdateHeights, onHeightCha
     const state = EditorState.create({
       doc: initialCode,
       extensions: [
+        keymap.of([{
+          key: "Cmd-Enter",
+          run: (view: EditorView) => {
+            const currentText = view.state.doc.toString();
+            executeScript(currentText).then(result => {
+              console.log('Execute result:', result);
+            });
+            return true;
+          }
+        }]),
         basicSetup,
         javascript(),
         lineHeightExtension,
