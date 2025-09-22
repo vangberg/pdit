@@ -100,6 +100,7 @@ function App() {
             onHeightChange={handleEditorHeightChange}
             targetHeights={targetEditorHeights}
             onExecute={handleExecute}
+            resultRanges={resultRanges}
           />
         </div>
         <div className="preview-half">

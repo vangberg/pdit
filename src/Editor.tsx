@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { EditorView, basicSetup } from 'codemirror'
 import { keymap } from '@codemirror/view'
-import { EditorState } from '@codemirror/state'
+import { EditorState, RangeSet } from '@codemirror/state'
 import { javascript } from '@codemirror/lang-javascript'
 import { lineHeightExtension, setLineHeights, getLineHeights, lineHeightChangeListener, LineHeight } from './line-heights'
 import { zebraStripes } from './zebra-stripes'
+import { rangeHighlightPlugin, reconfigureRanges } from './range-highlight-plugin'
 import React from 'react'
 
 interface EditorProps {
@@ -14,9 +15,10 @@ interface EditorProps {
   onHeightChange?: (heights: LineHeight[]) => void
   targetHeights?: LineHeight[]
   onExecute?: (script: string) => void
+  resultRanges?: RangeSet<any>
 }
 
-export function Editor({ initialCode, onGetHeights, onUpdateHeights, onHeightChange, targetHeights, onExecute }: EditorProps) {
+export function Editor({ initialCode, onGetHeights, onUpdateHeights, onHeightChange, targetHeights, onExecute, resultRanges }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
 
@@ -44,6 +46,7 @@ export function Editor({ initialCode, onGetHeights, onUpdateHeights, onHeightCha
           }
         }),
         zebraStripes(),
+        rangeHighlightPlugin(resultRanges),
         EditorView.theme({
           '&': {
             height: '100%',
@@ -71,7 +74,15 @@ export function Editor({ initialCode, onGetHeights, onUpdateHeights, onHeightCha
       view.destroy()
       viewRef.current = null
     }
-  }, [initialCode, onHeightChange])
+  }, [initialCode, onHeightChange, resultRanges])
+
+  // Update ranges when resultRanges changes
+  useEffect(() => {
+    if (viewRef.current && resultRanges) {
+      reconfigureRanges(viewRef.current, resultRanges)
+    }
+  }, [resultRanges])
+
 
   // Apply target heights when prop changes
   useEffect(() => {
