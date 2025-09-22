@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { LineHeight } from './line-heights';
-import { PreviewHeight } from './PreviewPane';
-import { ApiExecuteResponse } from './api';
-import { RangeSet, Text } from '@codemirror/state';
+import React, { useState } from "react";
+import { LineHeight } from "./line-heights";
+import { PreviewHeight } from "./PreviewPane";
+import { ApiExecuteResponse } from "./api";
+import { RangeSet, Text } from "@codemirror/state";
 
 interface DebugPanelProps {
   editorHeights: LineHeight[];
@@ -23,9 +23,17 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   isSyncing,
   executeResults,
   resultRanges,
-  currentDoc
+  currentDoc,
 }) => {
-  const [activeTab, setActiveTab] = useState<'heights' | 'ranges'>('heights');
+  const [activeTab, setActiveTab] = useState<"heights" | "ranges">(() => {
+    const saved = localStorage.getItem("debugPanelTab");
+    return saved === "ranges" || saved === "heights" ? saved : "heights";
+  });
+
+  const handleTabChange = (tab: "heights" | "ranges") => {
+    setActiveTab(tab);
+    localStorage.setItem("debugPanelTab", tab);
+  };
 
   // Get max lines to show for heights tab
   const maxLines = Math.max(
@@ -50,18 +58,30 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
       <tbody>
         {Array.from({ length: Math.min(maxLines, 8) }, (_, index) => {
           const lineNum = index + 1;
-          const editorHeight = editorHeights.find(h => h.line === lineNum);
-          const previewHeight = previewHeights.find(h => h.line === lineNum);
-          const targetEditor = targetEditorHeights.find(h => h.line === lineNum);
-          const targetPreview = targetPreviewHeights.find(h => h.line === lineNum);
+          const editorHeight = editorHeights.find((h) => h.line === lineNum);
+          const previewHeight = previewHeights.find((h) => h.line === lineNum);
+          const targetEditor = targetEditorHeights.find(
+            (h) => h.line === lineNum
+          );
+          const targetPreview = targetPreviewHeights.find(
+            (h) => h.line === lineNum
+          );
 
           return (
             <tr key={lineNum}>
               <td className="line-number">{lineNum}</td>
-              <td className="height-value">{editorHeight?.height.toFixed(1) || '-'}</td>
-              <td className="height-value">{previewHeight?.height.toFixed(1) || '-'}</td>
-              <td className="height-value">{targetEditor?.height.toFixed(1) || '-'}</td>
-              <td className="height-value">{targetPreview?.height.toFixed(1) || '-'}</td>
+              <td className="height-value">
+                {editorHeight?.height.toFixed(1) || "-"}
+              </td>
+              <td className="height-value">
+                {previewHeight?.height.toFixed(1) || "-"}
+              </td>
+              <td className="height-value">
+                {targetEditor?.height.toFixed(1) || "-"}
+              </td>
+              <td className="height-value">
+                {targetPreview?.height.toFixed(1) || "-"}
+              </td>
             </tr>
           );
         })}
@@ -71,20 +91,30 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
 
   const renderRangesTab = () => {
     if (!resultRanges || resultRanges.size === 0 || !currentDoc) {
-      return <div className="debug-empty">No result ranges or document available</div>;
+      return (
+        <div className="debug-empty">
+          No result ranges or document available
+        </div>
+      );
     }
 
-    const ranges: Array<{ id: number; from: number; to: number; lines: string }> = [];
+    const ranges: Array<{
+      id: number;
+      from: number;
+      to: number;
+      lines: string;
+    }> = [];
     resultRanges.between(0, Number.MAX_SAFE_INTEGER, (from, to, value) => {
       const fromLine = currentDoc.lineAt(from).number;
       const toLine = currentDoc.lineAt(to).number;
-      const linesDisplay = fromLine === toLine ? `${fromLine}` : `[${fromLine}, ${toLine}]`;
+      const linesDisplay =
+        fromLine === toLine ? `${fromLine}` : `[${fromLine}, ${toLine}]`;
 
       ranges.push({
         id: (value as any).id || ranges.length,
         from,
         to,
-        lines: linesDisplay
+        lines: linesDisplay,
       });
     });
 
@@ -119,27 +149,27 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
       <div className="debug-header">
         <h3>Debug Panel</h3>
         <div className="debug-status">
-          <strong>Syncing:</strong> {isSyncing ? 'Yes' : 'No'}
+          <strong>Syncing:</strong> {isSyncing ? "Yes" : "No"}
         </div>
       </div>
 
       <div className="debug-tabs">
         <button
-          className={`debug-tab ${activeTab === 'heights' ? 'active' : ''}`}
-          onClick={() => setActiveTab('heights')}
+          className={`debug-tab ${activeTab === "heights" ? "active" : ""}`}
+          onClick={() => handleTabChange("heights")}
         >
           Heights
         </button>
         <button
-          className={`debug-tab ${activeTab === 'ranges' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ranges')}
+          className={`debug-tab ${activeTab === "ranges" ? "active" : ""}`}
+          onClick={() => handleTabChange("ranges")}
         >
           Result Ranges
         </button>
       </div>
 
       <div className="debug-tab-content">
-        {activeTab === 'heights' ? renderHeightsTab() : renderRangesTab()}
+        {activeTab === "heights" ? renderHeightsTab() : renderRangesTab()}
       </div>
     </div>
   );
