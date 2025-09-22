@@ -20,7 +20,8 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   targetEditorHeights,
   targetPreviewHeights,
   isSyncing,
-  executeResults
+  executeResults,
+  resultRanges
 }) => {
   const [activeTab, setActiveTab] = useState<'heights' | 'ranges'>('heights');
 
@@ -67,9 +68,18 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   );
 
   const renderRangesTab = () => {
-    if (!executeResults || !executeResults.results.length) {
-      return <div className="debug-empty">No execution results available</div>;
+    if (!resultRanges || resultRanges.size === 0) {
+      return <div className="debug-empty">No result ranges available</div>;
     }
+
+    const ranges: Array<{ id: number; from: number; to: number }> = [];
+    resultRanges.between(0, Number.MAX_SAFE_INTEGER, (from, to, value) => {
+      ranges.push({
+        id: (value as any).id || ranges.length,
+        from,
+        to
+      });
+    });
 
     return (
       <table className="debug-table">
@@ -82,12 +92,12 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
           </tr>
         </thead>
         <tbody>
-          {executeResults.results.map(result => (
-            <tr key={result.id}>
-              <td className="range-id">{result.id}</td>
-              <td className="range-value">{result.from}</td>
-              <td className="range-value">{result.to}</td>
-              <td className="range-value">{result.to - result.from}</td>
+          {ranges.map((range, index) => (
+            <tr key={range.id || index}>
+              <td className="range-id">{range.id}</td>
+              <td className="range-value">{range.from}</td>
+              <td className="range-value">{range.to}</td>
+              <td className="range-value">{range.to - range.from}</td>
             </tr>
           ))}
         </tbody>

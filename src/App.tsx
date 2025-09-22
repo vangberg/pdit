@@ -89,6 +89,11 @@ function App() {
     setPreviewHeights(heights);
   }, []);
 
+  const handleResultRangesChange = useCallback((ranges: RangeSet<RangeValue>) => {
+    console.log("App received updated result ranges:", ranges);
+    setResultRanges(ranges as RangeSet<ResultIdValue>);
+  }, []);
+
   const handleExecute = useCallback(async (script: string) => {
     const result = await executeScript(script);
     console.log("Execute result:", result);
@@ -113,6 +118,7 @@ function App() {
             targetHeights={targetEditorHeights}
             onExecute={handleExecute}
             resultRanges={resultRanges}
+            onResultRangesChange={handleResultRangesChange}
           />
         </div>
         <div className="preview-half">

@@ -14,6 +14,11 @@ import {
   rangeHighlightPlugin,
   reconfigureRanges,
 } from "./range-highlight-plugin";
+import {
+  resultRangesSyncExtension,
+  setResultRanges,
+  ResultRangesChangeCallback,
+} from "./result-ranges-sync";
 import React from "react";
 
 interface EditorProps {
@@ -22,6 +27,7 @@ interface EditorProps {
   targetHeights?: LineHeight[];
   onExecute?: (script: string) => void;
   resultRanges?: RangeSet<any>;
+  onResultRangesChange?: ResultRangesChangeCallback;
 }
 
 export function Editor({
@@ -30,6 +36,7 @@ export function Editor({
   targetHeights,
   onExecute,
   resultRanges,
+  onResultRangesChange,
 }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -61,6 +68,7 @@ export function Editor({
         }),
         zebraStripes(),
         rangeHighlightPlugin(resultRanges),
+        ...(onResultRangesChange ? [resultRangesSyncExtension(onResultRangesChange)] : []),
         EditorView.theme({
           "&": {
             height: "100%",
@@ -95,8 +103,14 @@ export function Editor({
   useEffect(() => {
     if (viewRef.current && resultRanges) {
       reconfigureRanges(viewRef.current, resultRanges);
+      // Also update the sync StateField
+      if (onResultRangesChange) {
+        viewRef.current.dispatch({
+          effects: setResultRanges.of(resultRanges)
+        });
+      }
     }
-  }, [resultRanges]);
+  }, [resultRanges, onResultRangesChange]);
 
   // Apply target heights when prop changes
   useEffect(() => {
