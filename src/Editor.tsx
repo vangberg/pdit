@@ -18,6 +18,7 @@ import {
   resultRangesSyncExtension,
   setResultRanges,
   ResultRangesChangeCallback,
+  DocumentChangeCallback,
 } from "./result-ranges-sync";
 import React from "react";
 
@@ -28,6 +29,7 @@ interface EditorProps {
   onExecute?: (script: string) => void;
   resultRanges?: RangeSet<any>;
   onResultRangesChange?: ResultRangesChangeCallback;
+  onDocumentChange?: DocumentChangeCallback;
 }
 
 export function Editor({
@@ -37,6 +39,7 @@ export function Editor({
   onExecute,
   resultRanges,
   onResultRangesChange,
+  onDocumentChange,
 }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -68,7 +71,7 @@ export function Editor({
         }),
         zebraStripes(),
         rangeHighlightPlugin(resultRanges),
-        ...(onResultRangesChange ? [resultRangesSyncExtension(onResultRangesChange)] : []),
+        ...(onResultRangesChange ? [resultRangesSyncExtension(onResultRangesChange, onDocumentChange)] : []),
         EditorView.theme({
           "&": {
             height: "100%",

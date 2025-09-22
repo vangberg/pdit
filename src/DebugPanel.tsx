@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { LineHeight } from './line-heights';
 import { PreviewHeight } from './PreviewPane';
 import { ApiExecuteResponse } from './api';
-import { RangeSet } from '@codemirror/state';
+import { RangeSet, Text } from '@codemirror/state';
 
 interface DebugPanelProps {
   editorHeights: LineHeight[];
@@ -12,6 +12,7 @@ interface DebugPanelProps {
   isSyncing: boolean;
   executeResults?: ApiExecuteResponse | null;
   resultRanges?: RangeSet<any>;
+  currentDoc?: Text | null;
 }
 
 export const DebugPanel: React.FC<DebugPanelProps> = ({
@@ -21,7 +22,8 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   targetPreviewHeights,
   isSyncing,
   executeResults,
-  resultRanges
+  resultRanges,
+  currentDoc
 }) => {
   const [activeTab, setActiveTab] = useState<'heights' | 'ranges'>('heights');
 
@@ -68,16 +70,21 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   );
 
   const renderRangesTab = () => {
-    if (!resultRanges || resultRanges.size === 0) {
-      return <div className="debug-empty">No result ranges available</div>;
+    if (!resultRanges || resultRanges.size === 0 || !currentDoc) {
+      return <div className="debug-empty">No result ranges or document available</div>;
     }
 
-    const ranges: Array<{ id: number; from: number; to: number }> = [];
+    const ranges: Array<{ id: number; from: number; to: number; lines: string }> = [];
     resultRanges.between(0, Number.MAX_SAFE_INTEGER, (from, to, value) => {
+      const fromLine = currentDoc.lineAt(from).number;
+      const toLine = currentDoc.lineAt(to).number;
+      const linesDisplay = fromLine === toLine ? `${fromLine}` : `[${fromLine}, ${toLine}]`;
+
       ranges.push({
         id: (value as any).id || ranges.length,
         from,
-        to
+        to,
+        lines: linesDisplay
       });
     });
 
@@ -86,6 +93,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
         <thead>
           <tr>
             <th>ID</th>
+            <th>Lines</th>
             <th>From</th>
             <th>To</th>
             <th>Length</th>
@@ -95,6 +103,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
           {ranges.map((range, index) => (
             <tr key={range.id || index}>
               <td className="range-id">{range.id}</td>
+              <td className="range-value">{range.lines}</td>
               <td className="range-value">{range.from}</td>
               <td className="range-value">{range.to}</td>
               <td className="range-value">{range.to - range.from}</td>

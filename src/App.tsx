@@ -4,7 +4,7 @@ import { PreviewPane, PreviewHeight } from "./PreviewPane";
 import { DebugPanel } from "./DebugPanel";
 import { LineHeight } from "./line-heights";
 import { executeScript, ApiExecuteResponse } from "./api";
-import { RangeSet, RangeValue } from "@codemirror/state";
+import { RangeSet, RangeValue, Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
 
 class ResultIdValue extends RangeValue {
@@ -46,6 +46,7 @@ function App() {
   const [resultRanges, setResultRanges] = useState<RangeSet<ResultIdValue>>(
     RangeSet.empty
   );
+  const [currentDoc, setCurrentDoc] = useState<Text | null>(null);
   const isSyncing = useRef<boolean>(false);
 
   // Declarative height syncing - runs automatically when heights change
@@ -94,6 +95,11 @@ function App() {
     setResultRanges(ranges as RangeSet<ResultIdValue>);
   }, []);
 
+  const handleDocumentChange = useCallback((doc: Text) => {
+    console.log("App received document change:", doc.toString().slice(0, 50) + "...");
+    setCurrentDoc(doc);
+  }, []);
+
   const handleExecute = useCallback(async (script: string) => {
     const result = await executeScript(script);
     console.log("Execute result:", result);
@@ -119,6 +125,7 @@ function App() {
             onExecute={handleExecute}
             resultRanges={resultRanges}
             onResultRangesChange={handleResultRangesChange}
+            onDocumentChange={handleDocumentChange}
           />
         </div>
         <div className="preview-half">
@@ -140,6 +147,7 @@ function App() {
         isSyncing={isSyncing.current}
         executeResults={executeResults}
         resultRanges={resultRanges}
+        currentDoc={currentDoc}
       />
     </div>
   );

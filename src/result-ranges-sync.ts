@@ -1,4 +1,4 @@
-import { StateField, StateEffect, RangeSet, RangeValue } from '@codemirror/state'
+import { StateField, StateEffect, RangeSet, RangeValue, Text } from '@codemirror/state'
 import { ViewPlugin, ViewUpdate } from '@codemirror/view'
 
 export const setResultRanges = StateEffect.define<RangeSet<RangeValue>>({
@@ -22,14 +22,23 @@ export const resultRangesField = StateField.define<RangeSet<RangeValue>>({
 })
 
 export type ResultRangesChangeCallback = (ranges: RangeSet<RangeValue>) => void
+export type DocumentChangeCallback = (doc: Text) => void
 
-export function resultRangesSyncExtension(callback: ResultRangesChangeCallback) {
+export function resultRangesSyncExtension(
+  rangesCallback: ResultRangesChangeCallback,
+  documentCallback?: DocumentChangeCallback
+) {
   return [
     resultRangesField,
     ViewPlugin.fromClass(class {
       constructor(view: any) {
-        // Initial callback with empty ranges
-        setTimeout(() => callback(view.state.field(resultRangesField)), 0)
+        // Initial callbacks
+        setTimeout(() => {
+          rangesCallback(view.state.field(resultRangesField))
+          if (documentCallback) {
+            documentCallback(view.state.doc)
+          }
+        }, 0)
       }
 
       update(update: ViewUpdate) {
@@ -40,7 +49,12 @@ export function resultRangesSyncExtension(callback: ResultRangesChangeCallback) 
 
         if (hadSetRangesEffect || update.docChanged) {
           const currentRanges = update.state.field(resultRangesField)
-          callback(currentRanges)
+          rangesCallback(currentRanges)
+        }
+
+        // Call document callback if document changed
+        if (update.docChanged && documentCallback) {
+          documentCallback(update.state.doc)
         }
       }
     })
