@@ -1,46 +1,65 @@
-import { useEffect, useRef } from 'react'
-import { EditorView, basicSetup } from 'codemirror'
-import { keymap } from '@codemirror/view'
-import { EditorState, RangeSet } from '@codemirror/state'
-import { javascript } from '@codemirror/lang-javascript'
-import { lineHeightExtension, setLineHeights, getLineHeights, lineHeightChangeListener, LineHeight } from './line-heights'
-import { zebraStripes } from './zebra-stripes'
-import { rangeHighlightPlugin, reconfigureRanges } from './range-highlight-plugin'
-import React from 'react'
+import { useEffect, useRef } from "react";
+import { EditorView, basicSetup } from "codemirror";
+import { keymap } from "@codemirror/view";
+import { EditorState, RangeSet } from "@codemirror/state";
+import { javascript } from "@codemirror/lang-javascript";
+import {
+  lineHeightExtension,
+  setLineHeights,
+  getLineHeights,
+  lineHeightChangeListener,
+  LineHeight,
+} from "./line-heights";
+import { zebraStripes } from "./zebra-stripes";
+import {
+  rangeHighlightPlugin,
+  reconfigureRanges,
+} from "./range-highlight-plugin";
+import React from "react";
 
 interface EditorProps {
-  initialCode: string
-  onGetHeights?: () => void
-  onUpdateHeights?: () => void
-  onHeightChange?: (heights: LineHeight[]) => void
-  targetHeights?: LineHeight[]
-  onExecute?: (script: string) => void
-  resultRanges?: RangeSet<any>
+  initialCode: string;
+  onGetHeights?: () => void;
+  onUpdateHeights?: () => void;
+  onHeightChange?: (heights: LineHeight[]) => void;
+  targetHeights?: LineHeight[];
+  onExecute?: (script: string) => void;
+  resultRanges?: RangeSet<any>;
 }
 
-export function Editor({ initialCode, onGetHeights, onUpdateHeights, onHeightChange, targetHeights, onExecute, resultRanges }: EditorProps) {
-  const editorRef = useRef<HTMLDivElement>(null)
-  const viewRef = useRef<EditorView | null>(null)
+export function Editor({
+  initialCode,
+  onGetHeights,
+  onUpdateHeights,
+  onHeightChange,
+  targetHeights,
+  onExecute,
+  resultRanges,
+}: EditorProps) {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<EditorView | null>(null);
 
   useEffect(() => {
-    if (!editorRef.current) return
+    if (!editorRef.current) return;
 
     const state = EditorState.create({
       doc: initialCode,
       extensions: [
-        keymap.of([{
-          key: "Cmd-Enter",
-          run: (view: EditorView) => {
-            const currentText = view.state.doc.toString();
-            onExecute?.(currentText);
-            return true;
-          }
-        }]),
+        keymap.of([
+          {
+            key: "Cmd-Enter",
+            run: (view: EditorView) => {
+              const currentText = view.state.doc.toString();
+              onExecute?.(currentText);
+              return true;
+            },
+          },
+        ]),
         basicSetup,
         javascript(),
         lineHeightExtension,
         lineHeightChangeListener((heights) => {
-          console.log('Editor line heights changed:', heights.slice(0, 5))
+          console.log("Editor line heights changed:", heights.slice(0, 5));
           if (onHeightChange) {
             onHeightChange(heights);
           }
@@ -48,41 +67,41 @@ export function Editor({ initialCode, onGetHeights, onUpdateHeights, onHeightCha
         zebraStripes(),
         rangeHighlightPlugin(resultRanges),
         EditorView.theme({
-          '&': {
-            height: '100%',
-            width: '100%',
-            backgroundColor: 'white'
+          "&": {
+            height: "100%",
+            width: "100%",
+            backgroundColor: "white",
           },
-          '&.cm-focused': {
-            outline: 'none'
+          "&.cm-focused": {
+            outline: "none",
           },
-          '.cm-scroller': {
-            fontFamily: 'Fira Code, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
-          }
+          ".cm-scroller": {
+            fontFamily:
+              'Fira Code, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+          },
         }),
-      ]
-    })
+      ],
+    });
 
     const view = new EditorView({
       state,
-      parent: editorRef.current
-    })
+      parent: editorRef.current,
+    });
 
-    viewRef.current = view
+    viewRef.current = view;
 
     return () => {
-      view.destroy()
-      viewRef.current = null
-    }
-  }, [initialCode, onHeightChange, resultRanges])
+      view.destroy();
+      viewRef.current = null;
+    };
+  }, [initialCode, onHeightChange]);
 
   // Update ranges when resultRanges changes
   useEffect(() => {
     if (viewRef.current && resultRanges) {
-      reconfigureRanges(viewRef.current, resultRanges)
+      reconfigureRanges(viewRef.current, resultRanges);
     }
-  }, [resultRanges])
-
+  }, [resultRanges]);
 
   // Apply target heights when prop changes
   useEffect(() => {
@@ -93,9 +112,7 @@ export function Editor({ initialCode, onGetHeights, onUpdateHeights, onHeightCha
         }
       });
     }
-  }, [targetHeights])
+  }, [targetHeights]);
 
-  return (
-    <div id="editor" ref={editorRef} />
-  )
+  return <div id="editor" ref={editorRef} />;
 }
