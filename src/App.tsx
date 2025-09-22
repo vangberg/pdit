@@ -1,6 +1,7 @@
 import "./style.css";
 import { Editor } from "./Editor";
 import { PreviewPane, PreviewHeight } from "./PreviewPane";
+import { DebugPanel } from "./DebugPanel";
 import { LineHeight } from "./line-heights";
 import { executeScript, ApiExecuteResponse } from "./api";
 import { RangeSet, RangeValue } from "@codemirror/state";
@@ -125,13 +126,15 @@ function App() {
         </div>
       </div>
 
-      {/* <DebugPanel
+      <DebugPanel
         editorHeights={editorHeights}
         previewHeights={previewHeights}
         targetEditorHeights={targetEditorHeights}
         targetPreviewHeights={targetPreviewHeights}
         isSyncing={isSyncing.current}
-      /> */}
+        executeResults={executeResults}
+        resultRanges={resultRanges}
+      />
     </div>
   );
 }

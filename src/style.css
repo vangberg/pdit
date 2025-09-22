@@ -242,3 +242,56 @@ h1 {
   text-align: right;
   color: #374151;
 }
+
+.debug-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.debug-tab {
+  background: none;
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.debug-tab:hover {
+  color: #374151;
+  background: #f9fafb;
+}
+
+.debug-tab.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+.debug-tab-content {
+  /* Container for tab content */
+}
+
+.debug-empty {
+  text-align: center;
+  color: #6b7280;
+  padding: 2rem;
+  font-style: italic;
+}
+
+.range-id {
+  font-weight: 600;
+  color: #6b7280;
+  text-align: center;
+  width: 60px;
+}
+
+.range-value {
+  font-family: monospace;
+  text-align: right;
+  color: #374151;
+}

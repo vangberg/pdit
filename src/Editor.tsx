@@ -6,7 +6,6 @@ import { javascript } from "@codemirror/lang-javascript";
 import {
   lineHeightExtension,
   setLineHeights,
-  getLineHeights,
   lineHeightChangeListener,
   LineHeight,
 } from "./line-heights";
@@ -19,8 +18,6 @@ import React from "react";
 
 interface EditorProps {
   initialCode: string;
-  onGetHeights?: () => void;
-  onUpdateHeights?: () => void;
   onHeightChange?: (heights: LineHeight[]) => void;
   targetHeights?: LineHeight[];
   onExecute?: (script: string) => void;
@@ -29,8 +26,6 @@ interface EditorProps {
 
 export function Editor({
   initialCode,
-  onGetHeights,
-  onUpdateHeights,
   onHeightChange,
   targetHeights,
   onExecute,
