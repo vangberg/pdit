@@ -1,13 +1,13 @@
 import React, { useRef, useEffect, useCallback } from "react";
-import { Preview } from "./Preview";
+import { Output } from "./Output";
 import { ApiExecuteResult } from "./api";
 
-export interface PreviewHeight {
+export interface OutputHeight {
   line: number;
   height: number;
 }
 
-const previewData = [
+const outputData = [
   {
     type: "table" as const,
     content: {
@@ -90,32 +90,32 @@ const previewData = [
   },
 ];
 
-interface PreviewPaneProps {
-  onHeightChange?: (heights: PreviewHeight[]) => void;
-  targetHeights?: PreviewHeight[];
+interface OutputPaneProps {
+  onHeightChange?: (heights: OutputHeight[]) => void;
+  targetHeights?: OutputHeight[];
   results: ApiExecuteResult[];
 }
 
-export const PreviewPane: React.FC<PreviewPaneProps> = ({
+export const OutputPane: React.FC<OutputPaneProps> = ({
   onHeightChange,
   targetHeights,
   results,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const previewRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const outputRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const getPreviewHeights = useCallback((): PreviewHeight[] => {
+  const getOutputHeights = useCallback((): OutputHeight[] => {
     return results.map((_, index) => {
       const lineNumber = index + 1;
-      const previewElement = previewRefs.current[index];
+      const outputElement = outputRefs.current[index];
 
-      if (!previewElement) {
+      if (!outputElement) {
         return { line: lineNumber, height: 0 };
       }
 
       return {
         line: lineNumber,
-        height: Math.max(0, previewElement.getBoundingClientRect().height),
+        height: Math.max(0, outputElement.getBoundingClientRect().height),
       };
     });
   }, [results]);
@@ -125,7 +125,7 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
 
     // Initial callback (like CodeMirror's setTimeout pattern)
     const initialTimeout = setTimeout(() => {
-      onHeightChange(getPreviewHeights());
+      onHeightChange(getOutputHeights());
     }, 0);
 
     // MutationObserver for DOM changes that might affect height
@@ -133,17 +133,17 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
     const mutationObserver = new MutationObserver((mutations) => {
       const hasNonSpacerChanges = mutations.some((mutation) => {
         const target = mutation.target as Element;
-        return !target.classList?.contains("preview-spacer");
+        return !target.classList?.contains("output-spacer");
       });
 
       if (hasNonSpacerChanges) {
-        onHeightChange(getPreviewHeights());
+        onHeightChange(getOutputHeights());
       }
     });
 
     // ResizeObserver to watch for content size changes in line elements
     const resizeObserver = new ResizeObserver(() => {
-      onHeightChange(getPreviewHeights());
+      onHeightChange(getOutputHeights());
     });
 
     // Observe the container for mutations and resizes
@@ -164,22 +164,22 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
       mutationObserver.disconnect();
       resizeObserver.disconnect();
     };
-  }, [onHeightChange, getPreviewHeights]);
+  }, [onHeightChange, getOutputHeights]);
 
   return (
-    <div id="preview" ref={containerRef}>
-      <div className="preview-content">
+    <div id="output" ref={containerRef}>
+      <div className="output-content">
         {results.map((result, index) => {
-          const item = previewData[index % previewData.length];
+          const item = outputData[index % outputData.length];
           const lineNumber = index + 1;
           const lineTargetHeight = targetHeights?.find(
             (t) => t.line === lineNumber
           )?.height;
 
           return (
-            <Preview
+            <Output
               key={result.id}
-              ref={(el) => (previewRefs.current[index] = el)}
+              ref={(el) => (outputRefs.current[index] = el)}
               item={item}
               index={index}
               targetHeight={lineTargetHeight}

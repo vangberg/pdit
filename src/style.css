@@ -33,7 +33,7 @@ body {
 }
 
 .editor-half,
-.preview-half {
+.output-half {
   flex: 1;
   height: 100%;
 }
@@ -41,7 +41,7 @@ body {
 .editor-half {
 }
 
-.preview-half {
+.output-half {
   overflow-y: auto;
 }
 
@@ -84,49 +84,49 @@ h1 {
   outline: none;
 }
 
-#preview {
+#output {
   height: 100%;
   font-size: 14px;
   font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-.preview-content {
+.output-content {
   display: flex;
   flex-direction: column;
   padding-top: 4px;
 }
 
-.preview-line {
+.output-line {
   position: relative;
 } 
 
-.preview-line:not(.empty-line) {
+.output-line:not(.empty-line) {
   padding: 0.5rem;
 }
 
-.preview-container.zebra {
+.output-container.zebra {
   background-color: #e2e8f088;
 }
 
 
 
-.preview-table {
+.output-table {
   width: 100%;
   border-collapse: collapse;
   color: #666;
 }
 
-.preview-table td {
+.output-table td {
   padding: 0.15rem 0.3rem;
   border: none;
 }
 
-.preview-table .header-row td {
+.output-table .header-row td {
   font-weight: 500;
   color: #555;
 }
 
-.preview-table td:last-child {
+.output-table td:last-child {
   text-align: right;
   font-family: monospace;
 }
@@ -162,12 +162,12 @@ h1 {
   font-family: monospace;
 }
 
-.preview-spacer-container {
+.output-spacer-container {
   display: block;
   background: transparent;
 }
 
-.preview-spacer {
+.output-spacer {
   width: 100%;
 }
 

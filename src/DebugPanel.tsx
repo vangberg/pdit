@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import { LineHeight } from "./line-heights";
-import { PreviewHeight } from "./PreviewPane";
+import { OutputHeight } from "./OutputPane";
 import { ApiExecuteResponse } from "./api";
 import { RangeSet, Text } from "@codemirror/state";
 
 interface DebugPanelProps {
   editorHeights: LineHeight[];
-  previewHeights: PreviewHeight[];
+  outputHeights: OutputHeight[];
   targetEditorHeights: LineHeight[];
-  targetPreviewHeights: PreviewHeight[];
+  targetOutputHeights: OutputHeight[];
   isSyncing: boolean;
   executeResults?: ApiExecuteResponse | null;
   resultRanges?: RangeSet<any>;
@@ -17,9 +17,9 @@ interface DebugPanelProps {
 
 export const DebugPanel: React.FC<DebugPanelProps> = ({
   editorHeights,
-  previewHeights,
+  outputHeights,
   targetEditorHeights,
-  targetPreviewHeights,
+  targetOutputHeights,
   isSyncing,
   executeResults,
   resultRanges,
@@ -38,9 +38,9 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   // Get max lines to show for heights tab
   const maxLines = Math.max(
     editorHeights.length,
-    previewHeights.length,
+    outputHeights.length,
     targetEditorHeights.length,
-    targetPreviewHeights.length,
+    targetOutputHeights.length,
     5
   );
 
@@ -50,20 +50,20 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
         <tr>
           <th>Line</th>
           <th>Editor Natural</th>
-          <th>Preview Natural</th>
+          <th>Output Natural</th>
           <th>Target Editor</th>
-          <th>Target Preview</th>
+          <th>Target Output</th>
         </tr>
       </thead>
       <tbody>
         {Array.from({ length: Math.min(maxLines, 8) }, (_, index) => {
           const lineNum = index + 1;
           const editorHeight = editorHeights.find((h) => h.line === lineNum);
-          const previewHeight = previewHeights.find((h) => h.line === lineNum);
+          const outputHeight = outputHeights.find((h) => h.line === lineNum);
           const targetEditor = targetEditorHeights.find(
             (h) => h.line === lineNum
           );
-          const targetPreview = targetPreviewHeights.find(
+          const targetOutput = targetOutputHeights.find(
             (h) => h.line === lineNum
           );
 
@@ -74,13 +74,13 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
                 {editorHeight?.height.toFixed(1) || "-"}
               </td>
               <td className="height-value">
-                {previewHeight?.height.toFixed(1) || "-"}
+                {outputHeight?.height.toFixed(1) || "-"}
               </td>
               <td className="height-value">
                 {targetEditor?.height.toFixed(1) || "-"}
               </td>
               <td className="height-value">
-                {targetPreview?.height.toFixed(1) || "-"}
+                {targetOutput?.height.toFixed(1) || "-"}
               </td>
             </tr>
           );

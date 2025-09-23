@@ -1,6 +1,6 @@
 import "./style.css";
 import { Editor } from "./Editor";
-import { PreviewPane, PreviewHeight } from "./PreviewPane";
+import { OutputPane, OutputHeight } from "./OutputPane";
 import { DebugPanel } from "./DebugPanel";
 import { LineHeight } from "./line-heights";
 import { executeScript, ApiExecuteResponse } from "./api";
@@ -31,9 +31,9 @@ console.log(greeting);`;
 
 function App() {
   const [editorHeights, setEditorHeights] = useState<LineHeight[]>([]);
-  const [previewHeights, setPreviewHeights] = useState<PreviewHeight[]>([]);
-  const [targetPreviewHeights, setTargetPreviewHeights] = useState<
-    PreviewHeight[]
+  const [outputHeights, setOutputHeights] = useState<OutputHeight[]>([]);
+  const [targetOutputHeights, setTargetOutputHeights] = useState<
+    OutputHeight[]
   >([]);
   const [targetEditorHeights, setTargetEditorHeights] = useState<LineHeight[]>(
     []
@@ -48,43 +48,43 @@ function App() {
 
   // Declarative height syncing - runs automatically when heights change
   useEffect(() => {
-    if (editorHeights.length === 0 || previewHeights.length === 0) return;
+    if (editorHeights.length === 0 || outputHeights.length === 0) return;
     if (isSyncing.current) return;
 
     isSyncing.current = true;
 
-    const maxLines = Math.max(editorHeights.length, previewHeights.length);
+    const maxLines = Math.max(editorHeights.length, outputHeights.length);
     const editorTargets: LineHeight[] = [];
-    const previewTargets: PreviewHeight[] = [];
+    const outputTargets: OutputHeight[] = [];
 
     for (let line = 1; line <= maxLines; line++) {
       const editorHeight = editorHeights[line - 1]?.height || 0;
-      const previewHeight = previewHeights[line - 1]?.height || 0;
-      const targetHeight = Math.max(editorHeight, previewHeight);
+      const outputHeight = outputHeights[line - 1]?.height || 0;
+      const targetHeight = Math.max(editorHeight, outputHeight);
 
       if (targetHeight > 0) {
         editorTargets.push({ line, height: targetHeight });
-        previewTargets.push({ line, height: targetHeight });
+        outputTargets.push({ line, height: targetHeight });
       }
     }
 
     // Set target heights via props (declarative)
     setTargetEditorHeights(editorTargets);
-    setTargetPreviewHeights(previewTargets);
+    setTargetOutputHeights(outputTargets);
 
     requestAnimationFrame(() => {
       isSyncing.current = false;
     });
-  }, [editorHeights, previewHeights]);
+  }, [editorHeights, outputHeights]);
 
   const handleEditorHeightChange = useCallback((heights: LineHeight[]) => {
     console.log("App received editor heights:", heights.slice(0, 5));
     setEditorHeights(heights);
   }, []);
 
-  const handlePreviewHeightChange = useCallback((heights: PreviewHeight[]) => {
-    console.log("App received preview heights:", heights.slice(0, 5));
-    setPreviewHeights(heights);
+  const handleOutputHeightChange = useCallback((heights: OutputHeight[]) => {
+    console.log("App received output heights:", heights.slice(0, 5));
+    setOutputHeights(heights);
   }, []);
 
   const handleResultRangesChange = useCallback(
@@ -131,11 +131,11 @@ function App() {
             onDocumentChange={handleDocumentChange}
           />
         </div>
-        <div className="preview-half">
+        <div className="output-half">
           {executeResults && (
-            <PreviewPane
-              onHeightChange={handlePreviewHeightChange}
-              targetHeights={targetPreviewHeights}
+            <OutputPane
+              onHeightChange={handleOutputHeightChange}
+              targetHeights={targetOutputHeights}
               results={executeResults.results}
             />
           )}
@@ -144,9 +144,9 @@ function App() {
 
       <DebugPanel
         editorHeights={editorHeights}
-        previewHeights={previewHeights}
+        outputHeights={outputHeights}
         targetEditorHeights={targetEditorHeights}
-        targetPreviewHeights={targetPreviewHeights}
+        targetOutputHeights={targetOutputHeights}
         isSyncing={isSyncing.current}
         executeResults={executeResults}
         resultRanges={resultRanges}

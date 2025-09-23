@@ -1,8 +1,8 @@
 import React, { useImperativeHandle, useRef } from "react";
 import { useSpacerHeight, Spacer } from "./Spacer";
 
-// Type for a single preview item - matching the structure from PreviewPane
-type PreviewItem =
+// Type for a single output item - matching the structure from OutputPane
+type OutputItem =
   | {
       type: "empty";
     }
@@ -16,15 +16,15 @@ type PreviewItem =
       };
     };
 
-interface PreviewProps {
-  item: PreviewItem;
+interface OutputProps {
+  item: OutputItem;
   index: number;
   targetHeight?: number;
   isEven?: boolean;
   ref?: (element: HTMLDivElement | null) => void;
 }
 
-export const Preview: React.FC<PreviewProps> = ({
+export const Output: React.FC<OutputProps> = ({
   item,
   index,
   targetHeight,
@@ -38,15 +38,15 @@ export const Preview: React.FC<PreviewProps> = ({
   useImperativeHandle(ref, () => elementRef.current as HTMLDivElement, []);
 
   return [
-    <div key="content" ref={elementRef} className={`preview-container${isEven ? ' zebra' : ''}`}>
+    <div key="content" ref={elementRef} className={`output-container${isEven ? ' zebra' : ''}`}>
       {item.type === "empty" ? (
-        <div className="preview-line empty-line">
+        <div className="output-line empty-line">
           {/* Empty line content */}
         </div>
       ) : item.content ? (
-        <div className="preview-line" data-line={lineNumber}>
+        <div className="output-line" data-line={lineNumber}>
           {item.type === "table" && item.content.table && (
-            <table className="preview-table">
+            <table className="output-table">
               <tbody>
                 {item.content.table.map((row, rowIndex) => (
                   <tr
