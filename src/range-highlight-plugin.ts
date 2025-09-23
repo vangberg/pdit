@@ -10,8 +10,11 @@ function createRangeHighlightField(initialRanges?: RangeSet<any> | null) {
     create() {
       if (initialRanges) {
         const decorations: any[] = []
+        let rangeIndex = 0
         initialRanges.between(0, Number.MAX_SAFE_INTEGER, (from, to) => {
-          decorations.push(highlightMark.range(from, to))
+          const colorIndex = rangeIndex % highlightMarks.length
+          decorations.push(highlightMarks[colorIndex].range(from, to))
+          rangeIndex++
         })
         return Decoration.set(decorations)
       }
@@ -27,16 +30,35 @@ function createRangeHighlightField(initialRanges?: RangeSet<any> | null) {
   })
 }
 
-// The highlight decoration
-const highlightMark = Decoration.mark({
-  class: "range-highlight"
-})
+// The highlight decorations with different colors
+const highlightMarks = [
+  Decoration.mark({ class: "range-highlight-0" }),
+  Decoration.mark({ class: "range-highlight-1" }),
+  Decoration.mark({ class: "range-highlight-2" }),
+  Decoration.mark({ class: "range-highlight-3" }),
+  Decoration.mark({ class: "range-highlight-4" }),
+  Decoration.mark({ class: "range-highlight-5" })
+]
 
 // CSS theme for the highlights
 const highlightTheme = EditorView.theme({
-  '.range-highlight': {
-    backgroundColor: 'rgba(255, 255, 0, 0.3)',
-    borderRadius: '2px'
+  '.range-highlight-0': {
+    borderBottom: '2px dotted #FFD700'
+  },
+  '.range-highlight-1': {
+    borderBottom: '2px dotted #007BFF'
+  },
+  '.range-highlight-2': {
+    borderBottom: '2px dotted #28A745'
+  },
+  '.range-highlight-3': {
+    borderBottom: '2px dotted #DC3545'
+  },
+  '.range-highlight-4': {
+    borderBottom: '2px dotted #FF6500'
+  },
+  '.range-highlight-5': {
+    borderBottom: '2px dotted #6C757D'
   }
 })
 

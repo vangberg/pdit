@@ -69,9 +69,10 @@ export function Editor({
             onHeightChange(heights);
           }
         }),
-        zebraStripes(),
         rangeHighlightPlugin(resultRanges),
-        ...(onResultRangesChange ? [resultRangesSyncExtension(onResultRangesChange, onDocumentChange)] : []),
+        ...(onResultRangesChange
+          ? [resultRangesSyncExtension(onResultRangesChange, onDocumentChange)]
+          : []),
         EditorView.theme({
           "&": {
             height: "100%",
@@ -109,7 +110,7 @@ export function Editor({
       // Also update the sync StateField
       if (onResultRangesChange) {
         viewRef.current.dispatch({
-          effects: setResultRanges.of(resultRanges)
+          effects: setResultRanges.of(resultRanges),
         });
       }
     }

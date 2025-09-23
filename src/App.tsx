@@ -34,10 +34,7 @@ function App() {
   const [previewHeights, setPreviewHeights] = useState<PreviewHeight[]>([]);
   const [targetPreviewHeights, setTargetPreviewHeights] = useState<
     PreviewHeight[]
-  >([
-    { line: 2, height: 300 }, // Example initial target heights
-    { line: 4, height: 200 },
-  ]);
+  >([]);
   const [targetEditorHeights, setTargetEditorHeights] = useState<LineHeight[]>(
     []
   );
@@ -90,13 +87,19 @@ function App() {
     setPreviewHeights(heights);
   }, []);
 
-  const handleResultRangesChange = useCallback((ranges: RangeSet<RangeValue>) => {
-    console.log("App received updated result ranges:", ranges);
-    setResultRanges(ranges as RangeSet<ResultIdValue>);
-  }, []);
+  const handleResultRangesChange = useCallback(
+    (ranges: RangeSet<RangeValue>) => {
+      console.log("App received updated result ranges:", ranges);
+      setResultRanges(ranges as RangeSet<ResultIdValue>);
+    },
+    []
+  );
 
   const handleDocumentChange = useCallback((doc: Text) => {
-    console.log("App received document change:", doc.toString().slice(0, 50) + "...");
+    console.log(
+      "App received document change:",
+      doc.toString().slice(0, 50) + "..."
+    );
     setCurrentDoc(doc);
   }, []);
 
