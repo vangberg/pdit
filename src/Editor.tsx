@@ -114,6 +114,7 @@ export function Editor({
           ...lintKeymap,
         ]),
         javascript(),
+        zebraStripes(),
         lineHeightExtension,
         lineHeightChangeListener((heights) => {
           console.log("Editor line heights changed:", heights.slice(0, 5));

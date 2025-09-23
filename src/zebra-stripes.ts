@@ -4,10 +4,10 @@ import {Decoration, ViewPlugin, DecorationSet, ViewUpdate} from "@codemirror/vie
 import {RangeSetBuilder} from "@codemirror/state"
 
 const baseTheme = EditorView.baseTheme({
-  "&light .cm-zebraStripe": {backgroundColor: "#f8f9fa"},
-  "&dark .cm-zebraStripe": {backgroundColor: "#34474788"},
-  "&light .cm-preview-spacer.zebra-stripe": {backgroundColor: "#f8f9fa"},
-  "&dark .cm-preview-spacer.zebra-stripe": {backgroundColor: "#34474788"}
+  "&light .cm-zebraStripe": {backgroundColor: "#e2e8f088"},
+  "&dark .cm-zebraStripe": {backgroundColor: "#2d374888"},
+  "&light .cm-preview-spacer.zebra-stripe": {backgroundColor: "#e2e8f088"},
+  "&dark .cm-preview-spacer.zebra-stripe": {backgroundColor: "#2d374888"}
 })
 
 const stepSize = Facet.define<number, number>({
