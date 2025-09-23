@@ -102,7 +102,6 @@ export function Editor({
         autocompletion(),
         rectangularSelection(),
         crosshairCursor(),
-        highlightActiveLine(),
         highlightSelectionMatches(),
         keymap.of([
           ...closeBracketsKeymap,
