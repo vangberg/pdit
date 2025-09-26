@@ -47,6 +47,7 @@ import {
   ResultRangesChangeCallback,
   DocumentChangeCallback,
 } from "./result-ranges-sync";
+import { resultGroupingExtension } from "./result-grouping-plugin";
 import React from "react";
 
 interface EditorProps {
@@ -121,10 +122,11 @@ export function Editor({
             onHeightChange(heights);
           }
         }),
-        rangeHighlightPlugin(resultRanges),
         ...(onResultRangesChange
           ? [resultRangesSyncExtension(onResultRangesChange, onDocumentChange)]
           : []),
+        rangeHighlightPlugin(resultRanges),
+        resultGroupingExtension,
         EditorView.theme({
           "&": {
             height: "100%",
