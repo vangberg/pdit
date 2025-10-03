@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { LineHeight } from "./line-heights";
 import { OutputHeight } from "./OutputPane";
-import { ApiExecuteResponse } from "./api";
 import { RangeSet, Text } from "@codemirror/state";
+import { GroupValue } from "./result-grouping-plugin";
 
 interface DebugPanelProps {
   editorHeights: LineHeight[];
@@ -10,8 +10,7 @@ interface DebugPanelProps {
   targetEditorHeights: LineHeight[];
   targetOutputHeights: OutputHeight[];
   isSyncing: boolean;
-  executeResults?: ApiExecuteResponse | null;
-  resultRanges?: RangeSet<any>;
+  groupRanges?: RangeSet<GroupValue>;
   currentDoc?: Text | null;
 }
 
@@ -21,8 +20,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   targetEditorHeights,
   targetOutputHeights,
   isSyncing,
-  executeResults,
-  resultRanges,
+  groupRanges,
   currentDoc,
 }) => {
   const [activeTab, setActiveTab] = useState<"heights" | "ranges">(() => {
@@ -90,31 +88,35 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   );
 
   const renderRangesTab = () => {
-    if (!resultRanges || resultRanges.size === 0 || !currentDoc) {
+    if (!groupRanges || groupRanges.size === 0 || !currentDoc) {
       return (
         <div className="debug-empty">
-          No result ranges or document available
+          No result groups or document available
         </div>
       );
     }
 
-    const ranges: Array<{
-      id: number;
+    const groups: Array<{
+      groupIndex: number;
+      lines: string;
       from: number;
       to: number;
-      lines: string;
+      resultIds: string;
     }> = [];
-    resultRanges.between(0, Number.MAX_SAFE_INTEGER, (from, to, value) => {
-      const fromLine = currentDoc.lineAt(from).number;
-      const toLine = currentDoc.lineAt(to).number;
-      const linesDisplay =
-        fromLine === toLine ? `${fromLine}` : `[${fromLine}, ${toLine}]`;
 
-      ranges.push({
-        id: (value as any).id || ranges.length,
+    groupRanges.between(0, currentDoc.length, (from, to, value) => {
+      const startLine = currentDoc.lineAt(from).number;
+      const endPos = to > from ? to - 1 : to;
+      const endLine = currentDoc.lineAt(endPos).number;
+      const linesDisplay =
+        startLine === endLine ? `${startLine}` : `[${startLine}, ${endLine}]`;
+
+      groups.push({
+        groupIndex: value.groupIndex,
+        lines: linesDisplay,
         from,
         to,
-        lines: linesDisplay,
+        resultIds: value.resultIds.join(", "),
       });
     });
 
@@ -122,21 +124,23 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
       <table className="debug-table">
         <thead>
           <tr>
-            <th>ID</th>
+            <th>Group</th>
             <th>Lines</th>
             <th>From</th>
             <th>To</th>
             <th>Length</th>
+            <th>Result IDs</th>
           </tr>
         </thead>
         <tbody>
-          {ranges.map((range, index) => (
-            <tr key={range.id || index}>
-              <td className="range-id">{range.id}</td>
-              <td className="range-value">{range.lines}</td>
-              <td className="range-value">{range.from}</td>
-              <td className="range-value">{range.to}</td>
-              <td className="range-value">{range.to - range.from}</td>
+          {groups.map((group) => (
+            <tr key={group.groupIndex}>
+              <td className="range-id">{group.groupIndex}</td>
+              <td className="range-value">{group.lines}</td>
+              <td className="range-value">{group.from}</td>
+              <td className="range-value">{group.to}</td>
+              <td className="range-value">{group.to - group.from}</td>
+              <td className="range-value">{group.resultIds}</td>
             </tr>
           ))}
         </tbody>
@@ -164,7 +168,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
           className={`debug-tab ${activeTab === "ranges" ? "active" : ""}`}
           onClick={() => handleTabChange("ranges")}
         >
-          Result Ranges
+          Result Groups
         </button>
       </div>
 

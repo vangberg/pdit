@@ -4,14 +4,14 @@ import {
   keymap,
   highlightSpecialChars,
   drawSelection,
-  highlightActiveLine,
   dropCursor,
   rectangularSelection,
   crosshairCursor,
   lineNumbers,
   highlightActiveLineGutter,
+  ViewUpdate,
 } from "@codemirror/view";
-import { EditorState, RangeSet } from "@codemirror/state";
+import { EditorState, RangeSet, Text } from "@codemirror/state";
 import {
   defaultHighlightStyle,
   syntaxHighlighting,
@@ -38,16 +38,10 @@ import {
 } from "./line-heights";
 import { zebraStripes } from "./zebra-stripes";
 import {
-  rangeHighlightPlugin,
-  reconfigureRanges,
-} from "./range-highlight-plugin";
-import {
-  resultRangesSyncExtension,
-  setResultRanges,
-  ResultRangesChangeCallback,
-  DocumentChangeCallback,
-} from "./result-ranges-sync";
-import { resultGroupingExtension } from "./result-grouping-plugin";
+  resultGroupingExtension,
+  setGroupRanges,
+  GroupValue,
+} from "./result-grouping-plugin";
 import React from "react";
 
 interface EditorProps {
@@ -55,9 +49,8 @@ interface EditorProps {
   onHeightChange?: (heights: LineHeight[]) => void;
   targetHeights?: LineHeight[];
   onExecute?: (script: string) => void;
-  resultRanges?: RangeSet<any>;
-  onResultRangesChange?: ResultRangesChangeCallback;
-  onDocumentChange?: DocumentChangeCallback;
+  groupRanges?: RangeSet<GroupValue>;
+  onDocumentChange?: (doc: Text) => void;
 }
 
 export function Editor({
@@ -65,8 +58,7 @@ export function Editor({
   onHeightChange,
   targetHeights,
   onExecute,
-  resultRanges,
-  onResultRangesChange,
+  groupRanges,
   onDocumentChange,
 }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -122,11 +114,16 @@ export function Editor({
             onHeightChange(heights);
           }
         }),
-        ...(onResultRangesChange
-          ? [resultRangesSyncExtension(onResultRangesChange, onDocumentChange)]
-          : []),
-        rangeHighlightPlugin(resultRanges),
         resultGroupingExtension,
+        ...(onDocumentChange
+          ? [
+              EditorView.updateListener.of((update: ViewUpdate) => {
+                if (update.docChanged) {
+                  onDocumentChange(update.state.doc);
+                }
+              }),
+            ]
+          : []),
         EditorView.theme({
           "&": {
             height: "100%",
@@ -151,26 +148,26 @@ export function Editor({
 
     viewRef.current = view;
 
+    if (onDocumentChange) {
+      onDocumentChange(view.state.doc);
+    }
+
     return () => {
       view.destroy();
       viewRef.current = null;
     };
-  }, [initialCode, onHeightChange]);
+  }, [initialCode, onHeightChange, onExecute, onDocumentChange]);
 
-  // Update ranges when resultRanges changes
   useEffect(() => {
-    if (viewRef.current && resultRanges) {
-      reconfigureRanges(viewRef.current, resultRanges);
-      // Also update the sync StateField
-      if (onResultRangesChange) {
-        viewRef.current.dispatch({
-          effects: setResultRanges.of(resultRanges),
-        });
-      }
+    if (!viewRef.current || !groupRanges) {
+      return;
     }
-  }, [resultRanges, onResultRangesChange]);
 
-  // Apply target heights when prop changes
+    viewRef.current.dispatch({
+      effects: setGroupRanges.of(groupRanges),
+    });
+  }, [groupRanges]);
+
   useEffect(() => {
     if (targetHeights && targetHeights.length > 0 && viewRef.current) {
       requestAnimationFrame(() => {

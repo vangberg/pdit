@@ -4,18 +4,10 @@ import { OutputPane, OutputHeight } from "./OutputPane";
 import { DebugPanel } from "./DebugPanel";
 import { LineHeight } from "./line-heights";
 import { executeScript, ApiExecuteResponse } from "./api";
-import { RangeSet, RangeValue, Text } from "@codemirror/state";
+import { RangeSet, Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
-
-class ResultIdValue extends RangeValue {
-  constructor(public id: number) {
-    super();
-  }
-
-  eq(other: ResultIdValue) {
-    return this.id === other.id;
-  }
-}
+import { computeLineGroups } from "./compute-line-groups";
+import { GroupValue } from "./result-grouping-plugin";
 
 const initialCode = `// Welcome to CodeMirror, this is a very long, long line!
 function fibonacci(n) {
@@ -40,13 +32,12 @@ function App() {
   );
   const [executeResults, setExecuteResults] =
     useState<ApiExecuteResponse | null>(null);
-  const [resultRanges, setResultRanges] = useState<RangeSet<ResultIdValue>>(
+  const [groupRanges, setGroupRanges] = useState<RangeSet<GroupValue>>(
     RangeSet.empty
   );
   const [currentDoc, setCurrentDoc] = useState<Text | null>(null);
   const isSyncing = useRef<boolean>(false);
 
-  // Declarative height syncing - runs automatically when heights change
   useEffect(() => {
     if (editorHeights.length === 0 || outputHeights.length === 0) return;
     if (isSyncing.current) return;
@@ -68,7 +59,6 @@ function App() {
       }
     }
 
-    // Set target heights via props (declarative)
     setTargetEditorHeights(editorTargets);
     setTargetOutputHeights(outputTargets);
 
@@ -87,14 +77,6 @@ function App() {
     setOutputHeights(heights);
   }, []);
 
-  const handleResultRangesChange = useCallback(
-    (ranges: RangeSet<RangeValue>) => {
-      console.log("App received updated result ranges:", ranges);
-      setResultRanges(ranges as RangeSet<ResultIdValue>);
-    },
-    []
-  );
-
   const handleDocumentChange = useCallback((doc: Text) => {
     console.log(
       "App received document change:",
@@ -108,13 +90,26 @@ function App() {
     console.log("Execute result:", result);
     setExecuteResults(result);
 
-    // Create RangeSet from result positions
-    const ranges = result.results.map((r) => ({
-      from: r.from,
-      to: r.to,
-      value: new ResultIdValue(r.id),
-    }));
-    setResultRanges(RangeSet.of(ranges));
+    const doc = Text.of(script.split("\n"));
+    setCurrentDoc(doc);
+
+    const groups = computeLineGroups(result.results);
+    if (groups.length === 0) {
+      setGroupRanges(RangeSet.empty);
+      return;
+    }
+
+    const ranges = groups.map((group, index) => {
+      const fromLine = doc.line(group.lineStart);
+      const toLine = doc.line(group.lineEnd);
+      return {
+        from: fromLine.from,
+        to: toLine.to,
+        value: new GroupValue(index, group.resultIds),
+      };
+    });
+
+    setGroupRanges(RangeSet.of(ranges, true));
   }, []);
 
   return (
@@ -126,8 +121,7 @@ function App() {
             onHeightChange={handleEditorHeightChange}
             targetHeights={targetEditorHeights}
             onExecute={handleExecute}
-            resultRanges={resultRanges}
-            onResultRangesChange={handleResultRangesChange}
+            groupRanges={groupRanges}
             onDocumentChange={handleDocumentChange}
           />
         </div>
@@ -148,8 +142,7 @@ function App() {
         targetEditorHeights={targetEditorHeights}
         targetOutputHeights={targetOutputHeights}
         isSyncing={isSyncing.current}
-        executeResults={executeResults}
-        resultRanges={resultRanges}
+        groupRanges={groupRanges}
         currentDoc={currentDoc}
       />
     </div>

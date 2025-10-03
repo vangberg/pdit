@@ -1,203 +1,125 @@
-import { EditorView, Decoration, DecorationSet } from '@codemirror/view'
-import { StateField, RangeSet, RangeValue, Text } from '@codemirror/state'
-import { resultRangesField, setResultRanges } from './result-ranges-sync'
+import { EditorView, Decoration, DecorationSet } from "@codemirror/view";
+import {
+  StateField,
+  StateEffect,
+  RangeSet,
+  RangeValue,
+  Text,
+} from "@codemirror/state";
 
-// Interface from PLAN.md
-interface GroupRange {
-  from: number; // Start position of group
-  to: number; // End position of group
-  lineStart: number; // First line number
-  lineEnd: number; // Last line number
-  ranges: Array<{ from: number; to: number }>; // Individual ranges in group
+export class GroupValue extends RangeValue {
+  constructor(public groupIndex: number, public resultIds: number[]) {
+    super();
+  }
+
+  eq(other: GroupValue) {
+    return this.groupIndex === other.groupIndex;
+  }
 }
 
-// Simple grouping: ranges that share any line belong to the same group
-function groupLinesBySharedRanges(
-  rangesByLine: Map<number, Array<{ from: number; to: number }>>
-): number[][] {
-  const groups: number[][] = [];
-  const visited = new Set<number>();
+export const setGroupRanges = StateEffect.define<RangeSet<GroupValue>>();
 
-  for (const lineNum of rangesByLine.keys()) {
-    if (visited.has(lineNum)) continue;
+const groupRangesField = StateField.define<RangeSet<GroupValue>>({
+  create() {
+    return RangeSet.empty;
+  },
 
-    const group = [lineNum];
-    visited.add(lineNum);
-
-    // Find all other lines that share ranges with any line in this group
-    let changed = true;
-    while (changed) {
-      changed = false;
-
-      for (const [otherLineNum, otherRanges] of rangesByLine) {
-        if (visited.has(otherLineNum)) continue;
-
-        // Check if any range on otherLineNum overlaps with any range from any line in current group
-        const hasSharedRange = group.some(groupLineNum => {
-          const groupRanges = rangesByLine.get(groupLineNum) || [];
-          return groupRanges.some(groupRange =>
-            otherRanges.some(otherRange =>
-              groupRange.from === otherRange.from && groupRange.to === otherRange.to
-            )
-          );
-        });
-
-        if (hasSharedRange) {
-          group.push(otherLineNum);
-          visited.add(otherLineNum);
-          changed = true;
-        }
+  update(ranges, tr) {
+    for (const effect of tr.effects) {
+      if (effect.is(setGroupRanges)) {
+        return snapRangesToFullLines(effect.value, tr.state.doc);
       }
     }
 
-    groups.push(group);
-  }
+    if (tr.docChanged) {
+      const mapped = ranges.map(tr.changes);
+      return snapRangesToFullLines(mapped, tr.state.doc);
+    }
 
-  return groups;
-}
+    return ranges;
+  },
+});
 
-// Simplified grouping algorithm based on PLAN.md
-function calculateGroups(
-  ranges: RangeSet<RangeValue>,
+function snapRangesToFullLines(
+  ranges: RangeSet<GroupValue>,
   doc: Text
-): GroupRange[] {
-  const rangesByLine = new Map<number, Array<{ from: number; to: number }>>();
+): RangeSet<GroupValue> {
+  if (ranges.size === 0) {
+    return RangeSet.empty;
+  }
 
-  // Group ranges by line numbers they touch
-  ranges.between(0, doc.length, (from, to) => {
-    const startLine = doc.lineAt(from).number;
-    const endLine = doc.lineAt(to).number;
+  const snapped: Array<{ from: number; to: number; value: GroupValue }> = [];
 
-    for (let line = startLine; line <= endLine; line++) {
-      if (!rangesByLine.has(line)) {
-        rangesByLine.set(line, []);
-      }
-      rangesByLine.get(line)!.push({ from, to });
-    }
+  ranges.between(0, doc.length, (from, to, value) => {
+    const startLine = doc.lineAt(from);
+    const endPos = to > from ? to - 1 : to;
+    const endLine = doc.lineAt(endPos);
+
+    snapped.push({ from: startLine.from, to: endLine.to, value });
   });
 
-  // Group lines that share ranges
-  const lineGroups = groupLinesBySharedRanges(rangesByLine);
-
-  // Convert line groups to GroupRange objects
-  const groups: GroupRange[] = lineGroups.map(lineGroup => {
-    const minLine = Math.min(...lineGroup);
-    const maxLine = Math.max(...lineGroup);
-
-    // Get all unique ranges from all lines in this group
-    const allRanges = lineGroup.flatMap(lineNum => rangesByLine.get(lineNum) || []);
-    const uniqueRanges = Array.from(
-      new Map(allRanges.map(r => [`${r.from}-${r.to}`, r])).values()
-    );
-
-    return {
-      from: doc.line(minLine).from,
-      to: doc.line(maxLine).to,
-      lineStart: minLine,
-      lineEnd: maxLine,
-      ranges: uniqueRanges,
-    };
-  });
-
-  return groups;
+  return RangeSet.of(snapped, true);
 }
 
-// Line decorations for result ranges with different colors
-const resultLineDecorations = [
-  Decoration.line({ class: "cm-result-line-0" }),
-  Decoration.line({ class: "cm-result-line-1" }),
-  Decoration.line({ class: "cm-result-line-2" }),
-  Decoration.line({ class: "cm-result-line-3" }),
-  Decoration.line({ class: "cm-result-line-4" }),
-  Decoration.line({ class: "cm-result-line-5" })
-]
+const groupDecorations = [
+  Decoration.mark({ class: "cm-result-line-0" }),
+  Decoration.mark({ class: "cm-result-line-1" }),
+  Decoration.mark({ class: "cm-result-line-2" }),
+  Decoration.mark({ class: "cm-result-line-3" }),
+  Decoration.mark({ class: "cm-result-line-4" }),
+  Decoration.mark({ class: "cm-result-line-5" }),
+];
 
-// StateField to manage line decorations for result ranges
-const resultLinesField = StateField.define<DecorationSet>({
-  create(state) {
-    const ranges = state.field(resultRangesField)
-    const decorations: any[] = []
-
-    // Use proper grouping algorithm from PLAN.md
-    const groups = calculateGroups(ranges, state.doc)
-
-    // Create decorations for each group
-    groups.forEach((group, groupIndex) => {
-      const colorIndex = groupIndex % resultLineDecorations.length
-      const decoration = resultLineDecorations[colorIndex]
-
-      // Create decoration for each line in the group
-      for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
-        const line = state.doc.line(lineNum)
-        decorations.push(decoration.range(line.from))
-      }
-    })
-
-    return Decoration.set(decorations)
+const groupDecorationsField = StateField.define<DecorationSet>({
+  create() {
+    return Decoration.none;
   },
 
-  update(decorations, tr) {
-    // Check if result ranges changed
-    const hasSetResultRangesEffect = tr.effects.some(effect => effect.is(setResultRanges))
+  update(_, tr) {
+    const groupRanges = tr.state.field(groupRangesField);
+    const decorations: any[] = [];
 
-    if (hasSetResultRangesEffect || tr.docChanged) {
-      const ranges = tr.state.field(resultRangesField)
-      const newDecorations: any[] = []
+    groupRanges.between(0, tr.state.doc.length, (from, to, value) => {
+      const colorIndex = value.groupIndex % groupDecorations.length;
+      const decoration = groupDecorations[colorIndex];
+      decorations.push(decoration.range(from, to));
+    });
 
-      // Use proper grouping algorithm from PLAN.md
-      const groups = calculateGroups(ranges, tr.state.doc)
-
-      // Create decorations for each group
-      groups.forEach((group, groupIndex) => {
-        const colorIndex = groupIndex % resultLineDecorations.length
-        const decoration = resultLineDecorations[colorIndex]
-
-        // Create decoration for each line in the group
-        for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
-          const line = tr.state.doc.line(lineNum)
-          newDecorations.push(decoration.range(line.from))
-        }
-      })
-
-      return Decoration.set(newDecorations)
-    }
-
-    // Map existing decorations through document changes
-    return decorations.map(tr.changes)
-  }
-})
-
-// CSS theme for result line decorations with multiple colors
-const resultLinesTheme = EditorView.theme({
-  '.cm-result-line-0': {
-    backgroundColor: 'rgba(255, 215, 0, 0.1)', // Light gold
-    borderLeft: '3px solid #FFD700'
+    return decorations.length === 0 ? Decoration.none : Decoration.set(decorations);
   },
-  '.cm-result-line-1': {
-    backgroundColor: 'rgba(0, 123, 255, 0.1)', // Light blue
-    borderLeft: '3px solid #007BFF'
-  },
-  '.cm-result-line-2': {
-    backgroundColor: 'rgba(40, 167, 69, 0.1)', // Light green
-    borderLeft: '3px solid #28A745'
-  },
-  '.cm-result-line-3': {
-    backgroundColor: 'rgba(220, 53, 69, 0.1)', // Light red
-    borderLeft: '3px solid #DC3545'
-  },
-  '.cm-result-line-4': {
-    backgroundColor: 'rgba(255, 101, 0, 0.1)', // Light orange
-    borderLeft: '3px solid #FF6500'
-  },
-  '.cm-result-line-5': {
-    backgroundColor: 'rgba(108, 117, 125, 0.1)', // Light gray
-    borderLeft: '3px solid #6C757D'
-  }
-})
 
-// Main extension
+  provide: (f) => EditorView.decorations.from(f),
+});
+
+const groupTheme = EditorView.theme({
+  ".cm-result-line-0": {
+    backgroundColor: "rgba(255, 215, 0, 0.1)",
+    borderLeft: "3px solid #FFD700",
+  },
+  ".cm-result-line-1": {
+    backgroundColor: "rgba(0, 123, 255, 0.1)",
+    borderLeft: "3px solid #007BFF",
+  },
+  ".cm-result-line-2": {
+    backgroundColor: "rgba(40, 167, 69, 0.1)",
+    borderLeft: "3px solid #28A745",
+  },
+  ".cm-result-line-3": {
+    backgroundColor: "rgba(220, 53, 69, 0.1)",
+    borderLeft: "3px solid #DC3545",
+  },
+  ".cm-result-line-4": {
+    backgroundColor: "rgba(255, 101, 0, 0.1)",
+    borderLeft: "3px solid #FF6500",
+  },
+  ".cm-result-line-5": {
+    backgroundColor: "rgba(108, 117, 125, 0.1)",
+    borderLeft: "3px solid #6C757D",
+  },
+});
+
 export const resultGroupingExtension = [
-  resultLinesField,
-  EditorView.decorations.from(resultLinesField),
-  resultLinesTheme
-]
+  groupRangesField,
+  groupDecorationsField,
+  groupTheme,
+];

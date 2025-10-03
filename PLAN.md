@@ -112,7 +112,7 @@ Groups would be:
 1. Store groups as `RangeSet<GroupValue>` in StateField
 2. When new groups arrive via StateEffect, replace the RangeSet
 3. On document changes, map RangeSet through changes and then re-snap each range to full line boundaries
-4. Create mark decorations from RangeSet positions (full-line spans)
+4. Create a single mark decoration per group from the snapped RangeSet positions
 5. Cycle through colors for visual distinction
 6. On every transaction (initial effect or mapped doc change), recompute decoration ranges so they snap to the beginning of the first line and the end of the last line they cover
 
@@ -156,7 +156,7 @@ type GroupRangeSet = RangeSet<GroupValue>;
 - **Grouping**: Pure function in App.tsx, runs once per execution
 - **RangeSet Creation**: Convert groups to RangeSet using current document positions
 - **Plugin**: Stores RangeSet in StateField, maps through document changes, re-snaps mapped ranges to full lines
-- **Decorations**: Mark decorations with colored borders/backgrounds (full-line spans)
+- **Decorations**: Single mark decoration per group with colored borders/backgrounds
 - **Updates**: RangeSet automatically tracks position changes through edits
 
 ## Code Examples
@@ -364,7 +364,12 @@ function snapRangesToFullLines(
 
   ranges.between(0, doc.length, (from, to, value) => {
     const startLine = doc.lineAt(from);
-    const endLine = doc.lineAt(to);
+
+    // If the range is non-empty, move back one character so we stay within the last
+    // covered line (exclusive end positions point at the next line's start).
+    const endPos = to > from ? to - 1 : to;
+    const endLine = doc.lineAt(endPos);
+
     snapped.push({ from: startLine.from, to: endLine.to, value });
   });
 
@@ -392,19 +397,11 @@ const groupDecorationsField = StateField.define<DecorationSet>({
     const groupRanges = tr.state.field(groupRangesField);
     const newDecorations: any[] = [];
 
-    // Create mark decorations for each group range
+    // Create a single mark decoration for each group range
     groupRanges.between(0, tr.state.doc.length, (from, to, value) => {
-      const startLine = tr.state.doc.lineAt(from).number;
-      const endLine = tr.state.doc.lineAt(to).number;
-
       const colorIndex = value.groupIndex % groupDecorations.length;
       const decoration = groupDecorations[colorIndex];
-
-      // Apply decoration to each line in the group using full-line spans
-      for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
-        const line = tr.state.doc.line(lineNum);
-        newDecorations.push(decoration.range(line.from, line.to));
-      }
+      newDecorations.push(decoration.range(from, to));
     });
 
     return Decoration.set(newDecorations);
