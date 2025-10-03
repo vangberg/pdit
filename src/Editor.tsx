@@ -36,7 +36,6 @@ import {
   lineHeightChangeListener,
   LineHeight,
 } from "./line-heights";
-import { zebraStripes } from "./zebra-stripes";
 import {
   resultGroupingExtension,
   setGroupRanges,
@@ -163,7 +162,6 @@ export function Editor({
           ...lintKeymap,
         ]),
         javascript(),
-        zebraStripes(),
         lineHeightExtension,
         lineHeightChangeListener((heights) => {
           console.log("Editor line heights changed:", heights.slice(0, 5));
