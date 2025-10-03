@@ -2,40 +2,55 @@
 
 ## Overview
 
-Create a CodeMirror 6 plugin that groups multiple result ranges into logical groups, where a group spans from the beginning of the first line to the end of the last line of all ranges within that group.
+Create a CodeMirror 6 plugin that applies visual decorations to groups of lines based on execution results. The API returns line numbers only, groups are computed in App.tsx after execution, converted to a RangeSet, and passed to the plugin. The RangeSet automatically tracks position changes through document edits.
+
+## Architecture
+
+1. **API** (`src/api.ts`): Returns results with line numbers only (no character positions)
+2. **App.tsx**: Computes groups from API results, converts to RangeSet using current document, and passes to Editor
+3. **Grouping Plugin** (`src/result-grouping-plugin.ts`): Stores groups as RangeSet in StateField, maps through document changes, creates mark decorations
+4. **Removed**: `range-highlight-plugin.ts` and `result-ranges-sync.ts` (no longer needed)
 
 ## Grouping Logic
 
-- **Basic Rule**: If two result ranges are on the same line, they belong to the same group
-- **Extension Rule**: A group includes all lines from the start of the first range to the end of the last range in that group
-- **Merging**: Groups that overlap or touch should be merged into a single larger group
+- **Basic Rule**: Results that share any line belong to the same group
+- **Extension Rule**: A group includes all lines covered by any result in that group
+- **Merging**: Results are grouped based on shared line numbers
 
 ## Examples
 
 ### Example 1: Basic grouping with same-line results
 
-```
-Line 1: [result A]
-Line 2:
-Line 3: [result B] some text [result C]
-Line 4: more content
-Line 5: [result D]
+API returns:
+
+```typescript
+{
+  results: [
+    { id: 1, lineStart: 1, lineEnd: 1 }, // result A
+    { id: 2, lineStart: 3, lineEnd: 3 }, // result B
+    { id: 3, lineStart: 3, lineEnd: 3 }, // result C
+    { id: 4, lineStart: 5, lineEnd: 5 }, // result D
+  ];
+}
 ```
 
 Groups would be:
 
 - Group 1: Lines 1-1 (result A only)
-- Group 2: Lines 3-3 (results B and C on same line)
+- Group 2: Lines 3-3 (results B and C share line 3)
 - Group 3: Lines 5-5 (result D only)
 
-### Example 2: Multi-line result ranges
+### Example 2: Multi-line results
 
-```
-Line 1: function foo() {
-Line 2:   return [result E spans
-Line 3:   across these lines] + bar;
-Line 4: }
-Line 5: let x = [result F];
+API returns:
+
+```typescript
+{
+  results: [
+    { id: 1, lineStart: 2, lineEnd: 3 }, // result E spans lines 2-3
+    { id: 2, lineStart: 5, lineEnd: 5 }, // result F
+  ];
+}
 ```
 
 Groups would be:
@@ -43,12 +58,17 @@ Groups would be:
 - Group 1: Lines 2-3 (result E spans lines 2-3)
 - Group 2: Lines 5-5 (result F only)
 
-### Example 3: Multiple results on same line with multi-line ranges
+### Example 3: Multiple results with shared lines
 
-```
-Line 1: [result G] and [result H starts
-Line 2: and continues here]
-Line 3: some code
+API returns:
+
+```typescript
+{
+  results: [
+    { id: 1, lineStart: 1, lineEnd: 1 }, // result G on line 1
+    { id: 2, lineStart: 1, lineEnd: 2 }, // result H spans lines 1-2
+  ];
+}
 ```
 
 Groups would be:
@@ -57,12 +77,16 @@ Groups would be:
 
 ### Example 4: Consecutive results remain separate
 
-```
-Line 1: [result J]
-Line 2: [result K spans
-Line 3: to here]
-Line 4: [result L]
-Line 5: more code
+API returns:
+
+```typescript
+{
+  results: [
+    { id: 1, lineStart: 1, lineEnd: 1 }, // result J
+    { id: 2, lineStart: 2, lineEnd: 3 }, // result K spans lines 2-3
+    { id: 3, lineStart: 4, lineEnd: 4 }, // result L
+  ];
+}
 ```
 
 Groups would be:
@@ -73,259 +97,373 @@ Groups would be:
 
 ## Algorithm
 
-1. Collect all result ranges with their line numbers
-2. Sort ranges by starting position
-3. Group ranges that share any line numbers
-4. For each group, determine the full line span (first line start to last line end)
-5. Create decorations/extensions for the grouped ranges
+### In App.tsx (group computation and RangeSet creation)
+
+1. Receive API results with line numbers: `ApiExecuteResult[]`
+2. Build a map of `lineNumber -> Set<resultId>` to track which results touch each line
+3. Use union-find or iterative merging to group results that share any lines
+4. For each group, compute `lineStart` (min) and `lineEnd` (max)
+5. Get current document from Editor ref
+6. Convert groups to RangeSet by converting line numbers to character positions, always snapping to the beginning of the first line and the end of the last line that belongs to the group when the ranges are first created
+7. Pass RangeSet to Editor
+
+### In result-grouping-plugin.ts (RangeSet storage and decoration)
+
+1. Store groups as `RangeSet<GroupValue>` in StateField
+2. When new groups arrive via StateEffect, replace the RangeSet
+3. On document changes, map RangeSet through changes and then re-snap each range to full line boundaries
+4. Create mark decorations from RangeSet positions (full-line spans)
+5. Cycle through colors for visual distinction
+6. On every transaction (initial effect or mapped doc change), recompute decoration ranges so they snap to the beginning of the first line and the end of the last line they cover
+
+## Data Structures
+
+```typescript
+// API response
+interface ApiExecuteResult {
+  id: number;
+  lineStart: number; // First line number (1-indexed)
+  lineEnd: number; // Last line number (1-indexed)
+}
+
+// Intermediate group structure (computed from API results)
+interface LineGroup {
+  resultIds: number[]; // IDs of results in this group
+  lineStart: number; // First line number
+  lineEnd: number; // Last line number
+}
+
+// RangeValue stored in RangeSet for each group
+class GroupValue extends RangeValue {
+  constructor(
+    public groupIndex: number, // Index of this group (for color cycling)
+    public resultIds: number[] // IDs of results in this group
+  ) {
+    super();
+  }
+
+  eq(other: GroupValue) {
+    return this.groupIndex === other.groupIndex;
+  }
+}
+
+// What gets passed from App to Editor
+type GroupRangeSet = RangeSet<GroupValue>;
+```
 
 ## Technical Approach
 
-- Use CodeMirror 6's decoration system
-- Implement as a ViewPlugin or StateField
-- Track result ranges and compute groups reactively
-- Apply visual styling to grouped ranges
-
-## Questions to Resolve
-
-1. ~~What defines a "result range"?~~ **RESOLVED**: Result ranges are managed by `src/result-ranges-sync.ts` as `RangeSet<RangeValue>` through CodeMirror's state system
-2. ~~How should groups be visually distinguished?~~ **RESOLVED**: Add decorations to visually mark grouped ranges
-3. ~~Should groups be collapsible/expandable?~~ **RESOLVED**: No
-4. ~~How to handle dynamic updates when results change?~~ **RESOLVED**: Recalculate group ranges when result ranges change
-5. ~~Should there be a minimum/maximum group size?~~ **RESOLVED**: No
+- **Grouping**: Pure function in App.tsx, runs once per execution
+- **RangeSet Creation**: Convert groups to RangeSet using current document positions
+- **Plugin**: Stores RangeSet in StateField, maps through document changes, re-snaps mapped ranges to full lines
+- **Decorations**: Mark decorations with colored borders/backgrounds (full-line spans)
+- **Updates**: RangeSet automatically tracks position changes through edits
 
 ## Code Examples
 
-### Input: Result Ranges
+### Grouping Algorithm (in separate file: src/compute-line-groups.ts)
 
 ```typescript
-// Result ranges come from the existing result-ranges-sync.ts
-import { RangeSet, RangeValue } from "@codemirror/state";
-import { getCurrentResultRanges } from "./result-ranges-sync";
+import { ApiExecuteResult } from "./api";
 
-// Get current result ranges
-const ranges: RangeSet<RangeValue> = getCurrentResultRanges(view);
-```
-
-### Grouping Algorithm (Simplified Implementation)
-
-```typescript
-interface GroupRange {
-  from: number; // Start position of group
-  to: number; // End position of group
-  lineStart: number; // First line number
-  lineEnd: number; // Last line number
-  ranges: Array<{ from: number; to: number }>; // Individual ranges in group
+export interface LineGroup {
+  resultIds: number[];
+  lineStart: number;
+  lineEnd: number;
 }
 
-// Simple grouping: ranges that share any line belong to the same group
-function groupLinesBySharedRanges(
-  rangesByLine: Map<number, Array<{ from: number; to: number }>>
-): number[][] {
-  const groups: number[][] = [];
-  const visited = new Set<number>();
+/**
+ * Groups API execution results that share any lines.
+ *
+ * Results that touch the same line belong to the same group. This uses a
+ * union-find algorithm to efficiently merge results into groups.
+ *
+ * @param results - Array of execution results from the API
+ * @returns Array of line groups with their computed line ranges
+ */
+export function computeLineGroups(results: ApiExecuteResult[]): LineGroup[] {
+  // Step 1: Build a map of which results touch each line
+  // Map: lineNumber -> Set of result IDs that include that line
+  const lineToResults = new Map<number, Set<number>>();
 
-  for (const lineNum of rangesByLine.keys()) {
-    if (visited.has(lineNum)) continue;
-
-    const group = [lineNum];
-    visited.add(lineNum);
-
-    // Find all other lines that share ranges with any line in this group
-    let changed = true;
-    while (changed) {
-      changed = false;
-
-      for (const [otherLineNum, otherRanges] of rangesByLine) {
-        if (visited.has(otherLineNum)) continue;
-
-        // Check if any range on otherLineNum matches any range from any line in current group
-        const hasSharedRange = group.some(groupLineNum => {
-          const groupRanges = rangesByLine.get(groupLineNum) || [];
-          return groupRanges.some(groupRange =>
-            otherRanges.some(otherRange =>
-              groupRange.from === otherRange.from && groupRange.to === otherRange.to
-            )
-          );
-        });
-
-        if (hasSharedRange) {
-          group.push(otherLineNum);
-          visited.add(otherLineNum);
-          changed = true;
-        }
+  for (const result of results) {
+    // Add this result to all lines it spans
+    for (let lineNum = result.lineStart; lineNum <= result.lineEnd; lineNum++) {
+      if (!lineToResults.has(lineNum)) {
+        lineToResults.set(lineNum, new Set());
       }
+      lineToResults.get(lineNum)!.add(result.id);
+    }
+  }
+
+  // Step 2: Use union-find to group results that share lines
+  const parent = new Map<number, number>();
+
+  // Find with path compression
+  function find(id: number): number {
+    if (!parent.has(id)) parent.set(id, id);
+    if (parent.get(id) !== id) {
+      parent.set(id, find(parent.get(id)!));
+    }
+    return parent.get(id)!;
+  }
+
+  // Union two result IDs into the same group
+  function union(id1: number, id2: number) {
+    const root1 = find(id1);
+    const root2 = find(id2);
+    if (root1 !== root2) {
+      parent.set(root2, root1);
+    }
+  }
+
+  // For each line, union all results that appear on that line
+  for (const resultIds of lineToResults.values()) {
+    const ids = Array.from(resultIds);
+    for (let i = 1; i < ids.length; i++) {
+      union(ids[0], ids[i]);
+    }
+  }
+
+  // Step 3: Build groups from union-find results
+  // Map: root ID -> array of all result IDs in that group
+  const groupMap = new Map<number, number[]>();
+  for (const result of results) {
+    const root = find(result.id);
+    if (!groupMap.has(root)) {
+      groupMap.set(root, []);
+    }
+    groupMap.get(root)!.push(result.id);
+  }
+
+  // Step 4: Convert to LineGroup objects with computed line ranges
+  const groups: LineGroup[] = [];
+  for (const resultIds of groupMap.values()) {
+    let lineStart = Infinity;
+    let lineEnd = -Infinity;
+
+    // Find the min/max lines across all results in this group
+    for (const id of resultIds) {
+      const result = results.find((r) => r.id === id)!;
+      lineStart = Math.min(lineStart, result.lineStart);
+      lineEnd = Math.max(lineEnd, result.lineEnd);
     }
 
-    groups.push(group);
+    groups.push({
+      resultIds,
+      lineStart,
+      lineEnd,
+    });
   }
 
   return groups;
 }
+```
 
-function calculateGroups(
-  ranges: RangeSet<RangeValue>,
-  doc: Text
-): GroupRange[] {
-  const rangesByLine = new Map<number, Array<{ from: number; to: number }>>();
+### Usage in App.tsx
 
-  // Group ranges by line numbers they touch
-  ranges.between(0, doc.length, (from, to) => {
-    const startLine = doc.lineAt(from).number;
-    const endLine = doc.lineAt(to).number;
+```typescript
+import { executeScript } from "./api";
+import { computeLineGroups } from "./compute-line-groups";
+import { RangeSet } from "@codemirror/state";
 
-    for (let line = startLine; line <= endLine; line++) {
-      if (!rangesByLine.has(line)) {
-        rangesByLine.set(line, []);
-      }
-      rangesByLine.get(line)!.push({ from, to });
-    }
-  });
+// GroupValue class definition
+class GroupValue extends RangeValue {
+  constructor(public groupIndex: number, public resultIds: number[]) {
+    super();
+  }
 
-  // Group lines that share ranges
-  const lineGroups = groupLinesBySharedRanges(rangesByLine);
+  eq(other: GroupValue) {
+    return this.groupIndex === other.groupIndex;
+  }
+}
 
-  // Convert line groups to GroupRange objects
-  const groups: GroupRange[] = lineGroups.map(lineGroup => {
-    const minLine = Math.min(...lineGroup);
-    const maxLine = Math.max(...lineGroup);
+const handleExecute = useCallback(async (script: string) => {
+  const apiResponse = await executeScript(script);
 
-    // Get all unique ranges from all lines in this group
-    const allRanges = lineGroup.flatMap(lineNum => rangesByLine.get(lineNum) || []);
-    const uniqueRanges = Array.from(
-      new Map(allRanges.map(r => [`${r.from}-${r.to}`, r])).values()
-    );
+  // Compute groups from API results
+  const groups = computeLineGroups(apiResponse.results);
 
+  // Get current document from Editor
+  const doc = editorViewRef.current?.state.doc;
+  if (!doc) return;
+
+  // Convert groups to RangeSet
+  const ranges = groups.map((group, index) => {
+    const fromLine = doc.line(group.lineStart);
+    const toLine = doc.line(group.lineEnd);
     return {
-      from: doc.line(minLine).from,
-      to: doc.line(maxLine).to,
-      lineStart: minLine,
-      lineEnd: maxLine,
-      ranges: uniqueRanges,
+      from: fromLine.from,
+      to: toLine.to,
+      value: new GroupValue(index, group.resultIds),
     };
   });
 
-  return groups;
-}
+  const groupRangeSet = RangeSet.of(ranges);
+
+  // Pass RangeSet to Editor
+  setGroupRanges(groupRangeSet);
+}, []);
 ```
 
-### Plugin Structure (Current Implementation)
+### Plugin Structure (result-grouping-plugin.ts)
 
 ```typescript
-import { EditorView, Decoration, DecorationSet } from '@codemirror/view'
-import { StateField, RangeSet, RangeValue, Text } from '@codemirror/state'
-import { resultRangesField, setResultRanges } from './result-ranges-sync'
+import { EditorView, Decoration, DecorationSet } from "@codemirror/view";
+import {
+  StateField,
+  StateEffect,
+  RangeSet,
+  RangeValue,
+  Text,
+} from "@codemirror/state";
 
-// Line decorations for result ranges with different colors
-const resultLineDecorations = [
-  Decoration.line({ class: "cm-result-line-0" }),
-  Decoration.line({ class: "cm-result-line-1" }),
-  Decoration.line({ class: "cm-result-line-2" }),
-  Decoration.line({ class: "cm-result-line-3" }),
-  Decoration.line({ class: "cm-result-line-4" }),
-  Decoration.line({ class: "cm-result-line-5" })
-]
+// RangeValue for group tracking
+export class GroupValue extends RangeValue {
+  constructor(public groupIndex: number, public resultIds: number[]) {
+    super();
+  }
 
-// StateField to manage line decorations for result ranges
-const resultLinesField = StateField.define<DecorationSet>({
-  create(state) {
-    const ranges = state.field(resultRangesField)
-    const decorations: any[] = []
+  eq(other: GroupValue) {
+    return this.groupIndex === other.groupIndex;
+  }
+}
 
-    // Use proper grouping algorithm
-    const groups = calculateGroups(ranges, state.doc)
+// Effect to set group ranges
+export const setGroupRanges = StateEffect.define<RangeSet<GroupValue>>();
 
-    // Create decorations for each group with different colors
-    groups.forEach((group, groupIndex) => {
-      const colorIndex = groupIndex % resultLineDecorations.length
-      const decoration = resultLineDecorations[colorIndex]
+// StateField to store group ranges (maps through doc changes automatically)
+const groupRangesField = StateField.define<RangeSet<GroupValue>>({
+  create() {
+    return RangeSet.empty;
+  },
 
-      // Create decoration for each line in the group
-      for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
-        const line = state.doc.line(lineNum)
-        decorations.push(decoration.range(line.from))
+  update(ranges, tr) {
+    // Check for setGroupRanges effect
+    for (const effect of tr.effects) {
+      if (effect.is(setGroupRanges)) {
+        return snapRangesToFullLines(effect.value, tr.state.doc);
       }
-    })
+    }
 
-    return Decoration.set(decorations)
+    // Map through document changes and re-snap to full lines
+    if (tr.docChanged) {
+      const mapped = ranges.map(tr.changes);
+      return snapRangesToFullLines(mapped, tr.state.doc);
+    }
+
+    return ranges;
+  },
+});
+
+function snapRangesToFullLines(
+  ranges: RangeSet<GroupValue>,
+  doc: Text
+): RangeSet<GroupValue> {
+  const snapped: Array<{ from: number; to: number; value: GroupValue }> = [];
+
+  ranges.between(0, doc.length, (from, to, value) => {
+    const startLine = doc.lineAt(from);
+    const endLine = doc.lineAt(to);
+    snapped.push({ from: startLine.from, to: endLine.to, value });
+  });
+
+  return RangeSet.of(snapped, true);
+}
+
+// Mark decorations with different colors
+const groupDecorations = [
+  Decoration.mark({ class: "cm-result-line-0" }),
+  Decoration.mark({ class: "cm-result-line-1" }),
+  Decoration.mark({ class: "cm-result-line-2" }),
+  Decoration.mark({ class: "cm-result-line-3" }),
+  Decoration.mark({ class: "cm-result-line-4" }),
+  Decoration.mark({ class: "cm-result-line-5" }),
+];
+
+// StateField to create decorations from group ranges
+const groupDecorationsField = StateField.define<DecorationSet>({
+  create(state) {
+    return Decoration.none;
   },
 
   update(decorations, tr) {
-    // Check if result ranges changed
-    const hasSetResultRangesEffect = tr.effects.some(effect => effect.is(setResultRanges))
+    // Get current group ranges
+    const groupRanges = tr.state.field(groupRangesField);
+    const newDecorations: any[] = [];
 
-    if (hasSetResultRangesEffect || tr.docChanged) {
-      const ranges = tr.state.field(resultRangesField)
-      const newDecorations: any[] = []
+    // Create mark decorations for each group range
+    groupRanges.between(0, tr.state.doc.length, (from, to, value) => {
+      const startLine = tr.state.doc.lineAt(from).number;
+      const endLine = tr.state.doc.lineAt(to).number;
 
-      // Use proper grouping algorithm
-      const groups = calculateGroups(ranges, tr.state.doc)
+      const colorIndex = value.groupIndex % groupDecorations.length;
+      const decoration = groupDecorations[colorIndex];
 
-      // Create decorations for each group with different colors
-      groups.forEach((group, groupIndex) => {
-        const colorIndex = groupIndex % resultLineDecorations.length
-        const decoration = resultLineDecorations[colorIndex]
+      // Apply decoration to each line in the group using full-line spans
+      for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
+        const line = tr.state.doc.line(lineNum);
+        newDecorations.push(decoration.range(line.from, line.to));
+      }
+    });
 
-        // Create decoration for each line in the group
-        for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
-          const line = tr.state.doc.line(lineNum)
-          newDecorations.push(decoration.range(line.from))
-        }
-      })
-
-      return Decoration.set(newDecorations)
-    }
-
-    // Map existing decorations through document changes
-    return decorations.map(tr.changes)
-  }
-})
-
-// CSS theme for result line decorations with multiple colors
-const resultLinesTheme = EditorView.theme({
-  '.cm-result-line-0': {
-    backgroundColor: 'rgba(255, 215, 0, 0.1)', // Light gold
-    borderLeft: '3px solid #FFD700'
+    return Decoration.set(newDecorations);
   },
-  '.cm-result-line-1': {
-    backgroundColor: 'rgba(0, 123, 255, 0.1)', // Light blue
-    borderLeft: '3px solid #007BFF'
-  },
-  '.cm-result-line-2': {
-    backgroundColor: 'rgba(40, 167, 69, 0.1)', // Light green
-    borderLeft: '3px solid #28A745'
-  },
-  '.cm-result-line-3': {
-    backgroundColor: 'rgba(220, 53, 69, 0.1)', // Light red
-    borderLeft: '3px solid #DC3545'
-  },
-  '.cm-result-line-4': {
-    backgroundColor: 'rgba(255, 101, 0, 0.1)', // Light orange
-    borderLeft: '3px solid #FF6500'
-  },
-  '.cm-result-line-5': {
-    backgroundColor: 'rgba(108, 117, 125, 0.1)', // Light gray
-    borderLeft: '3px solid #6C757D'
-  }
-})
 
-// Main extension
+  provide: (f) => EditorView.decorations.from(f),
+});
+
+// CSS theme
+const groupTheme = EditorView.theme({
+  ".cm-result-line-0": {
+    backgroundColor: "rgba(255, 215, 0, 0.1)",
+    borderLeft: "3px solid #FFD700",
+  },
+  ".cm-result-line-1": {
+    backgroundColor: "rgba(0, 123, 255, 0.1)",
+    borderLeft: "3px solid #007BFF",
+  },
+  ".cm-result-line-2": {
+    backgroundColor: "rgba(40, 167, 69, 0.1)",
+    borderLeft: "3px solid #28A745",
+  },
+  ".cm-result-line-3": {
+    backgroundColor: "rgba(220, 53, 69, 0.1)",
+    borderLeft: "3px solid #DC3545",
+  },
+  ".cm-result-line-4": {
+    backgroundColor: "rgba(255, 101, 0, 0.1)",
+    borderLeft: "3px solid #FF6500",
+  },
+  ".cm-result-line-5": {
+    backgroundColor: "rgba(108, 117, 125, 0.1)",
+    borderLeft: "3px solid #6C757D",
+  },
+});
+
 export const resultGroupingExtension = [
-  resultLinesField,
-  EditorView.decorations.from(resultLinesField),
-  resultLinesTheme
-]
+  groupRangesField,
+  groupDecorationsField,
+  groupTheme,
+];
 ```
 
-### CSS Styling (Current Implementation)
+### Editor Integration
 
-The CSS styling is now handled by the `resultLinesTheme` in the plugin structure above, which provides multiple colors for different result groups:
+```typescript
+// In Editor.tsx, apply group ranges via effect when they change
+useEffect(() => {
+  if (viewRef.current && groupRanges) {
+    viewRef.current.dispatch({
+      effects: setGroupRanges.of(groupRanges),
+    });
+  }
+}, [groupRanges]);
+```
 
-- **Group 0**: Light gold background with gold border
-- **Group 1**: Light blue background with blue border
-- **Group 2**: Light green background with green border
-- **Group 3**: Light red background with red border
-- **Group 4**: Light orange background with orange border
-- **Group 5**: Light gray background with gray border
+## Key Benefits of RangeSet Approach
 
-Colors cycle through these 6 options for groups beyond the 5th group.
+1. **Automatic Position Tracking**: RangeSet automatically maps positions through document edits
+2. **Efficient Updates**: Only the changed portions need recalculation
+3. **Built-in CodeMirror Integration**: Leverages CodeMirror's position tracking system
+4. **Simple Plugin Logic**: Plugin just maps RangeSet through changes, no complex recalculation
