@@ -1,12 +1,11 @@
 import "./style.css";
-import { Editor } from "./Editor";
+import { Editor, EditorHandles } from "./Editor";
 import { OutputPane, OutputHeight } from "./OutputPane";
 import { DebugPanel } from "./DebugPanel";
 import { LineHeight } from "./line-heights";
 import { executeScript, ApiExecuteResponse } from "./api";
 import { RangeSet, Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
-import { computeLineGroups } from "./compute-line-groups";
 import { GroupValue } from "./result-grouping-plugin";
 
 const initialCode = `// Welcome to CodeMirror, this is a very long, long line!
@@ -22,6 +21,7 @@ const greeting = "Hello, CodeMirror!";
 console.log(greeting);`;
 
 function App() {
+  const editorRef = useRef<EditorHandles | null>(null);
   const [editorHeights, setEditorHeights] = useState<LineHeight[]>([]);
   const [outputHeights, setOutputHeights] = useState<OutputHeight[]>([]);
   const [targetOutputHeights, setTargetOutputHeights] = useState<
@@ -32,10 +32,10 @@ function App() {
   );
   const [executeResults, setExecuteResults] =
     useState<ApiExecuteResponse | null>(null);
-  const [groupRanges, setGroupRanges] = useState<RangeSet<GroupValue>>(
-    RangeSet.empty
-  );
   const [currentDoc, setCurrentDoc] = useState<Text | null>(null);
+  const [currentGroupRanges, setCurrentGroupRanges] = useState<
+    RangeSet<GroupValue>
+  >(RangeSet.empty);
   const isSyncing = useRef<boolean>(false);
 
   useEffect(() => {
@@ -85,31 +85,19 @@ function App() {
     setCurrentDoc(doc);
   }, []);
 
+  const handleGroupRangesChange = useCallback((ranges: RangeSet<GroupValue>) => {
+    setCurrentGroupRanges(ranges);
+  }, []);
+
   const handleExecute = useCallback(async (script: string) => {
     const result = await executeScript(script);
     console.log("Execute result:", result);
     setExecuteResults(result);
 
-    const doc = Text.of(script.split("\n"));
-    setCurrentDoc(doc);
-
-    const groups = computeLineGroups(result.results);
-    if (groups.length === 0) {
-      setGroupRanges(RangeSet.empty);
-      return;
-    }
-
-    const ranges = groups.map((group, index) => {
-      const fromLine = doc.line(group.lineStart);
-      const toLine = doc.line(group.lineEnd);
-      return {
-        from: fromLine.from,
-        to: toLine.to,
-        value: new GroupValue(index, group.resultIds),
-      };
+    editorRef.current?.applyExecutionUpdate({
+      doc: script,
+      results: result.results,
     });
-
-    setGroupRanges(RangeSet.of(ranges, true));
   }, []);
 
   return (
@@ -117,12 +105,13 @@ function App() {
       <div className="split-container">
         <div className="editor-half">
           <Editor
+            ref={editorRef}
             initialCode={initialCode}
             onHeightChange={handleEditorHeightChange}
             targetHeights={targetEditorHeights}
             onExecute={handleExecute}
-            groupRanges={groupRanges}
             onDocumentChange={handleDocumentChange}
+            onGroupRangesChange={handleGroupRangesChange}
           />
         </div>
         <div className="output-half">
@@ -142,7 +131,7 @@ function App() {
         targetEditorHeights={targetEditorHeights}
         targetOutputHeights={targetOutputHeights}
         isSyncing={isSyncing.current}
-        groupRanges={groupRanges}
+        groupRanges={currentGroupRanges}
         currentDoc={currentDoc}
       />
     </div>

@@ -36,17 +36,15 @@ export class GroupValue extends RangeValue {
 }
 
 export const setGroupRanges = StateEffect.define<RangeSet<GroupValue>>({
-  map(value, mapping) {
-    // When the document changes between the moment the effect is created and
-    // the moment it is applied (for example because a separate change slipped
-    // in first), the effect is remapped through the `ChangeDesc`. That keeps
-    // the RangeSet aligned with the document before we perform our own
-    // snapping pass inside the field.
-    return value.map(mapping);
+  map(value) {
+    // The ranges are authored against the document that will be installed as
+    // part of the same transaction, so we leave them unchanged here. The field
+    // will perform its regular snapping pass once the transaction lands.
+    return value;
   },
 });
 
-const groupRangesField = StateField.define<RangeSet<GroupValue>>({
+export const groupRangesField = StateField.define<RangeSet<GroupValue>>({
   create() {
     // Start with an empty set so decorations simply produce nothing until the
     // first execution result arrives.

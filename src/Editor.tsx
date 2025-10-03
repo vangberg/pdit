@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
-import { EditorView } from "codemirror";
+import React, { useEffect, useImperativeHandle, useRef } from "react";
 import {
+  EditorView,
   keymap,
   highlightSpecialChars,
   drawSelection,
@@ -41,31 +41,88 @@ import {
   resultGroupingExtension,
   setGroupRanges,
   GroupValue,
+  groupRangesField,
 } from "./result-grouping-plugin";
-import React from "react";
+import { computeLineGroups } from "./compute-line-groups";
+import { ApiExecuteResult } from "./api";
+
+export interface EditorHandles {
+  applyExecutionUpdate: (update: {
+    doc: string;
+    results: ApiExecuteResult[];
+  }) => void;
+}
 
 interface EditorProps {
   initialCode: string;
   onHeightChange?: (heights: LineHeight[]) => void;
   targetHeights?: LineHeight[];
   onExecute?: (script: string) => void;
-  groupRanges?: RangeSet<GroupValue>;
   onDocumentChange?: (doc: Text) => void;
+  onGroupRangesChange?: (ranges: RangeSet<GroupValue>) => void;
+  ref?: React.Ref<EditorHandles>;
 }
+
+export const buildGroupRangeSet = (
+  doc: Text,
+  groups: ReturnType<typeof computeLineGroups>
+): RangeSet<GroupValue> => {
+  if (groups.length === 0) {
+    return RangeSet.empty;
+  }
+
+  const ranges = groups.map((group, index) => {
+    const fromLine = doc.line(group.lineStart);
+    const toLine = doc.line(group.lineEnd);
+
+    return {
+      from: fromLine.from,
+      to: toLine.to,
+      value: new GroupValue(index, group.resultIds),
+    };
+  });
+
+  return RangeSet.of(ranges, true);
+};
 
 export function Editor({
   initialCode,
   onHeightChange,
   targetHeights,
   onExecute,
-  groupRanges,
   onDocumentChange,
+  onGroupRangesChange,
+  ref: externalRef,
 }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
 
+  const onExecuteRef = useRef(onExecute);
+  const onHeightChangeRef = useRef(onHeightChange);
+  const onDocumentChangeRef = useRef(onDocumentChange);
+  const onGroupRangesChangeRef = useRef(onGroupRangesChange);
+
+  // Mirror the latest callbacks so long-lived view listeners stay up to date
   useEffect(() => {
-    if (!editorRef.current) return;
+    onExecuteRef.current = onExecute;
+  }, [onExecute]);
+
+  useEffect(() => {
+    onHeightChangeRef.current = onHeightChange;
+  }, [onHeightChange]);
+
+  useEffect(() => {
+    onDocumentChangeRef.current = onDocumentChange;
+  }, [onDocumentChange]);
+
+  useEffect(() => {
+    onGroupRangesChangeRef.current = onGroupRangesChange;
+  }, [onGroupRangesChange]);
+
+  useEffect(() => {
+    if (!editorRef.current) {
+      return;
+    }
 
     const state = EditorState.create({
       doc: initialCode,
@@ -75,7 +132,7 @@ export function Editor({
             key: "Cmd-Enter",
             run: (view: EditorView) => {
               const currentText = view.state.doc.toString();
-              onExecute?.(currentText);
+              onExecuteRef.current?.(currentText);
               return true;
             },
           },
@@ -110,20 +167,23 @@ export function Editor({
         lineHeightExtension,
         lineHeightChangeListener((heights) => {
           console.log("Editor line heights changed:", heights.slice(0, 5));
-          if (onHeightChange) {
-            onHeightChange(heights);
-          }
+          onHeightChangeRef.current?.(heights);
         }),
         resultGroupingExtension,
-        ...(onDocumentChange
-          ? [
-              EditorView.updateListener.of((update: ViewUpdate) => {
-                if (update.docChanged) {
-                  onDocumentChange(update.state.doc);
-                }
-              }),
-            ]
-          : []),
+        EditorView.updateListener.of((update: ViewUpdate) => {
+          if (update.docChanged) {
+            onDocumentChangeRef.current?.(update.state.doc);
+          }
+
+          if (onGroupRangesChangeRef.current) {
+            const previous = update.startState.field(groupRangesField);
+            const next = update.state.field(groupRangesField);
+
+            if (previous !== next) {
+              onGroupRangesChangeRef.current(next as RangeSet<GroupValue>);
+            }
+          }
+        }),
         EditorView.theme({
           "&": {
             height: "100%",
@@ -148,34 +208,70 @@ export function Editor({
 
     viewRef.current = view;
 
-    if (onDocumentChange) {
-      onDocumentChange(view.state.doc);
-    }
+    onDocumentChangeRef.current?.(view.state.doc);
+    onGroupRangesChangeRef.current?.(
+      view.state.field(groupRangesField) as RangeSet<GroupValue>
+    );
 
     return () => {
       view.destroy();
       viewRef.current = null;
     };
-  }, [initialCode, onHeightChange, onExecute, onDocumentChange]);
+  }, []);
+
+  useImperativeHandle(
+    externalRef,
+    () => ({
+      applyExecutionUpdate: ({
+        doc,
+        results,
+      }: {
+        doc: string;
+        results: ApiExecuteResult[];
+      }) => {
+        const view = viewRef.current;
+        if (!view) {
+          return;
+        }
+
+        const text = Text.of(doc.split("\n"));
+        const groups = computeLineGroups(results);
+        const rangeSet = buildGroupRangeSet(text, groups);
+
+        const transaction: any = {
+          selection: { anchor: doc.length },
+          effects: setGroupRanges.of(rangeSet),
+        };
+
+        if (doc !== view.state.doc.toString()) {
+          transaction.changes = {
+            from: 0,
+            to: view.state.doc.length,
+            insert: doc,
+          };
+        }
+
+        view.dispatch(transaction);
+      },
+    }),
+    []
+  );
 
   useEffect(() => {
-    if (!viewRef.current || !groupRanges) {
+    if (!targetHeights || targetHeights.length === 0) {
       return;
     }
 
-    viewRef.current.dispatch({
-      effects: setGroupRanges.of(groupRanges),
-    });
-  }, [groupRanges]);
-
-  useEffect(() => {
-    if (targetHeights && targetHeights.length > 0 && viewRef.current) {
-      requestAnimationFrame(() => {
-        if (viewRef.current) {
-          setLineHeights(viewRef.current, targetHeights);
-        }
-      });
+    const view = viewRef.current;
+    if (!view) {
+      return;
     }
+
+    requestAnimationFrame(() => {
+      if (viewRef.current) {
+        setLineHeights(viewRef.current, targetHeights);
+      }
+    });
   }, [targetHeights]);
 
   return <div id="editor" ref={editorRef} />;
