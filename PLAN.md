@@ -17,6 +17,26 @@ Create a CodeMirror 6 plugin that applies visual decorations to groups of lines 
 - **Extension Rule**: A group includes all lines covered by any result in that group
 - **Merging**: Results are grouped based on shared line numbers
 
+## Undo
+
+Everything should be undoable (https://codemirror.net/examples/inverted-effect/).
+
+### Example 1: Undoing a line snap
+
+Document at time zero:
+
+```
+1: line one
+2: line two
+```
+
+- Group ranges highlight line 1 only.
+- Cursor sits at the beginning of line 2.
+
+Step 1 — press backspace. The newline is removed, CodeMirror snaps the range, and now the single line reads `line oneline two`. The group range expands to cover the merged line (which is expected).
+
+Step 2 — press Cmd-Z. The document returns to two lines, but the group range still spans from the beginning of line 1 to the end of line 2. The undo restored the text but did not shrink the snapped range; we need the range to revert to covering only line 1 again.
+
 ## Examples
 
 ### Example 1: Basic grouping with same-line results

@@ -6,6 +6,7 @@ import {
   RangeValue,
   Text,
 } from "@codemirror/state";
+import { invertedEffects } from "@codemirror/commands";
 
 export class GroupValue extends RangeValue {
   constructor(public groupIndex: number, public resultIds: number[]) {
@@ -17,7 +18,11 @@ export class GroupValue extends RangeValue {
   }
 }
 
-export const setGroupRanges = StateEffect.define<RangeSet<GroupValue>>();
+export const setGroupRanges = StateEffect.define<RangeSet<GroupValue>>({
+  map(value, mapping) {
+    return value.map(mapping);
+  },
+});
 
 const groupRangesField = StateField.define<RangeSet<GroupValue>>({
   create() {
@@ -118,8 +123,22 @@ const groupTheme = EditorView.theme({
   },
 });
 
+const groupRangesHistory = invertedEffects.of((tr) => {
+  const previous = tr.startState.field(groupRangesField);
+  const hasExplicitEffect = tr.effects.some((effect) =>
+    effect.is(setGroupRanges)
+  );
+
+  if (!tr.docChanged && !hasExplicitEffect) {
+    return [];
+  }
+
+  return [setGroupRanges.of(previous)];
+});
+
 export const resultGroupingExtension = [
   groupRangesField,
   groupDecorationsField,
   groupTheme,
+  groupRangesHistory,
 ];
