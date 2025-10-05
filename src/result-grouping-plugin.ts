@@ -130,7 +130,9 @@ const groupDecorationsField = StateField.define<DecorationSet>({
 
     // If no groups are active we return `Decoration.none` to avoid pointless
     // DOM updates.
-    return decorations.length === 0 ? Decoration.none : Decoration.set(decorations);
+    return decorations.length === 0
+      ? Decoration.none
+      : Decoration.set(decorations, true);
   },
 
   provide: (f) => EditorView.decorations.from(f),
