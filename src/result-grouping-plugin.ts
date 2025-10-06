@@ -52,12 +52,20 @@ export const groupRangesField = StateField.define<RangeSet<GroupValue>>({
   },
 
   update(ranges, tr) {
+    let explicitSet: RangeSet<GroupValue> | null = null;
+
     for (const effect of tr.effects) {
       if (effect.is(setGroupRanges)) {
-        // A new set of groups arrived from React. Snap to full lines using the
-        // latest document so that the stored state is always line-aligned.
-        return snapRangesToFullLines(effect.value, tr.state.doc);
+        // Keep the last explicit value so batched undo transactions restore the
+        // oldest snapshot instead of the most recent intermediate one.
+        explicitSet = effect.value;
       }
+    }
+
+    if (explicitSet) {
+      // A new set of groups arrived from React or via undo. Snap to full lines
+      // using the latest document so that the stored state stays line-aligned.
+      return snapRangesToFullLines(explicitSet, tr.state.doc);
     }
 
     if (tr.docChanged) {
