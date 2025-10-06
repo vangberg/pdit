@@ -65,7 +65,7 @@ export const groupRangesField = StateField.define<RangeSet<GroupValue>>({
     if (explicitSet) {
       // A new set of groups arrived from React or via undo. Snap to full lines
       // using the latest document so that the stored state stays line-aligned.
-      return snapRangesToFullLines(explicitSet, tr.state.doc);
+      return normalizeGroupRanges(explicitSet, tr.state.doc);
     }
 
     if (tr.docChanged) {
@@ -74,7 +74,7 @@ export const groupRangesField = StateField.define<RangeSet<GroupValue>>({
       // with the content, and then snap to the full lines that are currently
       // covered.
       const mapped = ranges.map(tr.changes);
-      return snapRangesToFullLines(mapped, tr.state.doc);
+      return normalizeGroupRanges(mapped, tr.state.doc);
     }
 
     // No relevant effects: keep the existing RangeSet instance.
@@ -82,7 +82,7 @@ export const groupRangesField = StateField.define<RangeSet<GroupValue>>({
   },
 });
 
-function snapRangesToFullLines(
+function normalizeGroupRanges(
   ranges: RangeSet<GroupValue>,
   doc: Text
 ): RangeSet<GroupValue> {
@@ -91,6 +91,16 @@ function snapRangesToFullLines(
     return RangeSet.empty;
   }
 
+  const snapped = snapRangesToFullLines(ranges, doc);
+  const merged = mergeSnappedRanges(snapped);
+
+  return RangeSet.of(merged, true);
+}
+
+function snapRangesToFullLines(
+  ranges: RangeSet<GroupValue>,
+  doc: Text
+): Array<{ from: number; to: number; value: GroupValue }> {
   const snapped: Array<{ from: number; to: number; value: GroupValue }> = [];
 
   ranges.between(0, doc.length, (from, to, value) => {
@@ -105,7 +115,35 @@ function snapRangesToFullLines(
     snapped.push({ from: startLine.from, to: endLine.to, value });
   });
 
-  return RangeSet.of(snapped, true);
+  return snapped;
+}
+
+function mergeSnappedRanges(
+  ranges: Array<{ from: number; to: number; value: GroupValue }>
+): Array<{ from: number; to: number; value: GroupValue }> {
+  if (ranges.length === 0) {
+    return ranges;
+  }
+
+  const merged: Array<{ from: number; to: number; value: GroupValue }> = [];
+  let current = { ...ranges[0] };
+
+  for (let index = 1; index < ranges.length; index++) {
+    const next = ranges[index];
+
+    if (next.from <= current.to) {
+      // Extend the accumulator to cover the full overlap while keeping the
+      // earliest group's metadata intact.
+      current = { ...current, to: Math.max(current.to, next.to) };
+      continue;
+    }
+
+    merged.push(current);
+    current = { ...next };
+  }
+
+  merged.push(current);
+  return merged;
 }
 
 const groupDecorations = [
