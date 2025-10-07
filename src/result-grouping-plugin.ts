@@ -16,6 +16,7 @@ import {
   Text,
 } from "@codemirror/state";
 import { invertedEffects } from "@codemirror/commands";
+import { LineGroup } from "./compute-line-groups";
 
 export class GroupValue extends RangeValue {
   // GroupValue carries metadata for a single group range. `groupIndex`
@@ -44,6 +45,12 @@ export const setGroupRanges = StateEffect.define<RangeSet<GroupValue>>({
   },
 });
 
+export const setLineGroups = StateEffect.define<LineGroup[]>({
+  map(value) {
+    return value;
+  },
+});
+
 export const groupRangesField = StateField.define<RangeSet<GroupValue>>({
   create() {
     // Start with an empty set so decorations simply produce nothing until the
@@ -53,13 +60,21 @@ export const groupRangesField = StateField.define<RangeSet<GroupValue>>({
 
   update(ranges, tr) {
     let explicitSet: RangeSet<GroupValue> | null = null;
+    let explicitGroups: LineGroup[] | null = null;
 
     for (const effect of tr.effects) {
       if (effect.is(setGroupRanges)) {
         // Keep the last explicit value so batched undo transactions restore the
         // oldest snapshot instead of the most recent intermediate one.
         explicitSet = effect.value;
+      } else if (effect.is(setLineGroups)) {
+        explicitGroups = effect.value;
       }
+    }
+
+    if (explicitGroups) {
+      const fromGroups = lineGroupsToRangeSet(tr.state.doc, explicitGroups);
+      return normalizeGroupRanges(fromGroups, tr.state.doc);
     }
 
     if (explicitSet) {
@@ -96,6 +111,132 @@ function normalizeGroupRanges(
 
   return RangeSet.of(merged, true);
 }
+
+export function lineGroupsToRangeSet(
+  doc: Text,
+  groups: LineGroup[]
+): RangeSet<GroupValue> {
+  if (groups.length === 0) {
+    return RangeSet.empty;
+  }
+
+  const ranges = groups.map((group, index) => {
+    const fromLine = doc.line(group.lineStart);
+    const toLine = doc.line(group.lineEnd);
+
+    return {
+      from: fromLine.from,
+      to: toLine.to,
+      value: new GroupValue(index, group.resultIds),
+    };
+  });
+
+  return RangeSet.of(ranges, true);
+}
+
+export function rangeSetToLineGroups(
+  ranges: RangeSet<GroupValue>,
+  doc: Text
+): LineGroup[] {
+  if (ranges.size === 0) {
+    return [];
+  }
+
+  const groups: LineGroup[] = [];
+
+  ranges.between(0, doc.length, (from, to, value) => {
+    const startLine = doc.lineAt(from).number;
+    const endPos = to > from ? to - 1 : to;
+    const endLine = doc.lineAt(endPos).number;
+
+    groups.push({
+      lineStart: startLine,
+      lineEnd: endLine,
+      resultIds: [...value.resultIds].sort((a, b) => a - b),
+    });
+  });
+
+  return groups;
+}
+
+function normalizeLineGroups(groups: LineGroup[], doc: Text): LineGroup[] {
+  if (groups.length === 0) {
+    return [];
+  }
+
+  const normalizedSet = normalizeGroupRanges(
+    lineGroupsToRangeSet(doc, groups),
+    doc
+  );
+
+  return rangeSetToLineGroups(normalizedSet, doc);
+}
+
+function areLineGroupsEqual(a: LineGroup[], b: LineGroup[]): boolean {
+  if (a === b) {
+    return true;
+  }
+
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  for (let index = 0; index < a.length; index++) {
+    const groupA = a[index];
+    const groupB = b[index];
+
+    if (
+      groupA.lineStart !== groupB.lineStart ||
+      groupA.lineEnd !== groupB.lineEnd ||
+      groupA.resultIds.length !== groupB.resultIds.length
+    ) {
+      return false;
+    }
+
+    for (let idIndex = 0; idIndex < groupA.resultIds.length; idIndex++) {
+      if (groupA.resultIds[idIndex] !== groupB.resultIds[idIndex]) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+export const lineGroupsField = StateField.define<LineGroup[]>({
+  create() {
+    return [];
+  },
+
+  update(groups, tr) {
+    const doc = tr.state.doc;
+    let nextGroups: LineGroup[] | null = null;
+
+    for (const effect of tr.effects) {
+      if (effect.is(setLineGroups)) {
+        nextGroups = normalizeLineGroups(effect.value, doc);
+        break;
+      }
+
+      if (effect.is(setGroupRanges)) {
+        const normalized = normalizeGroupRanges(effect.value, doc);
+        nextGroups = rangeSetToLineGroups(normalized, doc);
+        break;
+      }
+    }
+
+    if (!nextGroups && tr.docChanged) {
+      const ranges = tr.state.field(groupRangesField);
+      nextGroups = rangeSetToLineGroups(ranges, doc);
+    }
+
+    if (!nextGroups) {
+      return groups;
+    }
+
+    return areLineGroupsEqual(groups, nextGroups) ? groups : nextGroups;
+  },
+});
 
 function snapRangesToFullLines(
   ranges: RangeSet<GroupValue>,
@@ -214,7 +355,7 @@ const groupTheme = EditorView.theme({
 const groupRangesHistory = invertedEffects.of((tr) => {
   const previous = tr.startState.field(groupRangesField);
   const hasExplicitEffect = tr.effects.some((effect) =>
-    effect.is(setGroupRanges)
+    effect.is(setGroupRanges) || effect.is(setLineGroups)
   );
 
   if (!tr.docChanged && !hasExplicitEffect) {
@@ -233,6 +374,7 @@ export const resultGroupingExtension = [
   // Order does not matter much here, but we keep the field first so other
   // extensions (decorations/history) can read from it during initialization.
   groupRangesField,
+  lineGroupsField,
   groupDecorationsField,
   groupTheme,
   groupRangesHistory,

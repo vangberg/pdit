@@ -11,7 +11,7 @@ import {
   highlightActiveLineGutter,
   ViewUpdate,
 } from "@codemirror/view";
-import { EditorState, RangeSet, Text } from "@codemirror/state";
+import { EditorState, Text } from "@codemirror/state";
 import {
   defaultHighlightStyle,
   syntaxHighlighting,
@@ -38,17 +38,15 @@ import {
 } from "./line-heights";
 import {
   resultGroupingExtension,
-  setGroupRanges,
-  GroupValue,
-  groupRangesField,
+  setLineGroups,
+  lineGroupsField,
 } from "./result-grouping-plugin";
-import { computeLineGroups } from "./compute-line-groups";
-import { ApiExecuteResult } from "./api";
+import { LineGroup } from "./compute-line-groups";
 
 export interface EditorHandles {
   applyExecutionUpdate: (update: {
     doc: string;
-    results: ApiExecuteResult[];
+    lineGroups: LineGroup[];
   }) => void;
 }
 
@@ -58,31 +56,10 @@ interface EditorProps {
   targetHeights?: LineHeight[];
   onExecute?: (script: string) => void;
   onDocumentChange?: (doc: Text) => void;
-  onGroupRangesChange?: (ranges: RangeSet<GroupValue>) => void;
+  onLineGroupsChange?: (groups: LineGroup[]) => void;
+  lineGroups?: LineGroup[];
   ref?: React.Ref<EditorHandles>;
 }
-
-export const buildGroupRangeSet = (
-  doc: Text,
-  groups: ReturnType<typeof computeLineGroups>
-): RangeSet<GroupValue> => {
-  if (groups.length === 0) {
-    return RangeSet.empty;
-  }
-
-  const ranges = groups.map((group, index) => {
-    const fromLine = doc.line(group.lineStart);
-    const toLine = doc.line(group.lineEnd);
-
-    return {
-      from: fromLine.from,
-      to: toLine.to,
-      value: new GroupValue(index, group.resultIds),
-    };
-  });
-
-  return RangeSet.of(ranges, true);
-};
 
 export function Editor({
   initialCode,
@@ -90,7 +67,8 @@ export function Editor({
   targetHeights,
   onExecute,
   onDocumentChange,
-  onGroupRangesChange,
+  onLineGroupsChange,
+  lineGroups,
   ref: externalRef,
 }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -99,7 +77,7 @@ export function Editor({
   const onExecuteRef = useRef(onExecute);
   const onHeightChangeRef = useRef(onHeightChange);
   const onDocumentChangeRef = useRef(onDocumentChange);
-  const onGroupRangesChangeRef = useRef(onGroupRangesChange);
+  const onLineGroupsChangeRef = useRef(onLineGroupsChange);
 
   // Mirror the latest callbacks so long-lived view listeners stay up to date
   useEffect(() => {
@@ -115,8 +93,8 @@ export function Editor({
   }, [onDocumentChange]);
 
   useEffect(() => {
-    onGroupRangesChangeRef.current = onGroupRangesChange;
-  }, [onGroupRangesChange]);
+    onLineGroupsChangeRef.current = onLineGroupsChange;
+  }, [onLineGroupsChange]);
 
   useEffect(() => {
     if (!editorRef.current) {
@@ -173,12 +151,12 @@ export function Editor({
             onDocumentChangeRef.current?.(update.state.doc);
           }
 
-          if (onGroupRangesChangeRef.current) {
-            const previous = update.startState.field(groupRangesField);
-            const next = update.state.field(groupRangesField);
+          if (onLineGroupsChangeRef.current) {
+            const previousGroups = update.startState.field(lineGroupsField);
+            const nextGroups = update.state.field(lineGroupsField);
 
-            if (previous !== next) {
-              onGroupRangesChangeRef.current(next as RangeSet<GroupValue>);
+            if (previousGroups !== nextGroups) {
+              onLineGroupsChangeRef.current(nextGroups);
             }
           }
         }),
@@ -207,9 +185,9 @@ export function Editor({
     viewRef.current = view;
 
     onDocumentChangeRef.current?.(view.state.doc);
-    onGroupRangesChangeRef.current?.(
-      view.state.field(groupRangesField) as RangeSet<GroupValue>
-    );
+    if (onLineGroupsChangeRef.current) {
+      onLineGroupsChangeRef.current(view.state.field(lineGroupsField));
+    }
 
     return () => {
       view.destroy();
@@ -217,28 +195,34 @@ export function Editor({
     };
   }, []);
 
+  useEffect(() => {
+    const view = viewRef.current;
+
+    if (!view || lineGroups === undefined) {
+      return;
+    }
+
+    view.dispatch({ effects: setLineGroups.of(lineGroups) });
+  }, [lineGroups]);
+
   useImperativeHandle(
     externalRef,
     () => ({
       applyExecutionUpdate: ({
         doc,
-        results,
+        lineGroups,
       }: {
         doc: string;
-        results: ApiExecuteResult[];
+        lineGroups: LineGroup[];
       }) => {
         const view = viewRef.current;
         if (!view) {
           return;
         }
 
-        const text = Text.of(doc.split("\n"));
-        const groups = computeLineGroups(results);
-        const rangeSet = buildGroupRangeSet(text, groups);
-
         const transaction: any = {
           selection: { anchor: doc.length },
-          effects: setGroupRanges.of(rangeSet),
+          effects: [setLineGroups.of(lineGroups)],
         };
 
         if (doc !== view.state.doc.toString()) {

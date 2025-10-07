@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { LineHeight } from "./line-heights";
 import { OutputHeight } from "./OutputPane";
-import { RangeSet, Text } from "@codemirror/state";
-import { GroupValue } from "./result-grouping-plugin";
+import { Text } from "@codemirror/state";
+import { LineGroup } from "./compute-line-groups";
 
 interface DebugPanelProps {
   editorHeights: LineHeight[];
@@ -10,7 +10,7 @@ interface DebugPanelProps {
   targetEditorHeights: LineHeight[];
   targetOutputHeights: OutputHeight[];
   isSyncing: boolean;
-  groupRanges?: RangeSet<GroupValue>;
+  lineGroups?: LineGroup[];
   currentDoc?: Text | null;
 }
 
@@ -20,7 +20,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   targetEditorHeights,
   targetOutputHeights,
   isSyncing,
-  groupRanges,
+  lineGroups,
   currentDoc,
 }) => {
   const [activeTab, setActiveTab] = useState<"heights" | "ranges">(() => {
@@ -88,7 +88,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   );
 
   const renderRangesTab = () => {
-    if (!groupRanges || groupRanges.size === 0 || !currentDoc) {
+    if (!lineGroups || lineGroups.length === 0 || !currentDoc) {
       return (
         <div className="debug-empty">
           No result groups or document available
@@ -96,28 +96,23 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
       );
     }
 
-    const groups: Array<{
-      groupIndex: number;
-      lines: string;
-      from: number;
-      to: number;
-      resultIds: string;
-    }> = [];
-
-    groupRanges.between(0, currentDoc.length, (from, to, value) => {
-      const startLine = currentDoc.lineAt(from).number;
-      const endPos = to > from ? to - 1 : to;
-      const endLine = currentDoc.lineAt(endPos).number;
+    const groups = lineGroups.map((group, index) => {
       const linesDisplay =
-        startLine === endLine ? `${startLine}` : `[${startLine}, ${endLine}]`;
+        group.lineStart === group.lineEnd
+          ? `${group.lineStart}`
+          : `[${group.lineStart}, ${group.lineEnd}]`;
 
-      groups.push({
-        groupIndex: value.groupIndex,
+      const from = currentDoc.line(group.lineStart).from;
+      const to = currentDoc.line(group.lineEnd).to;
+
+      return {
+        groupIndex: index,
         lines: linesDisplay,
         from,
         to,
-        resultIds: value.resultIds.join(", "),
-      });
+        length: to - from,
+        resultIds: group.resultIds.join(", "),
+      };
     });
 
     return (
@@ -139,7 +134,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
               <td className="range-value">{group.lines}</td>
               <td className="range-value">{group.from}</td>
               <td className="range-value">{group.to}</td>
-              <td className="range-value">{group.to - group.from}</td>
+              <td className="range-value">{group.length}</td>
               <td className="range-value">{group.resultIds}</td>
             </tr>
           ))}

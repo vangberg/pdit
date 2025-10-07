@@ -4,9 +4,9 @@ import { OutputPane, OutputHeight } from "./OutputPane";
 import { DebugPanel } from "./DebugPanel";
 import { LineHeight } from "./line-heights";
 import { executeScript, ApiExecuteResponse } from "./api";
-import { RangeSet, Text } from "@codemirror/state";
+import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
-import { GroupValue } from "./result-grouping-plugin";
+import { computeLineGroups, LineGroup } from "./compute-line-groups";
 
 const initialCode = `// Welcome to CodeMirror, this is a very long, long line!
 function fibonacci(n) {
@@ -33,9 +33,7 @@ function App() {
   const [executeResults, setExecuteResults] =
     useState<ApiExecuteResponse | null>(null);
   const [currentDoc, setCurrentDoc] = useState<Text | null>(null);
-  const [currentGroupRanges, setCurrentGroupRanges] = useState<
-    RangeSet<GroupValue>
-  >(RangeSet.empty);
+  const [currentLineGroups, setCurrentLineGroups] = useState<LineGroup[]>([]);
   const isSyncing = useRef<boolean>(false);
 
   useEffect(() => {
@@ -85,8 +83,9 @@ function App() {
     setCurrentDoc(doc);
   }, []);
 
-  const handleGroupRangesChange = useCallback((ranges: RangeSet<GroupValue>) => {
-    setCurrentGroupRanges(ranges);
+  const handleLineGroupsChange = useCallback((groups: LineGroup[]) => {
+    console.log("App received line groups change:", groups);
+    setCurrentLineGroups(groups);
   }, []);
 
   const handleExecute = useCallback(async (script: string) => {
@@ -94,9 +93,12 @@ function App() {
     console.log("Execute result:", result);
     setExecuteResults(result);
 
+    const groups = computeLineGroups(result.results);
+    setCurrentLineGroups(groups);
+
     editorRef.current?.applyExecutionUpdate({
       doc: script,
-      results: result.results,
+      lineGroups: groups,
     });
   }, []);
 
@@ -111,7 +113,8 @@ function App() {
             targetHeights={targetEditorHeights}
             onExecute={handleExecute}
             onDocumentChange={handleDocumentChange}
-            onGroupRangesChange={handleGroupRangesChange}
+            onLineGroupsChange={handleLineGroupsChange}
+            lineGroups={currentLineGroups}
           />
         </div>
         <div className="output-half">
@@ -131,7 +134,7 @@ function App() {
         targetEditorHeights={targetEditorHeights}
         targetOutputHeights={targetOutputHeights}
         isSyncing={isSyncing.current}
-        groupRanges={currentGroupRanges}
+        lineGroups={currentLineGroups}
         currentDoc={currentDoc}
       />
     </div>
