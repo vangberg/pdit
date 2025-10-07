@@ -202,6 +202,10 @@ export function Editor({
       return;
     }
 
+    if (view.state.field(lineGroupsField) === lineGroups) {
+      return;
+    }
+
     view.dispatch({ effects: setLineGroups.of(lineGroups) });
   }, [lineGroups]);
 
