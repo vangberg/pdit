@@ -57,7 +57,6 @@ interface EditorProps {
   onExecute?: (script: string) => void;
   onDocumentChange?: (doc: Text) => void;
   onLineGroupsChange?: (groups: LineGroup[]) => void;
-  lineGroups?: LineGroup[];
   ref?: React.Ref<EditorHandles>;
 }
 
@@ -68,7 +67,6 @@ export function Editor({
   onExecute,
   onDocumentChange,
   onLineGroupsChange,
-  lineGroups,
   ref: externalRef,
 }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -194,20 +192,6 @@ export function Editor({
       viewRef.current = null;
     };
   }, []);
-
-  useEffect(() => {
-    const view = viewRef.current;
-
-    if (!view || lineGroups === undefined) {
-      return;
-    }
-
-    if (view.state.field(lineGroupsField) === lineGroups) {
-      return;
-    }
-
-    view.dispatch({ effects: setLineGroups.of(lineGroups) });
-  }, [lineGroups]);
 
   useImperativeHandle(
     externalRef,

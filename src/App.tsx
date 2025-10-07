@@ -114,7 +114,6 @@ function App() {
             onExecute={handleExecute}
             onDocumentChange={handleDocumentChange}
             onLineGroupsChange={handleLineGroupsChange}
-            lineGroups={currentLineGroups}
           />
         </div>
         <div className="output-half">
