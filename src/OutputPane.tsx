@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useCallback } from "react";
 import { Output } from "./Output";
 import { ApiExecuteResult } from "./api";
+import { LineGroup } from "./compute-line-groups";
 
 export interface OutputHeight {
   line: number;
@@ -94,12 +95,14 @@ interface OutputPaneProps {
   onHeightChange?: (heights: OutputHeight[]) => void;
   targetHeights?: OutputHeight[];
   results: ApiExecuteResult[];
+  lineGroups: LineGroup[];
 }
 
 export const OutputPane: React.FC<OutputPaneProps> = ({
   onHeightChange,
   targetHeights,
   results,
+  lineGroups,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const outputRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -169,24 +172,26 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
   return (
     <div id="output" ref={containerRef}>
       <div className="output-content">
-        {results.map((result, index) => {
-          const item = outputData[index % outputData.length];
-          const lineNumber = index + 1;
-          const lineTargetHeight = targetHeights?.find(
-            (t) => t.line === lineNumber
-          )?.height;
+        {lineGroups.map((group) => (
+          <div className="output-group" key={group.resultIds.join("-")}>
+            {group.resultIds.map((resultId) => {
+              const index = results.findIndex((res) => res.id === resultId);
+              if (index === -1) return null;
+              const result = results[index];
+              const item = outputData[index % outputData.length];
 
-          return (
-            <Output
-              key={result.id}
-              ref={(el) => (outputRefs.current[index] = el)}
-              item={item}
-              index={index}
-              targetHeight={lineTargetHeight}
-              isEven={index % 2 === 1}
-            />
-          );
-        })}
+              return (
+                <Output
+                  key={result.id}
+                  ref={(el) => (outputRefs.current[index] = el)}
+                  item={item}
+                  index={index}
+                  isEven={index % 2 === 1}
+                />
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );

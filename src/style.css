@@ -96,6 +96,10 @@ h1 {
   padding-top: 4px;
 }
 
+.output-group {
+  border: 2px solid red;
+}
+
 .output-line {
   position: relative;
 } 

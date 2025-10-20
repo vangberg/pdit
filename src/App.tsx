@@ -122,6 +122,7 @@ function App() {
               onHeightChange={handleOutputHeightChange}
               targetHeights={targetOutputHeights}
               results={executeResults.results}
+              lineGroups={currentLineGroups}
             />
           )}
         </div>
