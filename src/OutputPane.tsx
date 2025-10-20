@@ -92,61 +92,42 @@ const outputData = [
 ];
 
 interface OutputPaneProps {
-  onHeightChange?: (heights: OutputHeight[]) => void;
-  targetHeights?: OutputHeight[];
+  onLineGroupHeightChange?: (heights: number[]) => void;
   results: ApiExecuteResult[];
   lineGroups: LineGroup[];
 }
 
 export const OutputPane: React.FC<OutputPaneProps> = ({
-  onHeightChange,
-  targetHeights,
+  onLineGroupHeightChange,
   results,
   lineGroups,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const outputRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const lineGroupRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const getOutputHeights = useCallback((): OutputHeight[] => {
-    return results.map((_, index) => {
-      const lineNumber = index + 1;
-      const outputElement = outputRefs.current[index];
-
-      if (!outputElement) {
-        return { line: lineNumber, height: 0 };
-      }
-
-      return {
-        line: lineNumber,
-        height: Math.max(0, outputElement.getBoundingClientRect().height),
-      };
-    });
-  }, [results]);
+  const getLineGroupHeights = useCallback((): number[] => {
+    if (!lineGroupRefs.current) return [];
+    return lineGroupRefs.current.map((el) =>
+      el ? Math.max(0, el.getBoundingClientRect().height) : 0
+    );
+  }, []);
 
   useEffect(() => {
-    if (!containerRef.current || !onHeightChange) return;
+    if (!containerRef.current || !onLineGroupHeightChange) return;
 
     // Initial callback (like CodeMirror's setTimeout pattern)
     const initialTimeout = setTimeout(() => {
-      onHeightChange(getOutputHeights());
+      onLineGroupHeightChange(getLineGroupHeights());
     }, 0);
 
     // MutationObserver for DOM changes that might affect height
-    // But skip changes to spacer elements to avoid loops
-    const mutationObserver = new MutationObserver((mutations) => {
-      const hasNonSpacerChanges = mutations.some((mutation) => {
-        const target = mutation.target as Element;
-        return !target.classList?.contains("output-spacer");
-      });
-
-      if (hasNonSpacerChanges) {
-        onHeightChange(getOutputHeights());
-      }
+    const mutationObserver = new MutationObserver(() => {
+      onLineGroupHeightChange(getLineGroupHeights());
     });
 
     // ResizeObserver to watch for content size changes in line elements
     const resizeObserver = new ResizeObserver(() => {
-      onHeightChange(getOutputHeights());
+      onLineGroupHeightChange(getLineGroupHeights());
     });
 
     // Observe the container for mutations and resizes
@@ -167,13 +148,19 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
       mutationObserver.disconnect();
       resizeObserver.disconnect();
     };
-  }, [onHeightChange, getOutputHeights]);
+  }, [onLineGroupHeightChange, getLineGroupHeights]);
 
   return (
     <div id="output" ref={containerRef}>
       <div className="output-content">
-        {lineGroups.map((group) => (
-          <div className="output-group" key={group.resultIds.join("-")}>
+        {lineGroups.map((group, groupIndex) => (
+          <div
+            className="output-group"
+            key={group.resultIds.join("-")}
+            ref={(el) => {
+              lineGroupRefs.current[groupIndex] = el;
+            }}
+          >
             {group.resultIds.map((resultId) => {
               const index = results.findIndex((res) => res.id === resultId);
               if (index === -1) return null;
@@ -183,7 +170,6 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
               return (
                 <Output
                   key={result.id}
-                  ref={(el) => (outputRefs.current[index] = el)}
                   item={item}
                   index={index}
                   isEven={index % 2 === 1}

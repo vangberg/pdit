@@ -30,12 +30,7 @@ import {
 } from "@codemirror/autocomplete";
 import { lintKeymap } from "@codemirror/lint";
 import { javascript } from "@codemirror/lang-javascript";
-import {
-  lineHeightExtension,
-  setLineHeights,
-  lineHeightChangeListener,
-  LineHeight,
-} from "./line-heights";
+import { lineGroupHeightExtension, setLineGroupHeights } from "./line-group-heights";
 import {
   resultGroupingExtension,
   setLineGroups,
@@ -52,28 +47,25 @@ export interface EditorHandles {
 
 interface EditorProps {
   initialCode: string;
-  onHeightChange?: (heights: LineHeight[]) => void;
-  targetHeights?: LineHeight[];
   onExecute?: (script: string) => void;
   onDocumentChange?: (doc: Text) => void;
   onLineGroupsChange?: (groups: LineGroup[]) => void;
+  lineGroupHeights?: number[];
   ref?: React.Ref<EditorHandles>;
 }
 
 export function Editor({
   initialCode,
-  onHeightChange,
-  targetHeights,
   onExecute,
   onDocumentChange,
   onLineGroupsChange,
+  lineGroupHeights,
   ref: externalRef,
 }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
 
   const onExecuteRef = useRef(onExecute);
-  const onHeightChangeRef = useRef(onHeightChange);
   const onDocumentChangeRef = useRef(onDocumentChange);
   const onLineGroupsChangeRef = useRef(onLineGroupsChange);
 
@@ -81,10 +73,6 @@ export function Editor({
   useEffect(() => {
     onExecuteRef.current = onExecute;
   }, [onExecute]);
-
-  useEffect(() => {
-    onHeightChangeRef.current = onHeightChange;
-  }, [onHeightChange]);
 
   useEffect(() => {
     onDocumentChangeRef.current = onDocumentChange;
@@ -138,11 +126,7 @@ export function Editor({
           ...lintKeymap,
         ]),
         javascript(),
-        lineHeightExtension,
-        lineHeightChangeListener((heights) => {
-          console.log("Editor line heights changed:", heights.slice(0, 5));
-          onHeightChangeRef.current?.(heights);
-        }),
+        lineGroupHeightExtension,
         resultGroupingExtension,
         EditorView.updateListener.of((update: ViewUpdate) => {
           if (update.docChanged) {
@@ -228,7 +212,7 @@ export function Editor({
   );
 
   useEffect(() => {
-    if (!targetHeights || targetHeights.length === 0) {
+    if (!lineGroupHeights || lineGroupHeights.length === 0) {
       return;
     }
 
@@ -239,10 +223,10 @@ export function Editor({
 
     requestAnimationFrame(() => {
       if (viewRef.current) {
-        setLineHeights(viewRef.current, targetHeights);
+        setLineGroupHeights(viewRef.current, lineGroupHeights);
       }
     });
-  }, [targetHeights]);
+  }, [lineGroupHeights]);
 
   return <div id="editor" ref={editorRef} />;
 }

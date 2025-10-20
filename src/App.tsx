@@ -1,11 +1,9 @@
 import "./style.css";
 import { Editor, EditorHandles } from "./Editor";
-import { OutputPane, OutputHeight } from "./OutputPane";
-import { DebugPanel } from "./DebugPanel";
-import { LineHeight } from "./line-heights";
+import { OutputPane } from "./OutputPane";
 import { executeScript, ApiExecuteResponse } from "./api";
 import { Text } from "@codemirror/state";
-import React, { useRef, useState, useCallback, useEffect } from "react";
+import React, { useRef, useState, useCallback } from "react";
 import { computeLineGroups, LineGroup } from "./compute-line-groups";
 
 const initialCode = `// Welcome to CodeMirror, this is a very long, long line!
@@ -22,57 +20,15 @@ console.log(greeting);`;
 
 function App() {
   const editorRef = useRef<EditorHandles | null>(null);
-  const [editorHeights, setEditorHeights] = useState<LineHeight[]>([]);
-  const [outputHeights, setOutputHeights] = useState<OutputHeight[]>([]);
-  const [targetOutputHeights, setTargetOutputHeights] = useState<
-    OutputHeight[]
-  >([]);
-  const [targetEditorHeights, setTargetEditorHeights] = useState<LineHeight[]>(
-    []
-  );
+  const [lineGroupHeights, setLineGroupHeights] = useState<number[]>([]);
   const [executeResults, setExecuteResults] =
     useState<ApiExecuteResponse | null>(null);
   const [currentDoc, setCurrentDoc] = useState<Text | null>(null);
   const [currentLineGroups, setCurrentLineGroups] = useState<LineGroup[]>([]);
-  const isSyncing = useRef<boolean>(false);
 
-  useEffect(() => {
-    if (editorHeights.length === 0 || outputHeights.length === 0) return;
-    if (isSyncing.current) return;
-
-    isSyncing.current = true;
-
-    const maxLines = Math.max(editorHeights.length, outputHeights.length);
-    const editorTargets: LineHeight[] = [];
-    const outputTargets: OutputHeight[] = [];
-
-    for (let line = 1; line <= maxLines; line++) {
-      const editorHeight = editorHeights[line - 1]?.height || 0;
-      const outputHeight = outputHeights[line - 1]?.height || 0;
-      const targetHeight = Math.max(editorHeight, outputHeight);
-
-      if (targetHeight > 0) {
-        editorTargets.push({ line, height: targetHeight });
-        outputTargets.push({ line, height: targetHeight });
-      }
-    }
-
-    setTargetEditorHeights(editorTargets);
-    setTargetOutputHeights(outputTargets);
-
-    requestAnimationFrame(() => {
-      isSyncing.current = false;
-    });
-  }, [editorHeights, outputHeights]);
-
-  const handleEditorHeightChange = useCallback((heights: LineHeight[]) => {
-    console.log("App received editor heights:", heights.slice(0, 5));
-    setEditorHeights(heights);
-  }, []);
-
-  const handleOutputHeightChange = useCallback((heights: OutputHeight[]) => {
-    console.log("App received output heights:", heights.slice(0, 5));
-    setOutputHeights(heights);
+  const handleLineGroupHeightChange = useCallback((heights: number[]) => {
+    console.log("App received line group heights:", heights.slice(0, 5));
+    setLineGroupHeights(heights);
   }, []);
 
   const handleDocumentChange = useCallback((doc: Text) => {
@@ -109,34 +65,22 @@ function App() {
           <Editor
             ref={editorRef}
             initialCode={initialCode}
-            onHeightChange={handleEditorHeightChange}
-            targetHeights={targetEditorHeights}
             onExecute={handleExecute}
             onDocumentChange={handleDocumentChange}
             onLineGroupsChange={handleLineGroupsChange}
+            lineGroupHeights={lineGroupHeights}
           />
         </div>
         <div className="output-half">
           {executeResults && (
             <OutputPane
-              onHeightChange={handleOutputHeightChange}
-              targetHeights={targetOutputHeights}
+              onLineGroupHeightChange={handleLineGroupHeightChange}
               results={executeResults.results}
               lineGroups={currentLineGroups}
             />
           )}
         </div>
       </div>
-
-      <DebugPanel
-        editorHeights={editorHeights}
-        outputHeights={outputHeights}
-        targetEditorHeights={targetEditorHeights}
-        targetOutputHeights={targetOutputHeights}
-        isSyncing={isSyncing.current}
-        lineGroups={currentLineGroups}
-        currentDoc={currentDoc}
-      />
     </div>
   );
 }

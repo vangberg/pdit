@@ -1,5 +1,7 @@
 import {EditorView, Decoration, WidgetType, DecorationSet, ViewUpdate, ViewPlugin} from "@codemirror/view"
 import {StateField, StateEffect, RangeSetBuilder} from "@codemirror/state"
+import { lineGroupsField } from "./result-grouping-plugin"
+import { LineGroup } from "./compute-line-groups"
 
 class Spacer extends WidgetType {
   constructor(readonly height: number, readonly lineNumber: number) { super() }
@@ -45,12 +47,12 @@ export const spacersField = StateField.define<DecorationSet>({
   provide: f => EditorView.decorations.from(f)
 })
 
-export interface LineHeight {
+export interface LineGroupHeight {
   line: number;
   height: number;
 }
 
-export type LineHeightChangeCallback = (heights: LineHeight[]) => void
+export type LineGroupHeightChangeCallback = (heights: LineGroupHeight[]) => void
 
 function findSpacerForLine(spacers: DecorationSet, lineInfo: any): Spacer | null {
   const spacerIter = spacers.iter()
@@ -63,71 +65,94 @@ function findSpacerForLine(spacers: DecorationSet, lineInfo: any): Spacer | null
   return null
 }
 
-export function setLineHeights(view: EditorView, lineHeights: LineHeight[]) {
+function computeNaturalGroupHeight(
+  view: EditorView,
+  spacers: DecorationSet,
+  group: LineGroup
+): number {
+  const { doc } = view.state
+  let total = 0
+
+  for (let lineNumber = group.lineStart; lineNumber <= group.lineEnd; lineNumber++) {
+    const lineInfo = doc.line(lineNumber)
+    const lineBlock = view.lineBlockAt(lineInfo.from)
+    const spacer = findSpacerForLine(spacers, lineInfo)
+    const spacerHeight = spacer ? spacer.height : 0
+
+    total += lineBlock.height - spacerHeight
+  }
+
+  return total
+}
+
+export function setLineGroupHeights(view: EditorView, groupHeights: number[]) {
   const builder = new RangeSetBuilder<Decoration>()
   const spacers = view.state.field(spacersField)
+  const groups = view.state.field(lineGroupsField)
 
-  for (const {line, height} of lineHeights) {
-    const lineInfo = view.state.doc.line(line)
-    const spacer = findSpacerForLine(spacers, lineInfo)
+  for (let index = 0; index < groups.length; index++) {
+    const targetHeight = groupHeights[index]
+    if (!Number.isFinite(targetHeight)) {
+      continue
+    }
 
-    const currentHeight = view.lineBlockAt(lineInfo.from).height
-    const spacerHeight = spacer ? spacer.height : 0
-    const diff = height - currentHeight + spacerHeight
+    const group = groups[index]
+    const naturalHeight = computeNaturalGroupHeight(view, spacers, group)
+    const diff = targetHeight - naturalHeight
 
     if (diff > 0.01) {
-      builder.add(lineInfo.to, lineInfo.to, Decoration.widget({
-        widget: new Spacer(diff, line),
+      const endLine = view.state.doc.line(group.lineEnd)
+      builder.add(endLine.to, endLine.to, Decoration.widget({
+        widget: new Spacer(diff, group.lineEnd),
         block: true,
         side: 1
       }))
     }
   }
-  
+
   view.dispatch({effects: adjustSpacers.of(builder.finish())})
 }
 
-export function getLineHeights(view: EditorView): LineHeight[] {
+export function getLineGroupHeights(view: EditorView): LineGroupHeight[] {
   const doc = view.state.doc
   const spacers = view.state.field(spacersField)
-  const result: LineHeight[] = []
-  
+  const result: LineGroupHeight[] = []
+
   for (let lineNumber = 1; lineNumber <= doc.lines; lineNumber++) {
     const lineInfo = doc.line(lineNumber)
     const lineBlock = view.lineBlockAt(lineInfo.from)
     const spacer = findSpacerForLine(spacers, lineInfo)
-    
     const spacerHeight = spacer ? spacer.height : 0
     const actualHeight = lineBlock.height - spacerHeight
-    
+
     result.push({
       line: lineNumber,
       height: actualHeight
     })
   }
-  
+
   return result
 }
 
-export function lineHeightChangeListener(callback: LineHeightChangeCallback) {
+export function lineGroupHeightChangeListener(callback: LineGroupHeightChangeCallback) {
   return ViewPlugin.fromClass(class {
     constructor(view: EditorView) {
       // Initial call
-      setTimeout(() => callback(getLineHeights(view)), 0)
+      setTimeout(() => callback(getLineGroupHeights(view)), 0)
     }
-    
+
     update(update: ViewUpdate) {
       // Skip if this update contains adjustSpacers effects to avoid loops
-      const hasSpacerEffects = update.transactions.some(tr => 
+      const hasSpacerEffects = update.transactions.some(tr =>
         tr.effects.some(effect => effect.is(adjustSpacers))
       )
-      
+
       if (!hasSpacerEffects && (update.docChanged || update.viewportChanged || update.geometryChanged)) {
-        callback(getLineHeights(update.view))
+        callback(getLineGroupHeights(update.view))
       }
     }
   })
 }
 
 // Include spacersField in your editor extensions
-export const lineHeightExtension = spacersField
+export const lineGroupHeightExtension = spacersField

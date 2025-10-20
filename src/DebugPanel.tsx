@@ -1,13 +1,13 @@
 import React, { useState } from "react";
-import { LineHeight } from "./line-heights";
+import { LineGroupHeight } from "./line-group-heights";
 import { OutputHeight } from "./OutputPane";
 import { Text } from "@codemirror/state";
 import { LineGroup } from "./compute-line-groups";
 
 interface DebugPanelProps {
-  editorHeights: LineHeight[];
+  editorHeights: LineGroupHeight[];
   outputHeights: OutputHeight[];
-  targetEditorHeights: LineHeight[];
+  targetEditorHeights: LineGroupHeight[];
   targetOutputHeights: OutputHeight[];
   isSyncing: boolean;
   lineGroups?: LineGroup[];
