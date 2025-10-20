@@ -1,4 +1,4 @@
-import {EditorView, Decoration, WidgetType, DecorationSet, ViewUpdate, ViewPlugin} from "@codemirror/view"
+import {EditorView, Decoration, WidgetType, DecorationSet} from "@codemirror/view"
 import {StateField, StateEffect, RangeSetBuilder} from "@codemirror/state"
 import { lineGroupsField } from "./result-grouping-plugin"
 import { LineGroup } from "./compute-line-groups"
@@ -111,47 +111,6 @@ export function setLineGroupHeights(view: EditorView, groupHeights: number[]) {
   }
 
   view.dispatch({effects: adjustSpacers.of(builder.finish())})
-}
-
-export function getLineGroupHeights(view: EditorView): LineGroupHeight[] {
-  const doc = view.state.doc
-  const spacers = view.state.field(spacersField)
-  const result: LineGroupHeight[] = []
-
-  for (let lineNumber = 1; lineNumber <= doc.lines; lineNumber++) {
-    const lineInfo = doc.line(lineNumber)
-    const lineBlock = view.lineBlockAt(lineInfo.from)
-    const spacer = findSpacerForLine(spacers, lineInfo)
-    const spacerHeight = spacer ? spacer.height : 0
-    const actualHeight = lineBlock.height - spacerHeight
-
-    result.push({
-      line: lineNumber,
-      height: actualHeight
-    })
-  }
-
-  return result
-}
-
-export function lineGroupHeightChangeListener(callback: LineGroupHeightChangeCallback) {
-  return ViewPlugin.fromClass(class {
-    constructor(view: EditorView) {
-      // Initial call
-      setTimeout(() => callback(getLineGroupHeights(view)), 0)
-    }
-
-    update(update: ViewUpdate) {
-      // Skip if this update contains adjustSpacers effects to avoid loops
-      const hasSpacerEffects = update.transactions.some(tr =>
-        tr.effects.some(effect => effect.is(adjustSpacers))
-      )
-
-      if (!hasSpacerEffects && (update.docChanged || update.viewportChanged || update.geometryChanged)) {
-        callback(getLineGroupHeights(update.view))
-      }
-    }
-  })
 }
 
 // Include spacersField in your editor extensions
