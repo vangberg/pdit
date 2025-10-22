@@ -131,17 +131,17 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
     });
 
     // Observe the container for mutations and resizes
-    if (containerRef.current) {
-      mutationObserver.observe(containerRef.current, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["style", "class"],
-      });
+    // if (containerRef.current) {
+    //   mutationObserver.observe(containerRef.current, {
+    //     childList: true,
+    //     subtree: true,
+    //     attributes: true,
+    //     attributeFilter: ["style", "class"],
+    //   });
 
-      // Single ResizeObserver on the container catches all internal size changes
-      resizeObserver.observe(containerRef.current);
-    }
+    //   // Single ResizeObserver on the container catches all internal size changes
+    //   resizeObserver.observe(containerRef.current);
+    // }
 
     return () => {
       clearTimeout(initialTimeout);
