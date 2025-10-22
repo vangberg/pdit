@@ -1,4 +1,4 @@
-import {EditorView, Decoration, WidgetType, DecorationSet} from "@codemirror/view"
+import {EditorView, Decoration, WidgetType, DecorationSet, ViewPlugin, ViewUpdate} from "@codemirror/view"
 import {StateField, StateEffect, RangeSetBuilder} from "@codemirror/state"
 import { lineGroupsField } from "./result-grouping-plugin"
 import { LineGroup } from "./compute-line-groups"
@@ -36,6 +36,20 @@ class Spacer extends WidgetType {
 
 export const adjustSpacers = StateEffect.define<DecorationSet>({
   map: (value, mapping) => value.map(mapping)
+})
+
+export const setLineGroupTargetHeights = StateEffect.define<number[]>()
+
+export const lineGroupTargetHeightsField = StateField.define<number[]>({
+  create: () => [],
+  update: (targetHeights, tr) => {
+    for (const effect of tr.effects) {
+      if (effect.is(setLineGroupTargetHeights)) {
+        return effect.value
+      }
+    }
+    return targetHeights
+  }
 })
 
 export const spacersField = StateField.define<DecorationSet>({
@@ -110,8 +124,61 @@ export function setLineGroupHeights(view: EditorView, groupHeights: number[]) {
     }
   }
 
-  view.dispatch({effects: adjustSpacers.of(builder.finish())})
+  view.dispatch({
+    effects: [
+      setLineGroupTargetHeights.of(groupHeights),
+      adjustSpacers.of(builder.finish())
+    ]
+  })
+}
+
+class LineGroupHeightPlugin {
+  private frameId: number | null = null
+
+  constructor(private readonly view: EditorView) {}
+
+  update(update: ViewUpdate) {
+    if (this.didReceiveTargetHeightEffect(update)) {
+      return
+    }
+
+    if (update.docChanged) {
+      this.scheduleReapply()
+    }
+  }
+
+  destroy() {
+    if (this.frameId !== null) {
+      cancelAnimationFrame(this.frameId)
+      this.frameId = null
+    }
+  }
+
+  private didReceiveTargetHeightEffect(update: ViewUpdate): boolean {
+    return update.transactions.some(tr =>
+      tr.effects.some(effect => effect.is(setLineGroupTargetHeights))
+    )
+  }
+
+  private scheduleReapply() {
+    if (this.frameId !== null) {
+      return
+    }
+
+    this.frameId = requestAnimationFrame(() => {
+      this.frameId = null
+      const heights = this.view.state.field(lineGroupTargetHeightsField)
+      if (!heights.length) {
+        return
+      }
+      setLineGroupHeights(this.view, heights)
+    })
+  }
 }
 
 // Include spacersField in your editor extensions
-export const lineGroupHeightExtension = spacersField
+export const lineGroupHeightExtension = [
+  spacersField,
+  lineGroupTargetHeightsField,
+  ViewPlugin.fromClass(LineGroupHeightPlugin)
+]
