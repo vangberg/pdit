@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useCallback } from "react";
 import { Output } from "./Output";
 import { ApiExecuteResult } from "./api";
 import { LineGroup } from "./compute-line-groups";
+import { CSSProperties } from "react";
 
 const outputData = [
   {
@@ -90,12 +91,14 @@ interface OutputPaneProps {
   onLineGroupHeightChange?: (heights: number[]) => void;
   results: ApiExecuteResult[];
   lineGroups: LineGroup[];
+  lineGroupTops?: number[];
 }
 
 export const OutputPane: React.FC<OutputPaneProps> = ({
   onLineGroupHeightChange,
   results,
   lineGroups,
+  lineGroupTops,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const lineGroupRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -126,17 +129,16 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
     });
 
     // Observe the container for mutations and resizes
-    // if (containerRef.current) {
-    //   mutationObserver.observe(containerRef.current, {
-    //     childList: true,
-    //     subtree: true,
-    //     attributes: true,
-    //     attributeFilter: ["style", "class"],
-    //   });
-
-    //   // Single ResizeObserver on the container catches all internal size changes
-    //   resizeObserver.observe(containerRef.current);
-    // }
+    if (containerRef.current) {
+      // mutationObserver.observe(containerRef.current, {
+      //   childList: true,
+      //   subtree: true,
+      //   attributes: true,
+      //   attributeFilter: ["style", "class"],
+      // });
+      // Single ResizeObserver on the container catches all internal size changes
+      // resizeObserver.observe(containerRef.current);
+    }
 
     return () => {
       clearTimeout(initialTimeout);
@@ -155,6 +157,16 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
             ref={(el) => {
               lineGroupRefs.current[groupIndex] = el;
             }}
+            style={
+              lineGroupTops && Number.isFinite(lineGroupTops[groupIndex])
+                ? ({
+                    position: "absolute",
+                    top: lineGroupTops[groupIndex],
+                    left: 0,
+                    right: 0,
+                  } as CSSProperties)
+                : undefined
+            }
           >
             {group.resultIds.map((resultId) => {
               const index = results.findIndex((res) => res.id === resultId);

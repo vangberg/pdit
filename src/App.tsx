@@ -50,10 +50,6 @@ function App() {
     setLineGroupTops(tops);
   }, []);
 
-  useEffect(() => {
-    console.log("App stored line group tops:", lineGroupTops.slice(0, 5));
-  }, [lineGroupTops]);
-
   const handleExecute = useCallback(async (script: string) => {
     const result = await executeScript(script);
     console.log("Execute result:", result);
@@ -88,6 +84,7 @@ function App() {
               onLineGroupHeightChange={handleLineGroupHeightChange}
               results={executeResults.results}
               lineGroups={currentLineGroups}
+              lineGroupTops={lineGroupTops}
             />
           )}
         </div>
