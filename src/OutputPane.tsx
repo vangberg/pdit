@@ -3,11 +3,6 @@ import { Output } from "./Output";
 import { ApiExecuteResult } from "./api";
 import { LineGroup } from "./compute-line-groups";
 
-export interface OutputHeight {
-  line: number;
-  height: number;
-}
-
 const outputData = [
   {
     type: "table" as const,

@@ -1,4 +1,9 @@
-import React, { useEffect, useImperativeHandle, useRef } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+} from "react";
 import {
   EditorView,
   keymap,
@@ -30,7 +35,10 @@ import {
 } from "@codemirror/autocomplete";
 import { lintKeymap } from "@codemirror/lint";
 import { javascript } from "@codemirror/lang-javascript";
-import { lineGroupHeightExtension, setLineGroupHeights } from "./line-group-heights";
+import {
+  lineGroupHeightExtension,
+  setLineGroupHeights,
+} from "./line-group-heights";
 import {
   resultGroupingExtension,
   setLineGroups,
@@ -50,6 +58,7 @@ interface EditorProps {
   onExecute?: (script: string) => void;
   onDocumentChange?: (doc: Text) => void;
   onLineGroupsChange?: (groups: LineGroup[]) => void;
+  onLineGroupTopChange?: (tops: number[]) => void;
   lineGroupHeights?: number[];
   ref?: React.Ref<EditorHandles>;
 }
@@ -59,6 +68,7 @@ export function Editor({
   onExecute,
   onDocumentChange,
   onLineGroupsChange,
+  onLineGroupTopChange,
   lineGroupHeights,
   ref: externalRef,
 }: EditorProps) {
@@ -68,6 +78,55 @@ export function Editor({
   const onExecuteRef = useRef(onExecute);
   const onDocumentChangeRef = useRef(onDocumentChange);
   const onLineGroupsChangeRef = useRef(onLineGroupsChange);
+  const onLineGroupTopChangeRef = useRef(onLineGroupTopChange);
+  const lastLineGroupTopsRef = useRef<number[] | null>(null);
+
+  const requestLineGroupTopMeasurement = useCallback(() => {
+    const view = viewRef.current;
+    if (!view) {
+      return;
+    }
+
+    view.requestMeasure<number[] | null>({
+      read: (innerView) => {
+        if (!onLineGroupTopChangeRef.current) {
+          return null;
+        }
+
+        const groups = innerView.state.field(lineGroupsField);
+        if (!groups.length) {
+          return [];
+        }
+
+        return groups.map((group) => {
+          const line = innerView.state.doc.line(group.lineStart);
+          const block = innerView.lineBlockAt(line.from);
+          return Math.max(0, block.top);
+        });
+      },
+      write: (tops) => {
+        if (!tops || !onLineGroupTopChangeRef.current) {
+          return;
+        }
+
+        const previous = lastLineGroupTopsRef.current;
+        const changed =
+          !previous ||
+          previous.length !== tops.length ||
+          tops.some((top, index) => {
+            const prevTop = previous[index];
+            return prevTop === undefined || Math.abs(prevTop - top) > 0.5;
+          });
+
+        if (!changed) {
+          return;
+        }
+
+        lastLineGroupTopsRef.current = tops;
+        onLineGroupTopChangeRef.current(tops);
+      },
+    });
+  }, []);
 
   // Mirror the latest callbacks so long-lived view listeners stay up to date
   useEffect(() => {
@@ -81,6 +140,10 @@ export function Editor({
   useEffect(() => {
     onLineGroupsChangeRef.current = onLineGroupsChange;
   }, [onLineGroupsChange]);
+  useEffect(() => {
+    onLineGroupTopChangeRef.current = onLineGroupTopChange;
+    lastLineGroupTopsRef.current = null;
+  }, [onLineGroupTopChange]);
 
   useEffect(() => {
     if (!editorRef.current) {
@@ -133,13 +196,22 @@ export function Editor({
             onDocumentChangeRef.current?.(update.state.doc);
           }
 
-          if (onLineGroupsChangeRef.current) {
-            const previousGroups = update.startState.field(lineGroupsField);
-            const nextGroups = update.state.field(lineGroupsField);
+          const previousGroups = update.startState.field(lineGroupsField);
+          const nextGroups = update.state.field(lineGroupsField);
+          const groupsChanged = previousGroups !== nextGroups;
 
-            if (previousGroups !== nextGroups) {
-              onLineGroupsChangeRef.current(nextGroups);
-            }
+          if (groupsChanged) {
+            onLineGroupsChangeRef.current?.(nextGroups);
+          }
+
+          if (
+            onLineGroupTopChangeRef.current &&
+            (update.docChanged ||
+              update.geometryChanged ||
+              update.viewportChanged ||
+              groupsChanged)
+          ) {
+            requestLineGroupTopMeasurement();
           }
         }),
         EditorView.theme({
@@ -174,6 +246,7 @@ export function Editor({
     return () => {
       view.destroy();
       viewRef.current = null;
+      lastLineGroupTopsRef.current = null;
     };
   }, []);
 
@@ -212,20 +285,21 @@ export function Editor({
   );
 
   useEffect(() => {
-    if (!lineGroupHeights || lineGroupHeights.length === 0) {
-      return;
-    }
-
     const view = viewRef.current;
-    if (!view) {
+    if (!view || !lineGroupHeights || lineGroupHeights.length === 0) {
       return;
     }
 
-    requestAnimationFrame(() => {
-      if (viewRef.current) {
-        setLineGroupHeights(viewRef.current, lineGroupHeights);
+    const frameId = requestAnimationFrame(() => {
+      const currentView = viewRef.current;
+      if (!currentView) {
+        return;
       }
+
+      setLineGroupHeights(currentView, lineGroupHeights);
     });
+
+    return () => cancelAnimationFrame(frameId);
   }, [lineGroupHeights]);
 
   return <div id="editor" ref={editorRef} />;

@@ -44,6 +44,10 @@ function App() {
     setCurrentLineGroups(groups);
   }, []);
 
+  const handleLineGroupTopChange = useCallback((tops: number[]) => {
+    console.log("App received line group tops:", tops.slice(0, 5));
+  }, []);
+
   const handleExecute = useCallback(async (script: string) => {
     const result = await executeScript(script);
     console.log("Execute result:", result);
@@ -68,6 +72,7 @@ function App() {
             onExecute={handleExecute}
             onDocumentChange={handleDocumentChange}
             onLineGroupsChange={handleLineGroupsChange}
+            onLineGroupTopChange={handleLineGroupTopChange}
             lineGroupHeights={lineGroupHeights}
           />
         </div>
