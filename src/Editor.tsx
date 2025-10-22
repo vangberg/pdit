@@ -1,9 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-} from "react";
+import React, { useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import {
   EditorView,
   keymap,
@@ -16,7 +11,7 @@ import {
   highlightActiveLineGutter,
   ViewUpdate,
 } from "@codemirror/view";
-import { EditorState, Text } from "@codemirror/state";
+import { Compartment, EditorState, Text } from "@codemirror/state";
 import {
   defaultHighlightStyle,
   syntaxHighlighting,
@@ -45,6 +40,10 @@ import {
   lineGroupsField,
 } from "./result-grouping-plugin";
 import { LineGroup } from "./compute-line-groups";
+import {
+  lineGroupTopChangeFacet,
+  lineGroupTopExtension,
+} from "./line-group-tops";
 
 export interface EditorHandles {
   applyExecutionUpdate: (update: {
@@ -78,55 +77,7 @@ export function Editor({
   const onExecuteRef = useRef(onExecute);
   const onDocumentChangeRef = useRef(onDocumentChange);
   const onLineGroupsChangeRef = useRef(onLineGroupsChange);
-  const onLineGroupTopChangeRef = useRef(onLineGroupTopChange);
-  const lastLineGroupTopsRef = useRef<number[] | null>(null);
-
-  const requestLineGroupTopMeasurement = useCallback(() => {
-    const view = viewRef.current;
-    if (!view) {
-      return;
-    }
-
-    view.requestMeasure<number[] | null>({
-      read: (innerView) => {
-        if (!onLineGroupTopChangeRef.current) {
-          return null;
-        }
-
-        const groups = innerView.state.field(lineGroupsField);
-        if (!groups.length) {
-          return [];
-        }
-
-        return groups.map((group) => {
-          const line = innerView.state.doc.line(group.lineStart);
-          const block = innerView.lineBlockAt(line.from);
-          return Math.max(0, block.top);
-        });
-      },
-      write: (tops) => {
-        if (!tops || !onLineGroupTopChangeRef.current) {
-          return;
-        }
-
-        const previous = lastLineGroupTopsRef.current;
-        const changed =
-          !previous ||
-          previous.length !== tops.length ||
-          tops.some((top, index) => {
-            const prevTop = previous[index];
-            return prevTop === undefined || Math.abs(prevTop - top) > 0.5;
-          });
-
-        if (!changed) {
-          return;
-        }
-
-        lastLineGroupTopsRef.current = tops;
-        onLineGroupTopChangeRef.current(tops);
-      },
-    });
-  }, []);
+  const lineGroupTopCallbackCompartment = useMemo(() => new Compartment(), []);
 
   // Mirror the latest callbacks so long-lived view listeners stay up to date
   useEffect(() => {
@@ -140,10 +91,6 @@ export function Editor({
   useEffect(() => {
     onLineGroupsChangeRef.current = onLineGroupsChange;
   }, [onLineGroupsChange]);
-  useEffect(() => {
-    onLineGroupTopChangeRef.current = onLineGroupTopChange;
-    lastLineGroupTopsRef.current = null;
-  }, [onLineGroupTopChange]);
 
   useEffect(() => {
     if (!editorRef.current) {
@@ -191,6 +138,10 @@ export function Editor({
         javascript(),
         lineGroupHeightExtension,
         resultGroupingExtension,
+        lineGroupTopExtension,
+        lineGroupTopCallbackCompartment.of(
+          lineGroupTopChangeFacet.of(onLineGroupTopChange ?? null)
+        ),
         EditorView.updateListener.of((update: ViewUpdate) => {
           if (update.docChanged) {
             onDocumentChangeRef.current?.(update.state.doc);
@@ -202,16 +153,6 @@ export function Editor({
 
           if (groupsChanged) {
             onLineGroupsChangeRef.current?.(nextGroups);
-          }
-
-          if (
-            onLineGroupTopChangeRef.current &&
-            (update.docChanged ||
-              update.geometryChanged ||
-              update.viewportChanged ||
-              groupsChanged)
-          ) {
-            requestLineGroupTopMeasurement();
           }
         }),
         EditorView.theme({
@@ -246,7 +187,6 @@ export function Editor({
     return () => {
       view.destroy();
       viewRef.current = null;
-      lastLineGroupTopsRef.current = null;
     };
   }, []);
 
@@ -301,6 +241,19 @@ export function Editor({
 
     return () => cancelAnimationFrame(frameId);
   }, [lineGroupHeights]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) {
+      return;
+    }
+
+    view.dispatch({
+      effects: lineGroupTopCallbackCompartment.reconfigure(
+        lineGroupTopChangeFacet.of(onLineGroupTopChange ?? null)
+      ),
+    });
+  }, [onLineGroupTopChange, lineGroupTopCallbackCompartment]);
 
   return <div id="editor" ref={editorRef} />;
 }
