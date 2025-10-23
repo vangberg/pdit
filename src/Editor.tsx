@@ -31,19 +31,16 @@ import {
 import { lintKeymap } from "@codemirror/lint";
 import { javascript } from "@codemirror/lang-javascript";
 import {
-  lineGroupHeightExtension,
-  setLineGroupHeights,
-} from "./line-group-heights";
-import {
   resultGroupingExtension,
   setLineGroups,
   lineGroupsField,
 } from "./result-grouping-plugin";
 import { LineGroup } from "./compute-line-groups";
 import {
+  lineGroupLayoutExtension,
+  setLineGroupHeights,
   lineGroupTopChangeFacet,
-  lineGroupTopExtension,
-} from "./line-group-tops";
+} from "./line-group-layout";
 
 export interface EditorHandles {
   applyExecutionUpdate: (update: {
@@ -136,9 +133,8 @@ export function Editor({
           ...lintKeymap,
         ]),
         javascript(),
-        lineGroupHeightExtension,
         resultGroupingExtension,
-        lineGroupTopExtension,
+        lineGroupLayoutExtension,
         lineGroupTopCallbackCompartment.of(
           lineGroupTopChangeFacet.of(onLineGroupTopChange ?? null)
         ),

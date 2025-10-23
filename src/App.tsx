@@ -3,7 +3,7 @@ import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
 import { executeScript, ApiExecuteResponse } from "./api";
 import { Text } from "@codemirror/state";
-import React, { useRef, useState, useCallback, useEffect } from "react";
+import React, { useRef, useState, useCallback } from "react";
 import { computeLineGroups, LineGroup } from "./compute-line-groups";
 
 const initialCode = `// Welcome to CodeMirror, this is a very long, long line!
@@ -23,7 +23,6 @@ function App() {
   const [lineGroupHeights, setLineGroupHeights] = useState<number[]>([]);
   const [executeResults, setExecuteResults] =
     useState<ApiExecuteResponse | null>(null);
-  const [currentDoc, setCurrentDoc] = useState<Text | null>(null);
   const [currentLineGroups, setCurrentLineGroups] = useState<LineGroup[]>([]);
   const [lineGroupTops, setLineGroupTops] = useState<number[]>([]);
 
@@ -37,7 +36,6 @@ function App() {
       "App received document change:",
       doc.toString().slice(0, 50) + "..."
     );
-    setCurrentDoc(doc);
   }, []);
 
   const handleLineGroupsChange = useCallback((groups: LineGroup[]) => {
