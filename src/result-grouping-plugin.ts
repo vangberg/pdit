@@ -275,9 +275,19 @@ function mergeSnappedRanges(
     const next = ranges[index];
 
     if (next.from <= current.to) {
-      // Extend the accumulator to cover the full overlap while keeping the
-      // earliest group's metadata intact.
-      current = { ...current, to: Math.max(current.to, next.to) };
+      // Ranges overlap - merge them by combining their result IDs
+      const combinedResultIds = [
+        ...current.value.resultIds,
+        ...next.value.resultIds
+      ];
+      // Deduplicate while preserving order (first occurrence wins)
+      const uniqueResultIds = Array.from(new Set(combinedResultIds));
+
+      current = {
+        ...current,
+        to: Math.max(current.to, next.to),
+        value: new GroupValue(current.value.groupIndex, uniqueResultIds)
+      };
       continue;
     }
 
