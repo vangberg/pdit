@@ -54,8 +54,8 @@ interface EditorProps {
   onExecute?: (script: string) => void;
   onDocumentChange?: (doc: Text) => void;
   onLineGroupsChange?: (groups: LineGroup[]) => void;
-  onLineGroupTopChange?: (tops: number[]) => void;
-  lineGroupHeights?: number[];
+  onLineGroupTopChange?: (tops: Map<string, number>) => void;
+  lineGroupHeights?: Map<string, number>;
   ref?: React.Ref<EditorHandles>;
 }
 
@@ -222,7 +222,7 @@ export function Editor({
 
   useEffect(() => {
     const view = viewRef.current;
-    if (!view || !lineGroupHeights || lineGroupHeights.length === 0) {
+    if (!view || !lineGroupHeights || lineGroupHeights.size === 0) {
       return;
     }
 

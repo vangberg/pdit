@@ -88,10 +88,10 @@ const outputData = [
 ];
 
 interface OutputPaneProps {
-  onLineGroupHeightChange?: (heights: number[]) => void;
+  onLineGroupHeightChange?: (heights: Map<string, number>) => void;
   results: ApiExecuteResult[];
   lineGroups: LineGroup[];
-  lineGroupTops?: number[];
+  lineGroupTops?: Map<string, number>;
 }
 
 export const OutputPane: React.FC<OutputPaneProps> = ({
@@ -101,13 +101,16 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
   lineGroupTops,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const lineGroupRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const lineGroupRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  const getLineGroupHeights = useCallback((): number[] => {
-    if (!lineGroupRefs.current) return [];
-    return lineGroupRefs.current.map((el) =>
-      el ? Math.max(0, el.getBoundingClientRect().height) : 0
-    );
+  const getLineGroupHeights = useCallback((): Map<string, number> => {
+    const heights = new Map<string, number>();
+    for (const [id, el] of lineGroupRefs.current.entries()) {
+      if (el) {
+        heights.set(id, Math.max(0, el.getBoundingClientRect().height));
+      }
+    }
+    return heights;
   }, []);
 
   useEffect(() => {
@@ -150,41 +153,48 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
   return (
     <div id="output" ref={containerRef}>
       <div className="output-content">
-        {lineGroups.map((group, groupIndex) => (
-          <div
-            className="output-group"
-            key={group.resultIds.join("-")}
-            ref={(el) => {
-              lineGroupRefs.current[groupIndex] = el;
-            }}
-            style={
-              lineGroupTops && Number.isFinite(lineGroupTops[groupIndex])
-                ? ({
-                    position: "absolute",
-                    top: lineGroupTops[groupIndex],
-                    left: 0,
-                    right: 0,
-                  } as CSSProperties)
-                : undefined
-            }
-          >
-            {group.resultIds.map((resultId) => {
-              const index = results.findIndex((res) => res.id === resultId);
-              if (index === -1) return null;
-              const result = results[index];
-              const item = outputData[index % outputData.length];
+        {lineGroups.map((group) => {
+          const topValue = lineGroupTops?.get(group.id);
+          return (
+            <div
+              className="output-group"
+              key={group.id}
+              ref={(el) => {
+                if (el) {
+                  lineGroupRefs.current.set(group.id, el);
+                } else {
+                  lineGroupRefs.current.delete(group.id);
+                }
+              }}
+              style={
+                topValue !== undefined && Number.isFinite(topValue)
+                  ? ({
+                      position: "absolute",
+                      top: topValue,
+                      left: 0,
+                      right: 0,
+                    } as CSSProperties)
+                  : undefined
+              }
+            >
+              {group.resultIds.map((resultId) => {
+                const index = results.findIndex((res) => res.id === resultId);
+                if (index === -1) return null;
+                const result = results[index];
+                const item = outputData[index % outputData.length];
 
-              return (
-                <Output
-                  key={result.id}
-                  item={item}
-                  index={index}
-                  isEven={index % 2 === 1}
-                />
-              );
-            })}
-          </div>
-        ))}
+                return (
+                  <Output
+                    key={result.id}
+                    item={item}
+                    index={index}
+                    isEven={index % 2 === 1}
+                  />
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

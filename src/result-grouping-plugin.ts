@@ -143,6 +143,7 @@ export function rangeSetToLineGroups(
   }
 
   const groups: LineGroup[] = [];
+  let idCounter = 0;
 
   ranges.between(0, doc.length, (from, to, value) => {
     const startLine = doc.lineAt(from).number;
@@ -150,6 +151,7 @@ export function rangeSetToLineGroups(
     const endLine = doc.lineAt(endPos).number;
 
     groups.push({
+      id: `lg-${idCounter++}`,
       lineStart: startLine,
       lineEnd: endLine,
       resultIds: [...value.resultIds].sort((a, b) => a - b),

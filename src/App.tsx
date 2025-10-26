@@ -20,14 +20,14 @@ console.log(greeting);`;
 
 function App() {
   const editorRef = useRef<EditorHandles | null>(null);
-  const [lineGroupHeights, setLineGroupHeights] = useState<number[]>([]);
+  const [lineGroupHeights, setLineGroupHeights] = useState<Map<string, number>>(new Map());
   const [executeResults, setExecuteResults] =
     useState<ApiExecuteResponse | null>(null);
   const [currentLineGroups, setCurrentLineGroups] = useState<LineGroup[]>([]);
-  const [lineGroupTops, setLineGroupTops] = useState<number[]>([]);
+  const [lineGroupTops, setLineGroupTops] = useState<Map<string, number>>(new Map());
 
-  const handleLineGroupHeightChange = useCallback((heights: number[]) => {
-    console.log("App received line group heights:", heights.slice(0, 5));
+  const handleLineGroupHeightChange = useCallback((heights: Map<string, number>) => {
+    console.log("App received line group heights:", Array.from(heights.entries()).slice(0, 5));
     setLineGroupHeights(heights);
   }, []);
 
@@ -43,8 +43,8 @@ function App() {
     setCurrentLineGroups(groups);
   }, []);
 
-  const handleLineGroupTopChange = useCallback((tops: number[]) => {
-    console.log("App received line group tops:", tops.slice(0, 5));
+  const handleLineGroupTopChange = useCallback((tops: Map<string, number>) => {
+    console.log("App received line group tops:", Array.from(tops.entries()).slice(0, 5));
     setLineGroupTops(tops);
   }, []);
 

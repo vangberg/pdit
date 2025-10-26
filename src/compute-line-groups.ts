@@ -1,6 +1,7 @@
 import { ApiExecuteResult } from "./api";
 
 export interface LineGroup {
+  id: string;
   resultIds: number[];
   lineStart: number;
   lineEnd: number;
@@ -66,6 +67,7 @@ export function computeLineGroups(results: ApiExecuteResult[]): LineGroup[] {
   }
 
   const groups: LineGroup[] = [];
+  let idCounter = 0;
   for (const resultIds of grouped.values()) {
     let minLine = Number.POSITIVE_INFINITY;
     let maxLine = Number.NEGATIVE_INFINITY;
@@ -81,6 +83,7 @@ export function computeLineGroups(results: ApiExecuteResult[]): LineGroup[] {
 
     if (minLine !== Number.POSITIVE_INFINITY && maxLine !== Number.NEGATIVE_INFINITY) {
       groups.push({
+        id: `lg-${idCounter++}`,
         resultIds: [...resultIds].sort((a, b) => a - b),
         lineStart: minLine,
         lineEnd: maxLine,

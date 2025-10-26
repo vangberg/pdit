@@ -43,10 +43,10 @@ export const adjustSpacers = StateEffect.define<DecorationSet>({
   map: (value, mapping) => value.map(mapping)
 })
 
-export const setLineGroupTargetHeights = StateEffect.define<number[]>()
+export const setLineGroupTargetHeights = StateEffect.define<Map<string, number>>()
 
-export const lineGroupTargetHeightsField = StateField.define<number[]>({
-  create: () => [],
+export const lineGroupTargetHeightsField = StateField.define<Map<string, number>>({
+  create: () => new Map(),
   update: (targetHeights, tr) => {
     for (const effect of tr.effects) {
       if (effect.is(setLineGroupTargetHeights)) {
@@ -75,7 +75,7 @@ export interface LineGroupHeight {
   height: number;
 }
 
-export type LineGroupTopChange = (tops: number[]) => void;
+export type LineGroupTopChange = (tops: Map<string, number>) => void;
 
 export const lineGroupTopChangeFacet = Facet.define<
   LineGroupTopChange | null,
@@ -107,7 +107,7 @@ function updateSpacers(view: EditorView) {
   const targetHeights = view.state.field(lineGroupTargetHeightsField)
   const currentSpacers = view.state.field(spacersField)
 
-  if (!targetHeights.length || !groups.length) return
+  if (targetHeights.size === 0 || groups.length === 0) return
 
   const doc = view.state.doc
   const builder = new RangeSetBuilder<Decoration>()
@@ -120,11 +120,11 @@ function updateSpacers(view: EditorView) {
     }
   }
 
-  for (let i = 0; i < groups.length; i++) {
-    const group = groups[i]
-    const targetHeight = targetHeights[i]
+  for (const group of groups) {
+    const targetHeight = targetHeights.get(group.id)
 
-    if (!Number.isFinite(targetHeight)) continue
+    // Skip if no target height set for this group
+    if (targetHeight === undefined || !Number.isFinite(targetHeight)) continue
 
     // Measure natural height from DOM
     let naturalHeight = 0
@@ -165,15 +165,16 @@ function measureAndReportTops(view: EditorView) {
   const groups = view.state.field(lineGroupsField)
   const doc = view.state.doc
   if (!groups.length) {
-    callback([])
+    callback(new Map())
     return
   }
 
-  const tops = groups.map(group => {
+  const tops = new Map<string, number>()
+  for (const group of groups) {
     const line = doc.line(group.lineStart)
     const block = view.lineBlockAt(line.from)
-    return Math.max(0, block.top)
-  })
+    tops.set(group.id, Math.max(0, block.top))
+  }
 
   callback(tops)
 }
@@ -182,7 +183,7 @@ function measureAndReportTops(view: EditorView) {
 // Public API
 // ============================================================================
 
-export function setLineGroupHeights(view: EditorView, heights: number[]) {
+export function setLineGroupHeights(view: EditorView, heights: Map<string, number>) {
   view.dispatch({
     effects: [setLineGroupTargetHeights.of(heights)]
   })
