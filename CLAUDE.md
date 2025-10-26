@@ -1,2 +1,4 @@
 - Use React 19 API's
 - Use CodeMirror 6 API
+- Consult CodeMirror 6 docs in `docs/codemirror6/` when doing CodeMirror related tasks.
+- Editor: execute code with Cmd+Enter
