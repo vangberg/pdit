@@ -109,8 +109,16 @@ function updateSpacers(view: EditorView) {
 
   if (!targetHeights.length || !groups.length) return
 
+  const doc = view.state.doc
   const builder = new RangeSetBuilder<Decoration>()
-  const spacersIter = currentSpacers.iter()
+  const existingSpacers = new Map<number, number>()
+
+  for (let iter = currentSpacers.iter(); iter.value; iter.next()) {
+    const widget = iter.value.spec.widget
+    if (widget instanceof Spacer) {
+      existingSpacers.set(iter.from, widget.height)
+    }
+  }
 
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i]
@@ -121,22 +129,21 @@ function updateSpacers(view: EditorView) {
     // Measure natural height from DOM
     let naturalHeight = 0
     for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
-      const line = view.state.doc.line(lineNum)
+      const line = doc.line(lineNum)
       const block = view.lineBlockAt(line.from)
       naturalHeight += block.height
     }
 
     // Subtract existing spacer in this group
-    while (spacersIter.value && spacersIter.from <= view.state.doc.line(group.lineEnd).to) {
-      if (spacersIter.from === view.state.doc.line(group.lineEnd).to) {
-        naturalHeight -= (spacersIter.value.spec.widget as Spacer).height
-      }
-      spacersIter.next()
+    const endLine = doc.line(group.lineEnd)
+    const spacerPosition = endLine.to
+    const previousSpacerHeight = existingSpacers.get(spacerPosition)
+    if (previousSpacerHeight !== undefined) {
+      naturalHeight -= previousSpacerHeight
     }
 
     const diff = targetHeight - naturalHeight
     if (diff > 0.01) {
-      const endLine = view.state.doc.line(group.lineEnd)
       builder.add(endLine.to, endLine.to, Decoration.widget({
         widget: new Spacer(diff, group.lineEnd),
         block: true,
@@ -156,13 +163,14 @@ function measureAndReportTops(view: EditorView) {
   if (!callback) return
 
   const groups = view.state.field(lineGroupsField)
+  const doc = view.state.doc
   if (!groups.length) {
     callback([])
     return
   }
 
   const tops = groups.map(group => {
-    const line = view.state.doc.line(group.lineStart)
+    const line = doc.line(group.lineStart)
     const block = view.lineBlockAt(line.from)
     return Math.max(0, block.top)
   })
@@ -197,10 +205,11 @@ export const lineGroupLayoutExtension = [
     // Check if target heights changed
     const targetHeightsChanged = update.startState.field(lineGroupTargetHeightsField) !==
                                  update.state.field(lineGroupTargetHeightsField)
+    const lineGroupsChanged = update.startState.field(lineGroupsField) !==
+                              update.state.field(lineGroupsField)
 
     // Phase 1: Update spacers when heights change (but not if we just applied spacers)
-    if (!hasSpacerEffect && (update.heightChanged || update.geometryChanged || update.docChanged || targetHeightsChanged)) {
-      console.log("Updating spacers due to layout change")
+    if (!hasSpacerEffect && (update.heightChanged || update.geometryChanged || update.docChanged || targetHeightsChanged || lineGroupsChanged)) {
       updateSpacers(update.view)
       measureAndReportTops(update.view)
     }
