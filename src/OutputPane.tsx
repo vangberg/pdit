@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback } from "react";
 import { Output } from "./Output";
-import { ApiExecuteResult } from "./api";
+import { ExecutionOutput } from "./execution";
 import { LineGroup } from "./compute-line-groups";
 import { CSSProperties } from "react";
 
@@ -89,7 +89,7 @@ const outputData = [
 
 interface OutputPaneProps {
   onLineGroupHeightChange?: (heights: Map<string, number>) => void;
-  results: ApiExecuteResult[];
+  results: ExecutionOutput[];
   lineGroups: LineGroup[];
   lineGroupTops?: Map<string, number>;
 }

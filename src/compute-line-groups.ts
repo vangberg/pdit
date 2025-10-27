@@ -1,4 +1,4 @@
-import { ApiExecuteResult } from "./api";
+import { ExecutionOutput } from "./execution";
 
 export interface LineGroup {
   id: string;
@@ -11,7 +11,7 @@ export interface LineGroup {
  * Groups API execution results that share any lines using a union-find structure.
  * Results that touch the same line belong to the same group.
  */
-export function computeLineGroups(results: ApiExecuteResult[]): LineGroup[] {
+export function computeLineGroups(results: ExecutionOutput[]): LineGroup[] {
   if (results.length === 0) {
     return [];
   }

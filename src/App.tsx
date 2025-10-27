@@ -1,7 +1,7 @@
 import "./style.css";
 import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
-import { executeScript, ApiExecuteResponse } from "./api";
+import { executeScript, ExecutionResult } from "./execution";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback } from "react";
 import { computeLineGroups, LineGroup } from "./compute-line-groups";
@@ -22,7 +22,7 @@ function App() {
   const editorRef = useRef<EditorHandles | null>(null);
   const [lineGroupHeights, setLineGroupHeights] = useState<Map<string, number>>(new Map());
   const [executeResults, setExecuteResults] =
-    useState<ApiExecuteResponse | null>(null);
+    useState<ExecutionResult | null>(null);
   const [currentLineGroups, setCurrentLineGroups] = useState<LineGroup[]>([]);
   const [lineGroupTops, setLineGroupTops] = useState<Map<string, number>>(new Map());
 

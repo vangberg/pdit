@@ -1,19 +1,19 @@
-export interface ApiExecuteResult {
+export interface ExecutionOutput {
   id: number;
   lineStart: number;
   lineEnd: number;
 }
 
-export interface ApiExecuteResponse {
-  results: ApiExecuteResult[];
+export interface ExecutionResult {
+  results: ExecutionOutput[];
 }
 
 let globalIdCounter = 1;
 
-export async function executeScript(script: string): Promise<ApiExecuteResponse> {
+export async function executeScript(script: string): Promise<ExecutionResult> {
   const lines = script.split("\n");
   const totalLines = lines.length;
-  const results: ApiExecuteResult[] = [];
+  const results: ExecutionOutput[] = [];
 
   // Result on the first line if present
   if (totalLines >= 1) {
