@@ -6,6 +6,7 @@ import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { computeLineGroups, LineGroup } from "./compute-line-groups";
 import { initializeWebR } from "./webr-instance";
+import { TopBar } from "./TopBar";
 
 const initialCode = `# Welcome to Rokko - R in the browser!
 # Try running this code with Cmd+Enter
@@ -29,6 +30,7 @@ function App() {
     new Map()
   );
   const [isWebRReady, setIsWebRReady] = useState(false);
+  const [doc, setDoc] = useState<Text>();
 
   // Initialize webR on mount
   useEffect(() => {
@@ -56,7 +58,9 @@ function App() {
     []
   );
 
-  const handleDocumentChange = useCallback((_doc: Text) => {}, []);
+  const handleDocumentChange = useCallback((doc: Text) => {
+    setDoc(doc);
+  }, []);
 
   const handleLineGroupsChange = useCallback((groups: LineGroup[]) => {
     console.log("App received line groups change:", groups);
@@ -97,25 +101,13 @@ function App() {
     [isWebRReady]
   );
 
+  const handleRunAll = useCallback(() => {
+    handleExecute(doc?.toString() || "");
+  }, [handleExecute, doc]);
+
   return (
     <div id="app">
-      {!isWebRReady && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            background: "#1e1e1e",
-            color: "#fff",
-            padding: "10px",
-            textAlign: "center",
-            zIndex: 1000,
-          }}
-        >
-          Initializing R environment...
-        </div>
-      )}
+      <TopBar isWebRReady={isWebRReady} onRunAll={handleRunAll} />
       <div className="split-container">
         <div className="editor-half">
           <Editor
