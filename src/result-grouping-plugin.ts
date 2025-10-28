@@ -254,6 +254,11 @@ function snapRangesToFullLines(
     const endPos = to > from ? to - 1 : to;
     const endLine = doc.lineAt(endPos);
 
+    // Skip empty ranges - they represent deleted or collapsed groups
+    if (startLine.from >= endLine.to) {
+      return;
+    }
+
     // Store the snapped range for reconstruction via `RangeSet.of`.
     snapped.push({ from: startLine.from, to: endLine.to, value });
   });

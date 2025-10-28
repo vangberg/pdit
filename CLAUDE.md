@@ -2,3 +2,4 @@
 - Use CodeMirror 6 API
 - Consult CodeMirror 6 docs in `docs/codemirror6/` when doing CodeMirror related tasks.
 - Editor: execute code with Cmd+Enter
+- Prefer simple code over defensive code
