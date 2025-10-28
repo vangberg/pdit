@@ -104,7 +104,6 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
                     key={result.id}
                     result={result}
                     index={index}
-                    isEven={index % 2 === 1}
                   />
                 );
               })}

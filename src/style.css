@@ -155,24 +155,56 @@ h1 {
 .output-content {
   display: flex;
   flex-direction: column;
-  padding-top: 4px;
   position: relative;
+  padding-top: 4px;
 }
 
 .output-group {
-  border: 2px solid red;
+}
+
+.output-container {
+  border: 1px solid #d1d5db;
+  border-left: 2px solid #9ca3af;
+  margin-bottom: 2px;
 }
 
 .output-line {
   position: relative;
-} 
-
-.output-line:not(.empty-line) {
-  padding: 0.5rem;
 }
 
-.output-container.zebra {
-  background-color: #e2e8f088;
+.output-line:not(.empty-line) {
+  padding: 0.125rem 0.25rem;
+}
+
+.output-line pre {
+  margin: 0;
+  padding: 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.output-item {
+  color: #374151;
+}
+
+.output-item.output-stdout {
+  color: #000;
+}
+
+.output-item.output-stderr {
+  color: #6b7280;
+}
+
+.output-item.output-error {
+  color: #dc2626;
+}
+
+.output-item.output-warning {
+  color: #9ca3af;
+}
+
+.output-item.output-message {
+  color: #4b5563;
 }
 
 

@@ -4,11 +4,10 @@ import { ExecutionOutput } from "./execution";
 interface OutputProps {
   result: ExecutionOutput;
   index: number;
-  isEven?: boolean;
   ref?: (element: HTMLDivElement | null) => void;
 }
 
-export const Output: React.FC<OutputProps> = ({ result, isEven, ref }) => {
+export const Output: React.FC<OutputProps> = ({ result, ref }) => {
   const elementRef = useRef<HTMLDivElement | null>(null);
 
   useImperativeHandle(ref, () => elementRef.current as HTMLDivElement, []);
@@ -16,7 +15,7 @@ export const Output: React.FC<OutputProps> = ({ result, isEven, ref }) => {
   return (
     <div
       ref={elementRef}
-      className={`output-container${isEven ? " zebra" : ""}`}
+      className="output-container"
     >
       <div className="output-line">
         {result.output.map((item, i) => (
