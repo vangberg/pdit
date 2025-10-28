@@ -56,7 +56,7 @@ function App() {
     []
   );
 
-  const handleDocumentChange = useCallback((doc: Text) => {}, []);
+  const handleDocumentChange = useCallback((_doc: Text) => {}, []);
 
   const handleLineGroupsChange = useCallback((groups: LineGroup[]) => {
     console.log("App received line groups change:", groups);

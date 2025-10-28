@@ -41,6 +41,10 @@ import {
   setLineGroupHeights,
   lineGroupTopChangeFacet,
 } from "./line-group-layout";
+import {
+  debugPanelExtension,
+  toggleDebugPanelCommand,
+} from "./codemirror-debug-panel";
 
 export interface EditorHandles {
   applyExecutionUpdate: (update: {
@@ -106,6 +110,10 @@ export function Editor({
               return true;
             },
           },
+          {
+            key: "Cmd-Shift-d",
+            run: toggleDebugPanelCommand,
+          },
         ]),
         lineNumbers(),
         highlightActiveLineGutter(),
@@ -135,6 +143,7 @@ export function Editor({
         javascript(),
         resultGroupingExtension,
         lineGroupLayoutExtension,
+        debugPanelExtension(),
         lineGroupTopCallbackCompartment.of(
           lineGroupTopChangeFacet.of(onLineGroupTopChange ?? null)
         ),
