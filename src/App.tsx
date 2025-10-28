@@ -3,40 +3,60 @@ import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
 import { executeScript, ExecutionResult } from "./execution";
 import { Text } from "@codemirror/state";
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { computeLineGroups, LineGroup } from "./compute-line-groups";
+import { initializeWebR } from "./webr-instance";
 
-const initialCode = `// Welcome to CodeMirror, this is a very long, long line!
-function fibonacci(n) {
-  if (n <= 1) return n;
-  return fibonacci(n - 1) + fibonacci(n - 2);
-}
+const initialCode = `# Welcome to Rokko - R in the browser!
+# Try running this code with Cmd+Enter
 
-console.log(fibonacci(10));
+x <- 1:10
+print(x)
 
-// Try editing this code!
-const greeting = "Hello, CodeMirror!";
-console.log(greeting);`;
+# Calculate mean
+mean(x)`;
 
 function App() {
   const editorRef = useRef<EditorHandles | null>(null);
-  const [lineGroupHeights, setLineGroupHeights] = useState<Map<string, number>>(new Map());
-  const [executeResults, setExecuteResults] =
-    useState<ExecutionResult | null>(null);
+  const [lineGroupHeights, setLineGroupHeights] = useState<Map<string, number>>(
+    new Map()
+  );
+  const [executeResults, setExecuteResults] = useState<ExecutionResult | null>(
+    null
+  );
   const [currentLineGroups, setCurrentLineGroups] = useState<LineGroup[]>([]);
-  const [lineGroupTops, setLineGroupTops] = useState<Map<string, number>>(new Map());
+  const [lineGroupTops, setLineGroupTops] = useState<Map<string, number>>(
+    new Map()
+  );
+  const [isWebRReady, setIsWebRReady] = useState(false);
 
-  const handleLineGroupHeightChange = useCallback((heights: Map<string, number>) => {
-    console.log("App received line group heights:", Array.from(heights.entries()).slice(0, 5));
-    setLineGroupHeights(heights);
+  // Initialize webR on mount
+  useEffect(() => {
+    const init = async () => {
+      try {
+        console.log("Initializing webR...");
+        await initializeWebR();
+        console.log("webR ready!");
+        setIsWebRReady(true);
+      } catch (error) {
+        console.error("Failed to initialize webR:", error);
+      }
+    };
+    init();
   }, []);
 
-  const handleDocumentChange = useCallback((doc: Text) => {
-    console.log(
-      "App received document change:",
-      doc.toString().slice(0, 50) + "..."
-    );
-  }, []);
+  const handleLineGroupHeightChange = useCallback(
+    (heights: Map<string, number>) => {
+      console.log(
+        "App received line group heights:",
+        Array.from(heights.entries()).slice(0, 5)
+      );
+      setLineGroupHeights(heights);
+    },
+    []
+  );
+
+  const handleDocumentChange = useCallback((doc: Text) => {}, []);
 
   const handleLineGroupsChange = useCallback((groups: LineGroup[]) => {
     console.log("App received line groups change:", groups);
@@ -44,26 +64,58 @@ function App() {
   }, []);
 
   const handleLineGroupTopChange = useCallback((tops: Map<string, number>) => {
-    console.log("App received line group tops:", Array.from(tops.entries()).slice(0, 5));
+    console.log(
+      "App received line group tops:",
+      Array.from(tops.entries()).slice(0, 5)
+    );
     setLineGroupTops(tops);
   }, []);
 
-  const handleExecute = useCallback(async (script: string) => {
-    const result = await executeScript(script);
-    console.log("Execute result:", result);
-    setExecuteResults(result);
+  const handleExecute = useCallback(
+    async (script: string) => {
+      if (!isWebRReady) {
+        console.warn("webR is not ready yet");
+        return;
+      }
 
-    const groups = computeLineGroups(result.results);
-    setCurrentLineGroups(groups);
+      try {
+        const result = await executeScript(script);
+        console.log("Execute result:", result);
+        setExecuteResults(result);
 
-    editorRef.current?.applyExecutionUpdate({
-      doc: script,
-      lineGroups: groups,
-    });
-  }, []);
+        const groups = computeLineGroups(result.results);
+        setCurrentLineGroups(groups);
+
+        editorRef.current?.applyExecutionUpdate({
+          doc: script,
+          lineGroups: groups,
+        });
+      } catch (error) {
+        console.error("Execution error:", error);
+      }
+    },
+    [isWebRReady]
+  );
 
   return (
     <div id="app">
+      {!isWebRReady && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            background: "#1e1e1e",
+            color: "#fff",
+            padding: "10px",
+            textAlign: "center",
+            zIndex: 1000,
+          }}
+        >
+          Initializing R environment...
+        </div>
+      )}
       <div className="split-container">
         <div className="editor-half">
           <Editor

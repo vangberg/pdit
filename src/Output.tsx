@@ -1,29 +1,14 @@
 import React, { useImperativeHandle, useRef } from "react";
-
-// Type for a single output item - matching the structure from OutputPane
-type OutputItem =
-  | {
-      type: "empty";
-    }
-  | {
-      type: "table" | "plot" | "array";
-      content: {
-        title?: string;
-        table?: string[][];
-        data?: number[];
-        array?: (string | number)[];
-      };
-    };
+import { ExecutionOutput } from "./execution";
 
 interface OutputProps {
-  item: OutputItem;
+  result: ExecutionOutput;
   index: number;
   isEven?: boolean;
   ref?: (element: HTMLDivElement | null) => void;
 }
 
-export const Output: React.FC<OutputProps> = ({ item, index, isEven, ref }) => {
-  const lineNumber = index + 1;
+export const Output: React.FC<OutputProps> = ({ result, isEven, ref }) => {
   const elementRef = useRef<HTMLDivElement | null>(null);
 
   useImperativeHandle(ref, () => elementRef.current as HTMLDivElement, []);
@@ -33,54 +18,16 @@ export const Output: React.FC<OutputProps> = ({ item, index, isEven, ref }) => {
       ref={elementRef}
       className={`output-container${isEven ? " zebra" : ""}`}
     >
-      {item.type === "empty" ? (
-        <div className="output-line empty-line">{/* Empty line content */}</div>
-      ) : item.content ? (
-        <div className="output-line" data-line={lineNumber}>
-          {item.type === "table" && item.content.table && (
-            <table className="output-table">
-              <tbody>
-                {item.content.table.map((row, rowIndex) => (
-                  <tr
-                    key={rowIndex}
-                    className={rowIndex === 0 ? "header-row" : ""}
-                  >
-                    {row.map((cell, cellIndex) => (
-                      <td key={cellIndex}>{cell}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          {item.type === "plot" && item.content.data && (
-            <div className="plot-chart">
-              {item.content.data.map((value, i) => (
-                <div
-                  key={i}
-                  className="plot-bar"
-                  style={{
-                    height: `${
-                      (value / Math.max(...item.content.data!)) * 100
-                    }%`,
-                  }}
-                ></div>
-              ))}
-            </div>
-          )}
-
-          {item.type === "array" && item.content.array && (
-            <div className="array-items">
-              {item.content.array.map((arrayItem, i) => (
-                <span key={i} className="array-item">
-                  {arrayItem}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : null}
+      <div className="output-line">
+        {result.output.map((item, i) => (
+          <div
+            key={i}
+            className={`output-item output-${item.type}`}
+          >
+            <pre>{item.text}</pre>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

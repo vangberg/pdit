@@ -24,6 +24,7 @@
     "@vitejs/plugin-react": "^5.0.2",
     "codemirror": "^6.0.1",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "webr": "^0.5.6"
   }
 }
