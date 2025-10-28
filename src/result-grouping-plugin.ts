@@ -17,6 +17,7 @@ import {
 } from "@codemirror/state";
 import { invertedEffects } from "@codemirror/commands";
 import { LineGroup } from "./compute-line-groups";
+import { debugPanelState } from "./codemirror-debug-panel";
 
 export class GroupValue extends RangeValue {
   // GroupValue carries metadata for a single group range. `groupIndex`
@@ -321,6 +322,13 @@ export const groupDecorationsField = StateField.define<DecorationSet>({
   },
 
   update(_, tr) {
+    const isDebugMode = tr.state.field(debugPanelState, false);
+
+    // Only show decorations when debug panel is open
+    if (!isDebugMode) {
+      return Decoration.none;
+    }
+
     const groupRanges = tr.state.field(groupRangesField);
     const decorations: any[] = [];
 
@@ -345,27 +353,21 @@ export const groupDecorationsField = StateField.define<DecorationSet>({
 const groupTheme = EditorView.theme({
   ".cm-result-line-0": {
     backgroundColor: "rgba(255, 215, 0, 0.1)",
-    borderLeft: "3px solid #FFD700",
   },
   ".cm-result-line-1": {
     backgroundColor: "rgba(0, 123, 255, 0.1)",
-    borderLeft: "3px solid #007BFF",
   },
   ".cm-result-line-2": {
     backgroundColor: "rgba(40, 167, 69, 0.1)",
-    borderLeft: "3px solid #28A745",
   },
   ".cm-result-line-3": {
     backgroundColor: "rgba(220, 53, 69, 0.1)",
-    borderLeft: "3px solid #DC3545",
   },
   ".cm-result-line-4": {
     backgroundColor: "rgba(255, 101, 0, 0.1)",
-    borderLeft: "3px solid #FF6500",
   },
   ".cm-result-line-5": {
     backgroundColor: "rgba(108, 117, 125, 0.1)",
-    borderLeft: "3px solid #6C757D",
   },
 });
 

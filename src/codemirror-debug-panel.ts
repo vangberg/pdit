@@ -15,7 +15,7 @@ import { spacersField, lineGroupTargetHeightsField } from "./line-group-layout";
 const toggleDebugPanel = StateEffect.define<boolean>();
 
 // State field to track whether the debug panel is visible
-const debugPanelState = StateField.define<boolean>({
+export const debugPanelState = StateField.define<boolean>({
   create: () => false,
   update(value, tr) {
     for (let effect of tr.effects) {
