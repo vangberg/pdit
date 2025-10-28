@@ -8,7 +8,7 @@ import {
   StateEffect,
   Extension,
 } from "@codemirror/state";
-import { lineGroupsField } from "./result-grouping-plugin";
+import { lineGroupsField, groupDecorationsField } from "./result-grouping-plugin";
 import { spacersField, lineGroupTargetHeightsField } from "./line-group-layout";
 
 // State effect to toggle the debug panel
@@ -45,8 +45,13 @@ function createDebugPanel(view: EditorView): Panel {
   layoutTab.textContent = "Layout";
   layoutTab.className = "cm-debug-tab";
 
+  let decorationsTab = document.createElement("button");
+  decorationsTab.textContent = "Decorations";
+  decorationsTab.className = "cm-debug-tab";
+
   tabsContainer.appendChild(lineGroupsTab);
   tabsContainer.appendChild(layoutTab);
+  tabsContainer.appendChild(decorationsTab);
 
   // Create content container
   let contentContainer = document.createElement("div");
@@ -55,15 +60,17 @@ function createDebugPanel(view: EditorView): Panel {
   dom.appendChild(tabsContainer);
   dom.appendChild(contentContainer);
 
-  let currentTab: "lineGroups" | "layout" = "lineGroups";
+  let currentTab: "lineGroups" | "layout" | "decorations" = "lineGroups";
 
   function updateContent() {
     contentContainer.innerHTML = "";
 
     if (currentTab === "lineGroups") {
       contentContainer.appendChild(renderLineGroupsTab(view));
-    } else {
+    } else if (currentTab === "layout") {
       contentContainer.appendChild(renderLayoutTab(view));
+    } else {
+      contentContainer.appendChild(renderDecorationsTab(view));
     }
   }
 
@@ -71,6 +78,7 @@ function createDebugPanel(view: EditorView): Panel {
     currentTab = "lineGroups";
     lineGroupsTab.classList.add("active");
     layoutTab.classList.remove("active");
+    decorationsTab.classList.remove("active");
     updateContent();
   };
 
@@ -78,6 +86,15 @@ function createDebugPanel(view: EditorView): Panel {
     currentTab = "layout";
     layoutTab.classList.add("active");
     lineGroupsTab.classList.remove("active");
+    decorationsTab.classList.remove("active");
+    updateContent();
+  };
+
+  decorationsTab.onclick = () => {
+    currentTab = "decorations";
+    decorationsTab.classList.add("active");
+    lineGroupsTab.classList.remove("active");
+    layoutTab.classList.remove("active");
     updateContent();
   };
 
@@ -95,7 +112,9 @@ function createDebugPanel(view: EditorView): Panel {
         update.startState.field(spacersField) !==
           update.state.field(spacersField) ||
         update.startState.field(lineGroupTargetHeightsField) !==
-          update.state.field(lineGroupTargetHeightsField)
+          update.state.field(lineGroupTargetHeightsField) ||
+        update.startState.field(groupDecorationsField) !==
+          update.state.field(groupDecorationsField)
       ) {
         updateContent();
       }
@@ -293,6 +312,144 @@ function renderLayoutTab(view: EditorView): HTMLElement {
     topCell.textContent = block.top.toFixed(1);
     topCell.className = "cm-debug-cell-number";
     row.appendChild(topCell);
+
+    tbody.appendChild(row);
+  });
+
+  table.appendChild(tbody);
+  container.appendChild(table);
+
+  return container;
+}
+
+function renderDecorationsTab(view: EditorView): HTMLElement {
+  let container = document.createElement("div");
+  container.className = "cm-debug-decorations";
+
+  // Collect all decorations
+  interface DecorationInfo {
+    type: string;
+    from: number;
+    to: number;
+    details: string;
+    source: string;
+  }
+
+  let decorations: DecorationInfo[] = [];
+
+  // Get result group decorations
+  try {
+    let groupDecorations = view.state.field(groupDecorationsField);
+    groupDecorations.between(0, view.state.doc.length, (from, to, value) => {
+      // Extract class name from decoration
+      let className = (value.spec as any).class || "unknown";
+      decorations.push({
+        type: "Mark",
+        from,
+        to,
+        details: className,
+        source: "Result Groups",
+      });
+    });
+  } catch (e) {
+    // Field might not exist
+  }
+
+  // Get spacer widget decorations
+  try {
+    let spacers = view.state.field(spacersField);
+    spacers.between(0, view.state.doc.length, (from, to, value) => {
+      let widget = (value.spec.widget as any);
+      let height = widget?.height || 0;
+      decorations.push({
+        type: "Widget",
+        from,
+        to,
+        details: `Spacer (height: ${height.toFixed(1)}px)`,
+        source: "Layout",
+      });
+    });
+  } catch (e) {
+    // Field might not exist
+  }
+
+  // Sort by position
+  decorations.sort((a, b) => a.from - b.from);
+
+  if (decorations.length === 0) {
+    let empty = document.createElement("div");
+    empty.className = "cm-debug-empty";
+    empty.textContent = "No decorations found";
+    container.appendChild(empty);
+    return container;
+  }
+
+  // Summary section
+  let summary = document.createElement("div");
+  summary.className = "cm-debug-summary";
+  let markCount = decorations.filter((d) => d.type === "Mark").length;
+  let widgetCount = decorations.filter((d) => d.type === "Widget").length;
+  summary.innerHTML = `
+    <div><strong>Total:</strong> ${decorations.length}</div>
+    <div><strong>Marks:</strong> ${markCount}</div>
+    <div><strong>Widgets:</strong> ${widgetCount}</div>
+  `;
+  container.appendChild(summary);
+
+  // Table
+  let table = document.createElement("table");
+  table.className = "cm-debug-table";
+
+  // Header
+  let thead = document.createElement("thead");
+  let headerRow = document.createElement("tr");
+  ["Type", "From", "To", "Length", "Details", "Source"].forEach((text) => {
+    let th = document.createElement("th");
+    th.textContent = text;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // Body
+  let tbody = document.createElement("tbody");
+  decorations.forEach((deco) => {
+    let row = document.createElement("tr");
+
+    // Type
+    let typeCell = document.createElement("td");
+    typeCell.textContent = deco.type;
+    typeCell.className = "cm-debug-cell-mono";
+    row.appendChild(typeCell);
+
+    // From
+    let fromCell = document.createElement("td");
+    fromCell.textContent = deco.from.toString();
+    fromCell.className = "cm-debug-cell-number";
+    row.appendChild(fromCell);
+
+    // To
+    let toCell = document.createElement("td");
+    toCell.textContent = deco.to.toString();
+    toCell.className = "cm-debug-cell-number";
+    row.appendChild(toCell);
+
+    // Length
+    let lengthCell = document.createElement("td");
+    lengthCell.textContent = (deco.to - deco.from).toString();
+    lengthCell.className = "cm-debug-cell-number";
+    row.appendChild(lengthCell);
+
+    // Details
+    let detailsCell = document.createElement("td");
+    detailsCell.textContent = deco.details;
+    detailsCell.className = "cm-debug-cell-mono";
+    row.appendChild(detailsCell);
+
+    // Source
+    let sourceCell = document.createElement("td");
+    sourceCell.textContent = deco.source;
+    row.appendChild(sourceCell);
 
     tbody.appendChild(row);
   });

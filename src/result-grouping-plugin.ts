@@ -310,7 +310,7 @@ const groupDecorations = [
   Decoration.mark({ class: "cm-result-line-5" }),
 ];
 
-const groupDecorationsField = StateField.define<DecorationSet>({
+export const groupDecorationsField = StateField.define<DecorationSet>({
   create() {
     return Decoration.none;
   },
