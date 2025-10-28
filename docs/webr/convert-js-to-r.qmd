@@ -1,0 +1,131 @@
+---
+title: "Creating New R Objects"
+format: html
+toc: true
+---
+
+Once webR has been loaded into a web page, new R objects can be created from the JavaScript environment. For example, it is possible to construct an R object using data provided as a JavaScript array, and then perform some computation in R with that data.
+
+## Creating new R objects
+
+New R objects can be created from the main JavaScript thread by using the `new` operator with proxy classes on an initialised instance of the [`WebR`](api/js/classes/WebR.WebR.md) class. The `RObject` proxy class can be used as a general constructor for creating new R objects from a given JavaScript argument.
+
+When an R object is instantiated in this way, webR communicates with the worker thread to orchestrate object creation in WebAssembly memory. As such, new R objects can only be created once communication with the worker thread has been established and the promise returned by [`WebR.init()`](api/js/classes/WebR.WebR.md#init) has resolved.
+
+Once the object has been created on the worker thread, a promise is returned resolving as a reference to the new R object [in the form of an `RObject`](objects.qmd). In a modern asynchronous JavaScript environment, the `await` and `new` keywords can be combined.
+
+::: {.panel-tabset}
+## JavaScript
+
+``` javascript
+await webR.init();
+let d = await new webR.RObject([2, 4, 6]);
+await d.toArray();
+```
+
+## TypeScript
+
+``` typescript
+import type { RDouble } from 'webr';
+
+await webR.init();
+let d = await new webR.RObject([2, 4, 6]) as RDouble;
+await d.toArray();
+```
+
+:::
+
+    [2, 4, 6]
+
+Newly created `RObject` references are protected by the [default shelter](objects.qmd#the-default-shelter) unless [otherwise specified](objects.html#working-with-multiple-shelters). It is your responsibility to call the `destroy()` method to release these objects.
+
+Sometimes webR constructs new R objects implicitly behind the scenes. For instance new R objects are constructed automatically when [executing R functions with JavaScript arguments](convert-r-to-js.qmd#exec-r). In this case memory management is in the hands of webR and doesn't need intervention on your part.
+
+::: callout-warning
+`RObject` references that have been created from JavaScript objects are subject to R [memory management](objects.qmd#memory-management) and should be destroyed when no longer in use.
+:::
+
+### Constructing R objects from JavaScript objects
+
+When using the generic `RObject` constructor the resulting R object type is chosen based on the contents of the JavaScript argument provided. Where there is ambiguity, the following conversion rules are used,
+
+| Constructor Argument                                      | R Type                                                      |
+|-----------------------------------------------------------|-------------------------------------------------------------|
+| `null`                                                    | Logical `NA`                                                |
+| `boolean`                                                 | Logical atomic vector                                       |
+| `number`                                                  | Double atomic vector                                        |
+| `{ re: 1, im: 2 }`                                        | Complex atomic vector                                       |
+| `string`                                                  | Character atomic vector                                     |
+| `TypedArray`, `ArrayBuffer`, `ArrayBufferView`            | Raw atomic vector                                           |
+| `Array`                                                   | A vector following the coercion rules of R's `c()` function |
+| `{a: [0, 1], b: ['x', 'y']}`                              | Data frame                                                  |
+| `[{a: 0, b: 'x'}, {a: 1, b: 'y'}]`                        | Data frame                                                  |
+| `RObject`                                                 | Given by the type of the referenced R object                |
+| [`WebRDataJs`](convert-r-to-js.qmd#serialising-r-objects) | Given by the `type` property in the provided object         |
+| Other JavaScript type                                     | Reserved for future use                                     |
+
+#### Further details
+
+JavaScript objects (in "long" form) and JavaScript object arrays (in "wide" or "D3" form), as shown in the table above, are reserved for constructing R data frames. The object properties should correspond to data with columns of equal length and consistent data type, and values should be compatible with R atomic vectors (or `null`, indicating a missing value).
+
+The creation of a `data.frame` can be avoided by explicitly constructing an `RList` object, as shown in the next section.
+
+When `RObject` references are used for constructing new R objects, no underlying copy is made. The resulting R object reference will point to the same memory location.
+
+### Creating an R object with specific type
+
+Class constructors for various types of R object are also available on the [`WebR`](api/js/classes/WebR.WebR.md) instance. For example, the [`WebR.RList`](api/js/classes/WebR.WebR.md#rlist) constructor can be used to specifically create an R list object from a given JavaScript argument, rather than the atomic vector or `data.frame` that would be created when using the generic `RObject` constructor.
+
+To see how this can be useful, consider the difference in structure between the following two examples, using the same JavaScript object as the constructor argument,
+
+``` javascript
+let foo = await new webR.RObject([123, 'abc']);
+await foo.toJs();
+```
+
+    { type: 'character', names: null, values: ['123', 'abc'] }
+
+``` javascript
+let foo = await new webR.RList([123, 'abc']);
+await foo.toJs();
+```
+
+    {
+      type: 'list',
+      names: null,
+      values: [
+        { type: 'double', names: null, values: [ 123 ] },
+        { type: 'character', names: null, values: ['abc'] }
+      ]
+    }
+
+It is recommended that specific R object constructors are used, rather than relying on the conversion rules of the generic `RObject` constructor, when webR is used non-interactively or in production.
+
+### Creating objects using `RObject` references
+
+An [`RObject`](api/js/classes/RWorker.RObject.md) can be used as part of R object construction, either on its own, included in a JavaScript array, or as the values in an [`WebRDataJs`](api/js/modules/RObject.md#webrdatajs).
+
+In such cases a new `RObject` instance will be created, but the R object will not be copied as part of construction. The resulting `RObject` will be a reference to the same point in WebAssembly memory as the source object.
+
+This mechanism can be useful for creating new R lists or environments, or when re-constructing partially serialised objects in the form of an [`WebRDataJs`](api/js/modules/RObject.md#webrdatajs).
+
+## Binding objects to an R environment
+
+The `globalEnv` property, one of [webR's cached R objects](convert-r-to-js.qmd#cached-r-objects), can be used to quickly bind JavaScript objects to variables in the global R environment,
+
+``` javascript
+await webR.objs.globalEnv.bind('foo', ['x', 'y', 'z'])
+await webR.evalR('print(foo)');
+```
+
+    [1] "x" "y" "z"
+
+Alternatively, and to avoid adding to the global scope, a new environment can be directly constructed to be used with [`WebR.evalR()`](api/js/classes/WebR.WebR.md#evalr),
+
+``` javascript
+const arr = await new webR.RObject([10, 21, 32]);
+const env = await new webR.REnvironment({ foo: arr });
+await webR.evalR('print(foo)', { env });
+```
+
+    [1] 10 21 32

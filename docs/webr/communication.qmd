@@ -1,0 +1,234 @@
+---
+title: "Worker Communication"
+format: html
+toc: true
+---
+
+## The webR worker thread
+
+WebR initialises by launching a version of R built for WebAssembly in a [JavaScript web worker](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API). This allows R to perform long running computation without blocking the main browser thread. Without this process, the browser page loading webR would freeze whenever R is performing work.
+
+## Communication channels {#webr-channels}
+
+Communication between the main thread and the webR worker thread is managed by message passing through a communication channel. The possible channel types are:
+
+| Name                          | Requirements                                                                                      | Limitations                                                                         |
+|-------------------|----------------------------|-------------------------|
+| `SharedArrayBuffer` (Default) | [Cross-origin Isolation](https://developer.mozilla.org/en-US/docs/Web/API/crossOriginIsolated)    | None                                                                                |
+| `PostMessage`               | -- | R code cannot be interrupted. Nested R REPLs, e.g. `browser()`, do not work. |
+
+A communication channel will be automatically selected at startup, defaulting to `SharedArrayBuffer` if the page is cross-origin isolated. It is also possible to manually select a channel type by setting the [`WebROptions.channelType`](api/js/interfaces/WebR.WebROptions.md#channeltype) configuration option at startup.
+
+## JavaScript promises
+
+Since messages and data are communicated to and from the worker thread asynchronously, most of the API methods provided by webR return results through [JavaScript Promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises) rather than returning results directly.
+
+In a modern asynchronous JavaScript environment (e.g. within an [`async function`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/async_function)), the result of a promise can easily be obtained by using the [`await`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/await) keyword. For example,
+
+``` javascript
+await webR.read();
+```
+
+    { type: 'stdout', data: 'R is a collaborative project with many contributors.' }
+
+### Alternative use of promises
+
+As an alternative, the `then()` method can be used with JavaScript promises and callbacks when not in an asynchronous environment to obtain results without requiring the use of `async` or `await`,
+
+``` javascript
+webR.read().then((message) => {
+  console.log(message);
+});
+```
+
+    { type: 'stdout', data: 'R is a collaborative project with many contributors.' }
+
+## Message passing and requests {#messages}
+
+Communication between the main thread and the webR worker thread is in the form of messages sent over an established communication channel. A web application making use of webR should send input messages and handle output messages.
+
+The webR main thread maintains both input and an output queues. All messages sent from the main thread to the worker are stored in the input queue until they are consumed by the webR worker thread. If the input queue is empty, the worker worker thread blocks until an input message has been received.
+
+Messages from the worker thread are stored in the output queue on the main thread until they are read and consumed by the application loading and using webR.
+
+### Message interface
+
+Communication messages are in the form of a JavaScript object with type [`Message`](api/js/interfaces/Message.Message.md), which in general have shape,
+
+``` javascript
+{ type: string, data: any }
+```
+
+From the main thread, messages can be sent to the webR worker thread using [`WebR.write()`](api/js/classes/WebR.WebR.md#write).
+
+Messages from the worker thread can be obtained from the output queue using [`WebR.read()`](api/js/classes/WebR.WebR.md#read) to receive the next message in the queue, or [`WebR.flush()`](api/js/classes/WebR.WebR.md#flush) to receive an array of all queued output messages. These methods both return promises resolving to the output messages.
+
+Messages can be streamed from the worker thread using [`WebR.stream()`](api/js/classes/WebR.WebR.md#stream), which returns an [AsyncIterable](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols) that can be iterated over to receive output messages as they are produced.
+
+The [`WebR.close()`](api/js/classes/WebR.WebR.md#close) method closes down the communication channel. This stops the webR worker thread and should only be used once communication with an R process is no longer required.
+
+#### Handling messages
+
+A useful pattern for a web application making use of webR is to handle output messages as they are produced using the async generator returned by [`WebR.stream()`](api/js/classes/WebR.WebR.md#stream).
+
+``` javascript
+async function run() {
+  for await (const output of webR.stream()) {
+    switch (output.type) {
+      case 'stdout':
+        console.log(output.data);
+        break;
+      case 'stderr':
+        console.error(output.data);
+        break;
+      default:
+        console.warn(`Unhandled output type: ${output.type}.`);
+    }
+  }
+}
+```
+
+As an alternative to manually managing messages in this way, the [`Console`](api/js/classes/WebR.Console.md) class is available on the main [`WebR`](api/js/modules/WebR.md) module which can be used to [implement a simple R console using JavaScript callbacks](#console).
+
+### Input messages
+
+#### Standard input stream
+
+Messages of type `stdin` are sent to the R standard input stream, and a convenience function [`WebR.writeConsole()`](api/js/classes/WebR.WebR.md#writeconsole) is provided to send messages of this type.
+
+Messages of type `stdin` should provide a line of input in the form of a string as the message data.
+
+``` javascript
+{ type: 'stdin', data: string }
+```
+
+#### Package installation
+
+A request to install a package from the [webR binary package repository](packages.qmd#downloading-packages-from-a-webr-binary-repository) can be made with messages of type `installPackage`, providing the name of the requested package to be installed in the form of a string,
+
+``` javascript
+{ type: 'installPackage', data: { name: string } }
+```
+
+A convenience function [`WebR.installPackages()`](api/js/classes/WebR.WebR.md#installpackages) is provided, taking an array of package names to be installed.
+
+#### Interruption
+
+A long running R computation can be interrupted by sending an interruption request message using the [`WebR.interrupt()`](api/js/classes/WebR.WebR.md#interrupt) method.
+
+### Output messages
+
+#### Standard output streams
+
+Messages of type `stdout` or `stderr` are sent to the output queue for each line of standard stream output given by R. The line of output is given in the `data` property.
+
+``` javascript
+{ type: 'stdout' | 'stderr', data: string }
+```
+
+#### Prompt
+
+Messages of type `prompt` are sent to the output queue when R has given a prompt and is waiting for input. The prompt string, e.g. `'> '`, is given in the `data` property.
+
+``` javascript
+{ type: 'prompt', data: string }
+```
+
+#### Pager
+
+Messages of type `pager` are sent to the output queue when R's pager mechanism has been invoked and webR has been configured to install its own pager handler using [`webr::pager_install()`](api/r.html#pager_install).
+
+``` javascript
+{
+  type: 'pager',
+  data: {
+    path: string,
+    header: string,
+    title: string,
+    deleteFile: boolean
+  },
+}
+```
+
+#### Viewer
+
+Messages of type `view` are sent to the output queue when R's data viewer is invoked, for example by the `View()` function.
+
+``` javascript
+{
+  type: 'view',
+  data: {
+    title: string,
+    data: {
+      [column: string]: {
+        names: (string | null)[],
+        type: "string",
+        values: (string | null)[],
+      }
+    }
+  },
+}
+```
+
+#### Closed
+
+A message of type `closed` is issued when the webR worker thread and communication channel have been terminated using [`WebR.close()`](api/js/classes/WebR.WebR.md#close). This message indicates that the webR instance should no longer be used and no further messages will be issued. The `data` property is undefined for this type of message.
+
+``` javascript
+{ type: 'closed' }
+```
+
+This type of message can be a useful signal to break out of an otherwise infinite asynchronous loop of reading webR output messages.
+
+#### Canvas
+
+Messages from webR's supporting `webr::canvas()` graphics device are of the form,
+
+``` javascript
+{ type: 'canvas', data: { event: string, image?: ImageBitmap } }
+```
+
+The `event` property gives the name of the event type emitted from the graphics device. Plot image data is transmitted to the main thread in a `'canvasImage'` event. Other types of event may be emitted, for example to signify that a new plot has begun.
+
+Further information about plotting with webR can be found in the [Plotting](plotting.qmd) section.
+
+### Emscripten virtual filesystem
+
+WebR runs under a [virtual file system provided by Emscripten](https://emscripten.org/docs/api_reference/Filesystem-API.html). Request messages can be sent from the main thread to interact with the virtual filesystem (VFS) through the [`WebRFS`](api/js/interfaces/WebR.WebRFS.md) interface. This interface is designed to broadly match that of the [Emscripten File System API](https://emscripten.org/docs/api_reference/Filesystem-API.html).
+
+#### Read a file on the VFS
+
+Get the contents of a file from the Emscripten VFS using the [`WebR.FS.readFile()`](api/js/interfaces/WebR.WebRFS.md#readfile) method. This method takes the full path name to a file in the form of a string as its argument and returns a JavaScript promise, resolving to the contents of the requested file provided in the form of a `Uint8Array`.
+
+#### Write a file to the VFS
+
+Write a new file to the Emscripten VFS using the [`WebR.FS.writeFile()`](api/js/interfaces/WebR.WebRFS.md#writefile) method. In addition to the full path name as above, the content of the new file should be given as the method's second argument in the form of a `Uint8Array`.
+
+This method returns a JavaScript promise, resolving once the file has been created.
+
+#### Other VFS operations
+
+Further details for similar virtual filesystem operations, including functions for removing files and working with directories, can be found in the [`WebRFS`](api/js/interfaces/WebR.WebRFS.md) interface reference.
+
+## Setting up an R REPL with `Console` {#console}
+
+The [`Console`](api/js/classes/WebR.Console.md) class, in combination with JavaScript callback functions, can be used as an alternative way to use the R REPL without directly issuing messages to the webR communication channel.
+
+The issuing of input messages and the consumption of output messages over the communication channel between the webR worker thread and the main thread is handled by [`Console`](api/js/classes/WebR.Console.md), invoking the relevant callbacks provided.
+
+The [`Console`](api/js/classes/WebR.Console.md) class constructor takes two arguments,
+
+-   `callbacks` - A list of webR console callbacks to be used for this console.
+-   `options` - The startup options to be provided to webR.
+
+The [`Console.run()`](api/js/classes/WebR.Console.md#run) method is used to start the R console. Callback functions `stdout` and `stderr` are called with a single line of output as the first argument when the R REPL produces standard stream output. The default implementation of `stdout` and `stderr` writes to the console using `console.log` and `console.error`.
+
+R code can be sent as input by calling the [`Console.stdin()`](api/js/classes/WebR.Console.md#stdin) method.
+
+A long running R computation can be interrupted by calling the [`Console.interrupt()`](api/js/classes/WebR.Console.md#interrupt) method.
+
+The `prompt` callback function is called when webR produces a prompt at the REPL and is awaiting user input. The prompt character (usually `>` or `+`) is given as the first argument to the callback function. The default implementation of `prompt` shows a JavaScript prompt asking the user for input, and then sends the user input to `stdin`.
+
+The `canvasImage` callback function is called when webR writes plots to the built-in HTML canvas graphics device. Once the default HTML canvas has been written to (e.g. by plotting something in R), the HTML canvas element can be accessed with the [`Console.canvas`](api/js/classes/WebR.Console.html#canvas) instance property.
+
+See the [Example Usage](examples.qmd) page to see a worked example of a HTML web page loading webR and starting a `Console`, creating an interactive R REPL directly in the page.

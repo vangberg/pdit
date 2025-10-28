@@ -1,0 +1,98 @@
+---
+title: "WebR - R in the Browser"
+format:
+  html:
+    include-in-header:
+      - file: ace-editor.html
+toc: true
+---
+
+WebR is a version of the statistical language [R](https://www.r-project.org/) compiled for the browser and [Node.js](https://nodejs.org/en/) using [WebAssembly](https://webassembly.org), via [Emscripten](https://emscripten.org/).
+
+WebR makes it possible to run R code in the browser without the need for an R server to execute the code: the R interpreter runs directly on the user's machine. Several R packages have also been ported for use with webR, and can be [loaded in the usual way](packages.qmd) using the `library()` function.
+
+::: callout-warning
+The webR project is under active development, and the API is subject to change. Be aware that if you are using the latest build of webR the contents of this documentation might be out of date.
+:::
+
+::: callout-note
+Some browsers (especially mobile browsers) may place restrictive limits on the amount of RAM provided to WebAssembly *regardless of the amount of memory available on the host device*. Please keep this in mind when developing applications with webR intended for use on mobile devices.
+:::
+
+## Try it out
+
+### WebR REPL
+
+Try a [demo of the webR REPL](https://webr.sh) directly in your web browser, no installation required!
+
+### Interactive R code editor
+
+```{=html}
+<button class="btn btn-success btn-sm" disabled type="button" id="runButton">Loading webR...</button>
+<div id="editor">fit <- lm(mpg ~ am, data=mtcars)
+summary(fit)</div>
+<pre><code id="out"></code></pre>
+<canvas
+  id="canvas"
+  width="1008"
+  height="1008"
+  style="display: none; margin: auto; width: 700px;"
+></canvas>
+<script type="module">
+  var editor = ace.edit("editor");
+  editor.setOptions({ fontSize: "11pt", maxLines: Infinity });
+  editor.session.setMode("ace/mode/r");
+
+  import { WebR } from 'https://webr.r-wasm.org/{{< env WEBR_VERSION_TAG >}}/webr.mjs';
+  const webR = new WebR();
+  await webR.init();
+  await webR.evalRVoid('options(device=webr::canvas)');
+  const shelter = await new webR.Shelter();
+
+  // Handle webR output messages in an async loop
+  (async ()=>{
+    for (;;) {
+      const output = await webR.read();
+      switch (output.type) {
+        case 'canvas':
+          let canvas = document.getElementById('canvas');
+          if (output.data.event === 'canvasNewPage') {
+            canvas.style.display = 'block';
+            canvas.getContext('2d').clearRect(0, 0, 1008, 1008);
+          }
+          if (output.data.event === 'canvasImage') {
+            canvas.getContext('2d').drawImage(output.data.image, 0, 0);
+          }
+          break;
+        default:
+          break;
+      }
+    }
+  })();
+
+  async function runR() {
+    document.getElementById('canvas').style.display = 'none';
+    let code = editor.getValue();
+    const result = await shelter.captureR(code, {
+      withAutoprint: true,
+      captureStreams: true,
+      captureConditions: false
+    });
+    try {
+      const out = result.output.filter(
+        evt => evt.type == 'stdout' || evt.type == 'stderr'
+      ).map((evt) => evt.data);
+      document.getElementById('out').innerText = out.join('\n');
+    } finally {
+      shelter.purge();
+    }
+  }
+  document.getElementById('runButton').onclick = runR;
+  document.getElementById('runButton').innerText = 'Run code';
+  document.getElementById('runButton').disabled = false;
+
+</script>
+```
+## Useful links
+
+-   WebR on GitHub: <https://github.com/r-wasm/webr/>

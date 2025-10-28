@@ -1,0 +1,235 @@
+---
+title: "Managing R Objects"
+format: html
+toc: true
+---
+
+## References to R objects
+
+When webR provides a reference to an R object on the main thread, such as the result of R code evaluation with [`WebR.evalR()`](api/js/classes/WebR.WebR.md#evalr), it is provided in the form of an [`RObject`](api/js/modules/RMain.md#robject) proxy.
+
+Technically, an `RObject` is a JavaScript object that holds a reference to an R object in WebAssembly memory and forwards requests relating to that object to the webR worker thread. The forwarding between the main and worker threads is implemented with the JavaScript `Proxy` mechanism, which is why `RObject` instances print as objects of type `Proxy` in the console:
+
+``` javascript
+Proxy {obj: { type: 'double', ptr: 2184504, ... }, payloadType: 'ptr'}
+```
+
+`RObject` proxys can be passed to webR API calls that manipulate or access R objects. For instance, an `RObject` representing an environment can be passed to [`WebR.evalR()`](api/js/classes/WebR.WebR.md#evalr) to evaluate code in a particular environment.
+
+A proxy is parameterised by an R type, e.g. a proxy that wraps a character vector is implemented as `RProxy<RWorker.RCharacter>`. The [`RMain` module](api/js/modules/RMain.md) provides convenient type aliases for each R type. For instance, `RCharacter` stands for `RProxy<RWorker.RCharacter>`. Each of these types supports specific methods related to the kind of data they represent. For instance `RCharacter` supports conversion to a JS string with `toString()` whereas `RDouble` supports `toNumber()`.
+
+### Under the hood
+
+Each type of `RObject` proxy is associated with a corresponding subclass of [`RWorker.RObject`](api/js/classes/RWorker.RObject.md) with the same name, e.g. `RMain.RCharacter` has a corresponding `RWorker.RCharacter` type that is it proxied to. The `RWorker` module implements the methods for interacting with R objects on the webR worker thread, and the methods are made available to the main thread through the `RObject` proxies.
+
+Invoking a method on an `RObject` proxy is automatically handled by webR by issuing a request to the worker thread over the established communication channel. `RProxy` method invocation returns a JavaScript Promise that resolves to the result of invoking the corresponding [`RWorker.RObject`](api/js/classes/RWorker.RObject.md) method for the R object associated with the proxy.
+
+## Memory management
+
+Both the R interpreter and the JS environment include a built-in [garbage collector](https://en.wikipedia.org/wiki/Garbage_collection_(computer_science)) (GC) that deletes objects from memory when they are no longer required. Unfortunately, there is no way to integrate these garbage collectors in an automated way [^gc-integration]. This is why a Javascript wrapper can't keep an R object alive on its own and it needs some manual work from the developer who must ensure that any R objects targeted by an `RObject` reference are not deleted by the R GC while they are still in use.
+
+[^gc-integration]: While the JavaScript specification does provide a [finaliser mechanism](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/FinalizationRegistry) to signal when objects are no longer in use, it cannot be relied upon. Even a fully conforming JavaScript implementation is not required to call the cleanup callbacks.
+
+::: callout-note
+It is the user's responsibility to signal to webR when they have finished working with an `RObject` reference.
+:::
+
+## Sheltering R object references {#shelter}
+
+WebR solves the problem of keeping R objects alive through a *sheltering* mechanism. When an `RObject` reference is created on the main thread, the object referenced is automatically sheltered from R's GC. The object will not be deleted by R until it has been removed from the shelter.
+
+Once an R object is no longer protected by a shelter, there are no longer any guarantees about the state of the referenced object -- it may have already been deleted by the GC. In effect the `RObject` reference is no longer valid, and so the process of removing an object from the shelter is referred to as *destroying* the reference.
+
+::: callout-warning
+An `RObject` reference **must not** be used after it has been destroyed. Using a destroyed `RObject` results in undefined behaviour in the worker thread running R, most likely a crash.
+:::
+
+### The global shelter
+
+As webR initialises it creates a default shelter for R objects. When R object references are created without specifying a particular shelter, when running [`WebR.evalR()`](api/js/classes/WebR.WebR.md#evalr) for example, they are sheltered by the global shelter.
+
+Unlike normal shelters, the global shelter can't be purged all at once. A purge would not generally be safe because this shelter is likely shared among different concurrent routines. Instead, objects sheltered globally must be individually destroyed by passing them to the [`WebR.destroy()`](api/js/classes/WebR.WebR.md#destroy) method.
+
+### Using `try`/`finally` with the global shelter
+
+To avoid memory leaks, all `RObject` instances should be destroyed once they are no longer in use. This requires precautions to ensure destruction when a JavaScript error is thrown and interrupts execution. A useful pattern is to wrap code manipulating an `RObject` within a JavaScript `try`/`finally` block to ensure that the R object reference is always destroyed once the work is complete.
+
+::: {.panel-tabset}
+## JavaScript
+
+``` javascript
+const obj = await webR.evalR('42 + 123');
+try {
+  const result = await obj.toNumber();
+  console.log(result);
+} finally {
+  webR.destroy(obj);
+}
+```
+
+## TypeScript
+
+``` typescript
+import type { RDouble } from 'webr';
+
+const obj = await webR.evalR('42 + 123') as RDouble;
+try {
+  const result = await obj.toNumber();
+  console.log(result);
+} finally {
+  webR.destroy(obj);
+}
+```
+
+:::
+
+However this pattern quickly shows its limits when multiple objects are transferred from R because each object requires its own `try` / `finally` blocks.
+
+``` javascript
+const obj1 = await webR.evalR('42 + 123');
+
+try {
+  let result = await obj1.toNumber();
+  const obj2 = await webR.evalR('42 * 123');
+
+  try {
+    result = result + await obj2.toNumber();
+  } finally {
+    webR.destroy(obj2);
+  }
+
+  console.log(result);
+} finally {
+  webR.destroy(obj1);
+}
+```
+
+### Using `try`/`finally` with a local shelter
+
+To avoid increasingly nested blocks, it is often preferable to work with a shelter instead. A new shelter can be created using the [`Shelter`](api/js/classes/WebR.Shelter.md) class. An asynchronous constructor for this class is available in the `WebR.Shelter` property for convenient instantiation, e.g. `const myShelter = await new myWebR.Shelter()`.
+
+- The objects referenced in a shelter can be destroyed all at once using the `purge()` method. They can also be destroyed individually with the `destroy()` method, just like you would do with the global shelter.
+
+- The [`Shelter.evalR()`](api/js/classes/WebR.Shelter.md#evalr) and [`Shelter.captureR()`](api/js/classes/WebR.Shelter.md#capturer) methods automatically protect resulting `RObject` references within the shelter instance instead of the default shelter.
+
+The nested `try` / `finally` blocks example can be refactored as:
+
+::: {.panel-tabset}
+## JavaScript
+
+``` javascript
+const myShelter = await new webR.Shelter();
+
+try {
+  const obj1 = await myShelter.evalR('42 + 123');
+  const obj2 = await myShelter.evalR('42 * 123');
+
+  const result = await obj1.toNumber() + await obj2.toNumber();
+  console.log(result);
+} finally {
+  myShelter.purge();
+}
+```
+
+## TypeScript
+
+``` typescript
+import type { RDouble } from 'webr';
+
+const myShelter = await new webR.Shelter();
+
+try {
+  const obj1 = await myShelter.evalR('42 + 123') as RDouble;
+  const obj2 = await myShelter.evalR('42 * 123') as RDouble;
+
+  const result = await obj1.toNumber() + await obj2.toNumber();
+  console.log(result);
+} finally {
+  myShelter.purge();
+}
+```
+
+:::
+
+A list of available methods can be found in the methods section of the [`Shelter` class reference](api/js/classes/WebR.Shelter.md#methods). This includes similar methods for interacting with R or evaluating code to those provided on the [`WebR`](api/js/classes/WebR.WebR.md#methods) class.
+
+#### Create new objects protected by a shelter
+
+Shelters also provide a range of [R object class proxies](api/js/classes/WebR.Shelter.md#properties) which can be used to create a new R object by providing a JavaScript object. This works in the same way as when [creating R objects protected by the global shelter](convert-js-to-r.qmd#creating-an-r-object-with-specific-type), except that the resulting R objects will automatically be protected using this shelter, rather than the default shelter.
+
+``` javascript
+const obj = await new myShelter.RDouble([1, 1.5, 2, 2.5, 3]);
+```
+
+
+## Typing an `RObject`
+
+When working with TypeScript, it becomes important to pay attention to the typing for a given R object reference since the methods available depends on the kind of data referenced. Unfortunately, functions such as [`WebR.evalR()`](api/js/classes/WebR.WebR.md#evalr) may run arbitrary R code and so it is not clear what type of R object will be returned. As such, they are typed to return R object references as a generic `RObject` instance.
+
+If you are sure of the type of data referenced by the returned R object, it is possible to use the TypeScript `as` keyword to assert the type that you are expecting. We make use of this method throughout the TypeScript examples in this documentation, so that the relevant methods can be invoked without error.
+
+``` typescript
+import type { RDouble } from 'webr';
+
+let result = await webR.evalR('rnorm(10,5,1)') as RDouble;
+let output = await result.toTypedArray();
+```
+
+### Converting types using `RObject` constructors
+An alternative to the TypeScript `as` keyword is to [construct a new `RObject` with a specific type](convert-js-to-r.qmd#creating-an-r-object-with-specific-type), passing an existing `RObject` reference as the constructor argument. The returned object will be a reference to the same point in WebAssembly memory as the source object, but narrowed to the specific type. After conversion, methods can be invoked without error.
+
+``` typescript
+const foo = await webR.evalR('123');
+console.log(await foo.toJs());
+
+// The next line causes a "missing property" error in TypeScript
+// await foo.toNumber();
+
+// Construct an `RDouble` referencing the same R object
+const bar = await new webR.RDouble(foo);
+console.log(await bar.toNumber());
+```
+```
+{ type: 'double', names: null, values: [123] }
+123
+```
+
+If the R object is unable be converted into the selected type, a [`WebRError`](/api/js/classes/WebR.WebRError.md) will be thrown,
+
+``` typescript
+const baz = await new webR.RLogical(foo);
+console.log(await baz.toBoolean());
+```
+
+```
+Uncaught Error: Unexpected object type "double" when expecting type "logical"
+```
+
+### Type predicate functions
+
+For the case where type assertion is not appropriate, such as when the data referenced by an R object is unknown, webR provides a selection of [type predicate functions](api/js/modules/RMain.md#functions). The functions return boolean `true` if the argument's R object type matches, and so different actions can be taken at runtime depending on the type. In addition, the TypeScript compiler is able to use the result of the functions to narrow the `RObject` type.
+
+A useful pattern is to check the type of a returned R object and throwing an `Error` early if it is not as expected. After the check, Typescript will narrow the R object type automatically while it remains in scope.
+
+``` typescript
+import { isREnvironment } from 'webr';
+
+let result = await webR.evalR('as.environment(list(foo=1, bar=2, baz=3))');
+
+if (!isREnvironment(result)) {
+  throw new Error("Unexpected type of result from evalR evaluation.");
+}
+
+let output = await result.ls();
+console.log('The result is an environment containing: ', output);
+```
+
+Notice that TypeScript is able to deduce that the [`ls()`](api/js/classes/RWorker.REnvironment.md#ls) method is indeed valid for use with the `result` object, despite the method not existing on the generic `RObject` class. Typescript has successfully narrowed the object type to an [`REnvironment`](api/js/modules/RMain.md#renvironment).
+
+### Typing of JavaScript conversions
+
+Explicitly converting an `RObject` to JavaScript can be done by invoking the [`toJs()`](api/js/classes/RWorker.RObject.md#tojs) method, which returns a JavaScript representation of the referenced R object data. In general, the JavaScript object returned by `toJs()` is of type [`WebRDataJs`](api/js/modules/RObject.md#webrdatajs), a type union covering all possible R object data.
+
+Subclasses of `RObject` will return different types from the `WebRDataJs` type union. For example, an `RNull` object will return a JavaScript representation with type [`WebRDataJsNull`](api/js/modules/RObject.html#webrdatajsnull).
+
+Further information about converting R objects to JavaScript can be found in the next section.

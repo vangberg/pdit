@@ -1,0 +1,74 @@
+---
+title: "Evaluating R Code"
+format: html
+toc: true
+---
+
+## Evaluating R code with `evalR`
+
+The [`WebR.evalR()`](api/js/classes/WebR.WebR.md#evalr) method can be used to evaluate R code and retrieve the result of the computation. The method takes two arguments,
+
+-   `code` - The R code to evaluate.
+-   `options` - Optional: A [`EvalROptions`](api/js/interfaces/WebRChan.EvalROptions.md) object controlling how the code is evaluated.
+
+A promise is returned resolving to a reference to the result of the computation, given as an [`RObject`](api/js/modules/RMain.md#robject) proxy.
+
+The `options` argument provides advanced control over how the R code is evaluated and captured. For example, this can be used to enable R's [autoprint](https://cran.r-project.org/doc/manuals/r-release/R-ints.html#Autoprinting) feature.
+
+The `env` property of the `options` argument can be set when you wish to evaluate the R code within an R environment, rather than the default global environment. This could be used, for example, to sandbox an evaluation in a local environment to avoid `<-` creating variables in the global environment. Providing an environment is also a convenient way to pass data from Javascript to the R process.
+
+The normal stream output is written to the JavaScript console. The error stream is also written to the console except when it is emitted with structured R conditions and `captureConditions` is `true` (the default). In this case, R errors raised during evaluation are rethrown as JavaScript exceptions, and R warnings and messages are rethrown as JavaScript warnings.
+
+`RObject` references returned by `evalR()` are subject to [memory management](objects.qmd#memory-management) and should be destroyed when no longer in use. The related [`Shelter.evalR()`](api/js/classes/WebR.Shelter.md#evalr) method can be used to automatically manage returned R objects using a webR [shelter](objects.qmd#shelter).
+
+### Returning JavaScript values when evaluating R code
+
+A selection of convenience methods return the result of evaluating R code as a promise to a JavaScript object, rather than an `RObject` reference. The benefit is that since the returned object is of a raw JavaScript type, it does not need to be memory managed like an `RObject` result would be.
+
+| Method                                                            | Returned object type |
+|-----------------------------------------------|------------------------|
+| [`WebR.evalRBoolean()`](api/js/classes/WebR.WebR.md#evalrboolean) | `boolean`            |
+| [`WebR.evalRNumber()`](api/js/classes/WebR.WebR.md#evalrnumber)   | `number`             |
+| [`WebR.evalRString()`](api/js/classes/WebR.WebR.md#evalrstring)   | `string`             |
+| [`WebR.evalRVoid()`](api/js/classes/WebR.WebR.md#evalrvoid)       | No return value      |
+
+The methods in the table above are shortcuts to the more general [`WebR.evalRRaw()`](api/js/classes/WebR.WebR.md#evalrraw) method. This takes an additional `outputType` argument, which determines the type of raw JavaScript object returned. Using the `evalRRaw()` method additionally allows for the return of JavaScript `Array` objects.
+
+| `objectType` argument value | Returned object type      |
+|-----------------------------|---------------------------|
+| `'boolean'`                 | `boolean`                 |
+| `'number'`                  | `number`                  |
+| `'string'`                  | `string`                  |
+| `'boolean[]'`               | Array of `boolean` values |
+| `'number[]'`                | Array of `number` values  |
+| `'string[]'`                | Array of `string` values  |
+| `'void'`                    | No return value           |
+
+::: callout-warning
+The `evalRRaw()` method and its related convenience methods require that the result of the R code evaluation is a vector of type `logical`, `integer`, `double` or `character` and must not contain missing values.
+:::
+
+## Evaluating R code and capturing output with `captureR`
+
+The [`Shelter.captureR()`](api/js/classes/WebR.Shelter.md#capturer) method is lower level and more flexible than `evalR()`. It allows the user to capture any stream output, plots, and conditions raised during evaluation of R code, in addition to returning the result of the computation.
+
+Unlike `evalR()` which only returns one R object, `captureR()` returns a variable number of objects when R conditions are captured. Since this makes memory management of individual objects unwieldy, `captureR()` requires the [shelter](objects.qmd#shelter) approach to [memory management](objects.qmd#memory-management), where all the sheltered objects are destroyed at once.
+
+The method takes two arguments,
+
+-   `code` - The R code to evaluate
+-   `options` - Optional: A [`EvalROptions`](api/js/interfaces/WebRChan.EvalROptions.md) object controlling how the code is evaluated.
+
+A promise is returned resolving to a JavaScript object with three properties,
+
+-   `result` - The result of the computation, as an [`RObject`](api/js/modules/RMain.md#robject) proxy.
+-   `output` - Output captured during execution, an array of objects with properties `type` and `data`.
+-   `images` - Plots captured by the canvas device during execution, an array of [`ImageBitmap`](https://developer.mozilla.org/en-US/docs/Web/API/ImageBitmap) objects.
+
+Stream output is returned as elements of `output` with a `type` property of `stdout` or `stderr`. The line of output is returned in the form of a JavaScript string in the `data` property.
+
+Any raised conditions are also included as elements of `output` with a `type` property of `message`, `warning`, or `error`. A reference to the condition is returned in the form of an [`RObject`](api/js/modules/RMain.md#robject) proxy in the `data` property.
+
+Plots captured by the [`webr::canvas()`](api/r.html#canvas) graphics device are included as elements of `images`, in the form of [`ImageBitmap`](https://developer.mozilla.org/en-US/docs/Web/API/ImageBitmap) objects. The captured images may be displayed on the page using the [`drawImage()`](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage) method of a HTML Canvas element's [2D rendering context](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D).
+
+During capture with `evalR()` and `captureR()` the R session is set as non-interactive. After the output capture has completed, the session's interactive status will be restored.
