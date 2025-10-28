@@ -43,24 +43,28 @@ export async function executeScript(script: string): Promise<ExecutionResult> {
     try {
       for (let i = 1; i <= numExpressions; i++) {
         // Get line numbers from parse data
-        // Find the top-level expression (parent == 0) for this expression index
+        // Filter for top-level expression tokens only (excluding semicolons, etc.)
         const startLine = await webR.evalRNumber(`
           {
-            expr_rows <- .rokko_parse_data[.rokko_parse_data$parent == 0, ]
-            if (nrow(expr_rows) >= ${i}) {
-              expr_rows$line1[${i}]
+            # Get top-level expressions (parent == 0) that are actual expressions (token == "expr")
+            top_level_exprs <- .rokko_parse_data[.rokko_parse_data$parent == 0 & .rokko_parse_data$token == "expr", ]
+            # Get the i-th expression's line
+            if (nrow(top_level_exprs) >= ${i}) {
+              top_level_exprs$line1[${i}]
             } else {
-              ${i}
+              1
             }
           }
         `);
         const endLine = await webR.evalRNumber(`
           {
-            expr_rows <- .rokko_parse_data[.rokko_parse_data$parent == 0, ]
-            if (nrow(expr_rows) >= ${i}) {
-              expr_rows$line2[${i}]
+            # Get top-level expressions (parent == 0) that are actual expressions (token == "expr")
+            top_level_exprs <- .rokko_parse_data[.rokko_parse_data$parent == 0 & .rokko_parse_data$token == "expr", ]
+            # Get the i-th expression's line
+            if (nrow(top_level_exprs) >= ${i}) {
+              top_level_exprs$line2[${i}]
             } else {
-              ${i}
+              1
             }
           }
         `);
