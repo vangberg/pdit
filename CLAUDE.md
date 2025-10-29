@@ -18,4 +18,3 @@ UI STYLE: Terminal/Newslist
 - Pre-formatted text for output
 - Minimal hover states (hover:bg-gray-100)
 - Information-dense, compact layouts
-- Show metadata (IDs, types, counts)
