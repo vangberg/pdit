@@ -172,6 +172,7 @@ export function Editor({
           ".cm-scroller": {
             fontFamily:
               'Fira Code, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+            overflow: "visible",
           },
         }),
       ],

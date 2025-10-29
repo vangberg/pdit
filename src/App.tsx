@@ -8,14 +8,27 @@ import { computeLineGroups, LineGroup } from "./compute-line-groups";
 import { initializeWebR } from "./webr-instance";
 import { TopBar } from "./TopBar";
 
-const initialCode = `# Welcome to Rokko - R in the browser!
-# Try running this code with Cmd+Enter
+const initialCode = `# Dataset overview and summary statistics
+head(mtcars)
+summary(mtcars)
 
-x <- 1:10
-print(x)
+# Visualization: fuel efficiency vs vehicle weight
+plot(mtcars$wt, mtcars$mpg,
+     xlab = "Weight (1000 lbs)",
+     ylab = "Miles per Gallon",
+     main = "Fuel Efficiency vs Vehicle Weight",
+     pch = 19)
 
-# Calculate mean
-mean(x)`;
+# Fitted linear regression line
+trend <- lm(mpg ~ wt, data = mtcars)
+abline(trend, col = "red", lwd = 2)
+
+# Calculate correlation
+cor(mtcars$mpg, mtcars$wt)
+
+# Multiple linear regression model
+model <- lm(mpg ~ wt + hp + cyl, data = mtcars)
+summary(model)`;
 
 function App() {
   const editorRef = useRef<EditorHandles | null>(null);
@@ -127,6 +140,7 @@ function App() {
               results={executeResults.results}
               lineGroups={currentLineGroups}
               lineGroupTops={lineGroupTops}
+              lineGroupHeights={lineGroupHeights}
             />
           )}
         </div>

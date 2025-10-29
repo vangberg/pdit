@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from "react";
+import React, { useRef, useEffect, useCallback, useMemo } from "react";
 import { Output } from "./Output";
 import { ExecutionOutput } from "./execution";
 import { LineGroup } from "./compute-line-groups";
@@ -9,6 +9,7 @@ interface OutputPaneProps {
   results: ExecutionOutput[];
   lineGroups: LineGroup[];
   lineGroupTops?: Map<string, number>;
+  lineGroupHeights?: Map<string, number>;
 }
 
 export const OutputPane: React.FC<OutputPaneProps> = ({
@@ -16,9 +17,22 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
   results,
   lineGroups,
   lineGroupTops,
+  lineGroupHeights,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const lineGroupRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const minHeight = useMemo(() => {
+    if (!lineGroupTops || !lineGroupHeights || lineGroups.length === 0) {
+      return undefined;
+    }
+
+    const lastGroup = lineGroups[lineGroups.length - 1];
+    const top = lineGroupTops.get(lastGroup.id);
+    const height = lineGroupHeights.get(lastGroup.id);
+
+    return (top !== undefined && height !== undefined) ? top + height : undefined;
+  }, [lineGroups, lineGroupTops, lineGroupHeights]);
 
   const getLineGroupHeights = useCallback((): Map<string, number> => {
     const heights = new Map<string, number>();
@@ -69,7 +83,10 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
 
   return (
     <div id="output" ref={containerRef}>
-      <div className="output-content">
+      <div
+        className="output-content"
+        style={minHeight ? { minHeight: `${minHeight}px` } : undefined}
+      >
         {lineGroups.map((group) => {
           const topValue = lineGroupTops?.get(group.id);
           return (
