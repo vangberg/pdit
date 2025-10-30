@@ -1,4 +1,4 @@
-import { getWebR } from './webr-instance';
+import { getWebR, startImageCollection, stopImageCollection } from './webr-instance';
 
 export interface OutputItem {
   type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message';
@@ -10,6 +10,7 @@ export interface ExecutionOutput {
   lineStart: number;
   lineEnd: number;
   output: OutputItem[];
+  images?: ImageBitmap[];
 }
 
 export interface ExecutionResult {
@@ -69,13 +70,32 @@ export async function executeScript(script: string): Promise<ExecutionResult> {
           }
         `);
 
-        // Execute this expression and capture output
-        // Enable autoprinting to match R REPL behavior for top-level expressions
-        const result = await shelter.captureR(`eval(.rokko_parsed[[${i}]])`, {
+        // Start collecting canvas images
+        startImageCollection();
+
+        // Execute this expression and capture output (no captureGraphics - using persistent device)
+        const result = await shelter.captureR(`
+          {
+            .tmp <- withVisible(eval(.rokko_parsed[[${i}]]))
+            # Ensure plot is flushed if there's an active device
+            if (length(dev.list()) > 0) {
+              dev.flush()
+            }
+            # Preserve invisibility flag
+            if (.tmp$visible) .tmp$value else invisible(.tmp$value)
+          }
+        `, {
           withAutoprint: true,
           captureStreams: true,
           captureConditions: false,
+          captureGraphics: false,
         });
+
+        // Flush all pending messages from the output queue
+        await webR.flush();
+
+        // Stop collecting and get images
+        const images = stopImageCollection();
 
         // Convert output to our format
         const output: OutputItem[] = [];
@@ -88,13 +108,14 @@ export async function executeScript(script: string): Promise<ExecutionResult> {
           }
         }
 
-        // Only add result if there's output
-        if (output.length > 0) {
+        // Only add result if there's output or images
+        if (output.length > 0 || images.length > 0) {
           results.push({
             id: globalIdCounter++,
             lineStart: startLine,
             lineEnd: endLine,
             output: output,
+            images: images.length > 0 ? images : undefined,
           });
         }
       }
