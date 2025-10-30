@@ -31,13 +31,13 @@ export async function executeScript(script: string): Promise<ExecutionResult> {
   try {
     // Store the code in R and parse with source information
     await webR.evalRVoid(`
-      .rokko_code <- ${JSON.stringify(script)}
-      .rokko_parsed <- parse(text = .rokko_code, keep.source = TRUE)
-      .rokko_parse_data <- getParseData(.rokko_parsed)
+      .rdit_code <- ${JSON.stringify(script)}
+      .rdit_parsed <- parse(text = .rdit_code, keep.source = TRUE)
+      .rdit_parse_data <- getParseData(.rdit_parsed)
     `);
 
     // Get the number of expressions
-    const numExpressions = await webR.evalRNumber('length(.rokko_parsed)');
+    const numExpressions = await webR.evalRNumber('length(.rdit_parsed)');
 
     // Execute each expression
     const shelter = await new webR.Shelter();
@@ -48,7 +48,7 @@ export async function executeScript(script: string): Promise<ExecutionResult> {
         const startLine = await webR.evalRNumber(`
           {
             # Get top-level expressions (parent == 0) that are actual expressions (token == "expr")
-            top_level_exprs <- .rokko_parse_data[.rokko_parse_data$parent == 0 & .rokko_parse_data$token == "expr", ]
+            top_level_exprs <- .rdit_parse_data[.rdit_parse_data$parent == 0 & .rdit_parse_data$token == "expr", ]
             # Get the i-th expression's line
             if (nrow(top_level_exprs) >= ${i}) {
               top_level_exprs$line1[${i}]
@@ -60,7 +60,7 @@ export async function executeScript(script: string): Promise<ExecutionResult> {
         const endLine = await webR.evalRNumber(`
           {
             # Get top-level expressions (parent == 0) that are actual expressions (token == "expr")
-            top_level_exprs <- .rokko_parse_data[.rokko_parse_data$parent == 0 & .rokko_parse_data$token == "expr", ]
+            top_level_exprs <- .rdit_parse_data[.rdit_parse_data$parent == 0 & .rdit_parse_data$token == "expr", ]
             # Get the i-th expression's line
             if (nrow(top_level_exprs) >= ${i}) {
               top_level_exprs$line2[${i}]
@@ -76,7 +76,7 @@ export async function executeScript(script: string): Promise<ExecutionResult> {
         // Execute this expression and capture output (no captureGraphics - using persistent device)
         const result = await shelter.captureR(`
           {
-            .tmp <- withVisible(eval(.rokko_parsed[[${i}]]))
+            .tmp <- withVisible(eval(.rdit_parsed[[${i}]]))
             # Ensure plot is flushed if there's an active device
             if (length(dev.list()) > 0) {
               dev.flush()
