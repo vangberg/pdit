@@ -7,26 +7,20 @@ import { lineGroupsField } from "./result-grouping-plugin"
 // ============================================================================
 
 class Spacer extends WidgetType {
-  constructor(readonly height: number, readonly lineNumber: number) { super() }
+  constructor(readonly height: number, readonly lineNumber: number, readonly groupIndex: number) { super() }
 
-  eq(other: Spacer) { return this.height == other.height && this.lineNumber == other.lineNumber }
+  eq(other: Spacer) { return this.height == other.height && this.lineNumber == other.lineNumber && this.groupIndex == other.groupIndex }
 
   toDOM() {
     let elt = document.createElement("div")
     elt.style.height = this.height + "px"
-    elt.className = "cm-preview-spacer"
-    if ((this.lineNumber % 2) === 0) {
-      elt.className += " zebra-stripe"
-    }
+    elt.className = `cm-preview-spacer cm-preview-spacer-${this.groupIndex % 6}`
     return elt
   }
 
   updateDOM(dom: HTMLElement) {
     dom.style.height = this.height + "px"
-    dom.className = "cm-preview-spacer"
-    if ((this.lineNumber % 2) === 0) {
-      dom.className += " zebra-stripe"
-    }
+    dom.className = `cm-preview-spacer cm-preview-spacer-${this.groupIndex % 6}`
     return true
   }
 
@@ -120,7 +114,8 @@ function updateSpacers(view: EditorView) {
     }
   }
 
-  for (const group of groups) {
+  for (let groupIndex = 0; groupIndex < groups.length; groupIndex++) {
+    const group = groups[groupIndex]
     const targetHeight = targetHeights.get(group.id)
 
     // Skip if no target height set for this group
@@ -145,7 +140,7 @@ function updateSpacers(view: EditorView) {
     const diff = targetHeight - naturalHeight
     if (diff > 0.01) {
       builder.add(endLine.to, endLine.to, Decoration.widget({
-        widget: new Spacer(diff, group.lineEnd),
+        widget: new Spacer(diff, group.lineEnd, groupIndex),
         block: true,
         side: 1
       }))
@@ -169,11 +164,15 @@ function measureAndReportTops(view: EditorView) {
     return
   }
 
+  // Get the cm-content padding to account for offset
+  const contentEl = view.contentDOM
+  const contentPadding = contentEl ? parseInt(getComputedStyle(contentEl).paddingTop) || 0 : 0
+
   const tops = new Map<string, number>()
   for (const group of groups) {
     const line = doc.line(group.lineStart)
     const block = view.lineBlockAt(line.from)
-    tops.set(group.id, Math.max(0, block.top))
+    tops.set(group.id, Math.max(0, block.top + contentPadding))
   }
 
   callback(tops)

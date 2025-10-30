@@ -350,6 +350,40 @@ export const groupDecorationsField = StateField.define<DecorationSet>({
   provide: (f) => EditorView.decorations.from(f),
 });
 
+// Line background decorations (always visible, not just in debug mode)
+export const lineGroupBackgroundField = StateField.define<DecorationSet>({
+  create() {
+    return Decoration.none;
+  },
+
+  update(_, tr) {
+    const lineGroups = tr.state.field(lineGroupsField);
+
+    if (lineGroups.length === 0) {
+      return Decoration.none;
+    }
+
+    const decorations: any[] = [];
+
+    for (let groupIndex = 0; groupIndex < lineGroups.length; groupIndex++) {
+      const group = lineGroups[groupIndex];
+      const colorClass = `cm-line-group-bg-${groupIndex % 6}`;
+      const lineDecoration = Decoration.line({ class: colorClass });
+
+      for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
+        const line = tr.state.doc.line(lineNum);
+        decorations.push(lineDecoration.range(line.from));
+      }
+    }
+
+    return decorations.length === 0
+      ? Decoration.none
+      : Decoration.set(decorations, true);
+  },
+
+  provide: (f) => EditorView.decorations.from(f),
+});
+
 const groupTheme = EditorView.theme({
   ".cm-result-line-0": {
     backgroundColor: "rgba(255, 215, 0, 0.1)",
@@ -368,6 +402,49 @@ const groupTheme = EditorView.theme({
   },
   ".cm-result-line-5": {
     backgroundColor: "rgba(108, 117, 125, 0.1)",
+  },
+  ".cm-line-group-bg-0": {
+    backgroundColor: "rgba(252, 228, 236, 0.5)",
+  },
+  ".cm-line-group-bg-1": {
+    backgroundColor: "rgba(225, 245, 254, 0.5)",
+  },
+  ".cm-line-group-bg-2": {
+    backgroundColor: "rgba(241, 248, 233, 0.5)",
+  },
+  ".cm-line-group-bg-3": {
+    backgroundColor: "rgba(255, 243, 224, 0.5)",
+  },
+  ".cm-line-group-bg-4": {
+    backgroundColor: "rgba(243, 229, 245, 0.5)",
+  },
+  ".cm-line-group-bg-5": {
+    backgroundColor: "rgba(224, 242, 241, 0.5)",
+  },
+  ".cm-preview-spacer-0": {
+    backgroundColor: "rgba(252, 228, 236, 0.5)",
+  },
+  ".cm-preview-spacer-1": {
+    backgroundColor: "rgba(225, 245, 254, 0.5)",
+  },
+  ".cm-preview-spacer-2": {
+    backgroundColor: "rgba(241, 248, 233, 0.5)",
+  },
+  ".cm-preview-spacer-3": {
+    backgroundColor: "rgba(255, 243, 224, 0.5)",
+  },
+  ".cm-preview-spacer-4": {
+    backgroundColor: "rgba(243, 229, 245, 0.5)",
+  },
+  ".cm-preview-spacer-5": {
+    backgroundColor: "rgba(224, 242, 241, 0.5)",
+  },
+  // Make selections more visible on colored backgrounds
+  ".cm-selectionBackground, ::selection": {
+    backgroundColor: "rgba(0, 0, 0, 0.3) !important",
+  },
+  "&.cm-focused .cm-selectionBackground": {
+    backgroundColor: "rgba(0, 100, 200, 0.4) !important",
   },
 });
 
@@ -395,6 +472,7 @@ export const resultGroupingExtension = [
   groupRangesField,
   lineGroupsField,
   groupDecorationsField,
+  lineGroupBackgroundField,
   groupTheme,
   groupRangesHistory,
 ];
