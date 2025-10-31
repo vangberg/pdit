@@ -29,7 +29,7 @@ import {
   closeBracketsKeymap,
 } from "@codemirror/autocomplete";
 import { lintKeymap } from "@codemirror/lint";
-import { javascript } from "@codemirror/lang-javascript";
+import { r } from "codemirror-lang-r";
 import {
   resultGroupingExtension,
   setLineGroups,
@@ -140,7 +140,7 @@ export function Editor({
           ...completionKeymap,
           ...lintKeymap,
         ]),
-        javascript(),
+        r(),
         resultGroupingExtension,
         lineGroupLayoutExtension,
         debugPanelExtension(),
