@@ -222,7 +222,17 @@ h1 {
   color: #4b5563;
 }
 
+.output-item.output-plot {
+  margin-top: 0.25rem;
+}
 
+.output-plot canvas {
+  display: block;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  width: 400px;
+  height: 300px;
+}
 
 .output-table {
   width: 100%;
