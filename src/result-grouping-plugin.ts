@@ -368,11 +368,15 @@ export const lineGroupBackgroundField = StateField.define<DecorationSet>({
     for (let groupIndex = 0; groupIndex < lineGroups.length; groupIndex++) {
       const group = lineGroups[groupIndex];
       const colorClass = `cm-line-group-bg-${groupIndex % 6}`;
-      const lineDecoration = Decoration.line({ class: colorClass });
 
       for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
         const line = tr.state.doc.line(lineNum);
-        decorations.push(lineDecoration.range(line.from));
+        // Add background color to all lines in group
+        decorations.push(Decoration.line({ class: colorClass }).range(line.from));
+        // Add border to first line of each group
+        if (lineNum === group.lineStart) {
+          decorations.push(Decoration.line({ class: 'cm-line-group-top' }).range(line.from));
+        }
       }
     }
 
@@ -403,41 +407,14 @@ const groupTheme = EditorView.theme({
   ".cm-result-line-5": {
     backgroundColor: "rgba(108, 117, 125, 0.1)",
   },
-  ".cm-line-group-bg-0": {
-    backgroundColor: "rgba(252, 228, 236, 0.5)",
+  ".cm-line-group-bg-0, .cm-line-group-bg-1, .cm-line-group-bg-2, .cm-line-group-bg-3, .cm-line-group-bg-4, .cm-line-group-bg-5": {
+    backgroundColor: "rgba(225, 239, 254, 0.3)",
   },
-  ".cm-line-group-bg-1": {
-    backgroundColor: "rgba(225, 245, 254, 0.5)",
+  ".cm-line-group-top": {
+    borderTop: "1px solid rgba(96, 165, 250, 0.4)",
   },
-  ".cm-line-group-bg-2": {
-    backgroundColor: "rgba(241, 248, 233, 0.5)",
-  },
-  ".cm-line-group-bg-3": {
-    backgroundColor: "rgba(255, 243, 224, 0.5)",
-  },
-  ".cm-line-group-bg-4": {
-    backgroundColor: "rgba(243, 229, 245, 0.5)",
-  },
-  ".cm-line-group-bg-5": {
-    backgroundColor: "rgba(224, 242, 241, 0.5)",
-  },
-  ".cm-preview-spacer-0": {
-    backgroundColor: "rgba(252, 228, 236, 0.5)",
-  },
-  ".cm-preview-spacer-1": {
-    backgroundColor: "rgba(225, 245, 254, 0.5)",
-  },
-  ".cm-preview-spacer-2": {
-    backgroundColor: "rgba(241, 248, 233, 0.5)",
-  },
-  ".cm-preview-spacer-3": {
-    backgroundColor: "rgba(255, 243, 224, 0.5)",
-  },
-  ".cm-preview-spacer-4": {
-    backgroundColor: "rgba(243, 229, 245, 0.5)",
-  },
-  ".cm-preview-spacer-5": {
-    backgroundColor: "rgba(224, 242, 241, 0.5)",
+  ".cm-preview-spacer-0, .cm-preview-spacer-1, .cm-preview-spacer-2, .cm-preview-spacer-3, .cm-preview-spacer-4, .cm-preview-spacer-5": {
+    backgroundColor: "rgba(225, 239, 254, 0.3)",
   },
   // Make selections more visible on colored backgrounds
   ".cm-selectionBackground, ::selection": {
