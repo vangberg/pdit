@@ -1,26 +1,42 @@
 import {EditorView, Decoration, WidgetType, DecorationSet} from "@codemirror/view"
 import {StateField, StateEffect, RangeSetBuilder, Facet} from "@codemirror/state"
 import { lineGroupsField } from "./result-grouping-plugin"
+import { executionHistoryField } from "./execution-gutter"
+import { LineGroup } from "./compute-line-groups"
 
 // ============================================================================
 // Spacer Widget
 // ============================================================================
 
 class Spacer extends WidgetType {
-  constructor(readonly height: number, readonly lineNumber: number, readonly groupIndex: number) { super() }
+  constructor(
+    readonly height: number,
+    readonly lineNumber: number,
+    readonly groupIndex: number,
+    readonly executionState: 'recent' | 'previous' | 'none'
+  ) { super() }
 
-  eq(other: Spacer) { return this.height == other.height && this.lineNumber == other.lineNumber && this.groupIndex == other.groupIndex }
+  eq(other: Spacer) {
+    return this.height == other.height &&
+           this.lineNumber == other.lineNumber &&
+           this.groupIndex == other.groupIndex &&
+           this.executionState == other.executionState
+  }
 
   toDOM() {
     let elt = document.createElement("div")
     elt.style.height = this.height + "px"
-    elt.className = `cm-preview-spacer cm-preview-spacer-${this.groupIndex % 6}`
+    const executionClass = this.executionState === 'recent' ? 'cm-execution-recent' :
+                          this.executionState === 'previous' ? 'cm-execution-previous' : ''
+    elt.className = `cm-preview-spacer cm-preview-spacer-${this.groupIndex % 6} ${executionClass}`.trim()
     return elt
   }
 
   updateDOM(dom: HTMLElement) {
     dom.style.height = this.height + "px"
-    dom.className = `cm-preview-spacer cm-preview-spacer-${this.groupIndex % 6}`
+    const executionClass = this.executionState === 'recent' ? 'cm-execution-recent' :
+                          this.executionState === 'previous' ? 'cm-execution-previous' : ''
+    dom.className = `cm-preview-spacer cm-preview-spacer-${this.groupIndex % 6} ${executionClass}`.trim()
     return true
   }
 
@@ -88,18 +104,38 @@ function compareSpacers(a: DecorationSet, b: DecorationSet): boolean {
   if (a.size != b.size) return false
   let iA = a.iter(), iB = b.iter()
   while (iA.value) {
+    const widgetA = iA.value.spec.widget as Spacer
+    const widgetB = iB.value!.spec.widget as Spacer
     if (iA.from != iB.from ||
-        Math.abs((iA.value.spec.widget as Spacer).height - (iB.value!.spec.widget as Spacer).height) > 1)
+        Math.abs(widgetA.height - widgetB.height) > 1 ||
+        widgetA.executionState !== widgetB.executionState)
       return false
     iA.next(); iB.next()
   }
   return true
 }
 
+function getExecutionState(group: LineGroup, executionHistory: any): 'recent' | 'previous' | 'none' {
+  // Check if this group is in lastExecuted (recent)
+  const isRecent = executionHistory.lastExecuted.some((g: LineGroup) =>
+    g.lineStart === group.lineStart && g.lineEnd === group.lineEnd
+  )
+  if (isRecent) return 'recent'
+
+  // Check if this group is in everExecuted (previous)
+  const isPrevious = executionHistory.everExecuted.some((g: LineGroup) =>
+    g.lineStart === group.lineStart && g.lineEnd === group.lineEnd
+  )
+  if (isPrevious) return 'previous'
+
+  return 'none'
+}
+
 function updateSpacers(view: EditorView) {
   const groups = view.state.field(lineGroupsField)
   const targetHeights = view.state.field(lineGroupTargetHeightsField)
   const currentSpacers = view.state.field(spacersField)
+  const executionHistory = view.state.field(executionHistoryField, false)
 
   if (targetHeights.size === 0 || groups.length === 0) return
 
@@ -139,8 +175,9 @@ function updateSpacers(view: EditorView) {
 
     const diff = targetHeight - naturalHeight
     if (diff > 0.01) {
+      const executionState = executionHistory ? getExecutionState(group, executionHistory) : 'none'
       builder.add(endLine.to, endLine.to, Decoration.widget({
-        widget: new Spacer(diff, group.lineEnd, groupIndex),
+        widget: new Spacer(diff, group.lineEnd, groupIndex, executionState),
         block: true,
         side: 1
       }))
@@ -208,8 +245,12 @@ export const lineGroupLayoutExtension = [
     const lineGroupsChanged = update.startState.field(lineGroupsField) !==
                               update.state.field(lineGroupsField)
 
-    // Phase 1: Update spacers when heights change (but not if we just applied spacers)
-    if (!hasSpacerEffect && (update.heightChanged || update.geometryChanged || update.docChanged || targetHeightsChanged || lineGroupsChanged)) {
+    // Check if execution history changed
+    const executionHistoryChanged = update.startState.field(executionHistoryField, false) !==
+                                    update.state.field(executionHistoryField, false)
+
+    // Phase 1: Update spacers when heights, groups, or execution history change (but not if we just applied spacers)
+    if (!hasSpacerEffect && (update.heightChanged || update.geometryChanged || update.docChanged || targetHeightsChanged || lineGroupsChanged || executionHistoryChanged)) {
       updateSpacers(update.view)
       measureAndReportTops(update.view)
     }

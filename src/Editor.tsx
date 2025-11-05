@@ -45,17 +45,21 @@ import {
   debugPanelExtension,
   toggleDebugPanelCommand,
 } from "./codemirror-debug-panel";
+import { executionGutterExtension, setExecutionHistory } from "./execution-gutter";
 
 export interface EditorHandles {
   applyExecutionUpdate: (update: {
     doc: string;
     lineGroups: LineGroup[];
+    preserveCursor?: boolean;
   }) => void;
+  updateExecutionHistory: (lineGroups: LineGroup[]) => void;
 }
 
 interface EditorProps {
   initialCode: string;
   onExecute?: (script: string) => void;
+  onExecuteCurrent?: (script: string, cursorLine: number) => void;
   onDocumentChange?: (doc: Text) => void;
   onLineGroupsChange?: (groups: LineGroup[]) => void;
   onLineGroupTopChange?: (tops: Map<string, number>) => void;
@@ -66,6 +70,7 @@ interface EditorProps {
 export function Editor({
   initialCode,
   onExecute,
+  onExecuteCurrent,
   onDocumentChange,
   onLineGroupsChange,
   onLineGroupTopChange,
@@ -76,6 +81,7 @@ export function Editor({
   const viewRef = useRef<EditorView | null>(null);
 
   const onExecuteRef = useRef(onExecute);
+  const onExecuteCurrentRef = useRef(onExecuteCurrent);
   const onDocumentChangeRef = useRef(onDocumentChange);
   const onLineGroupsChangeRef = useRef(onLineGroupsChange);
   const lineGroupTopCallbackCompartment = useMemo(() => new Compartment(), []);
@@ -84,6 +90,10 @@ export function Editor({
   useEffect(() => {
     onExecuteRef.current = onExecute;
   }, [onExecute]);
+
+  useEffect(() => {
+    onExecuteCurrentRef.current = onExecuteCurrent;
+  }, [onExecuteCurrent]);
 
   useEffect(() => {
     onDocumentChangeRef.current = onDocumentChange;
@@ -104,6 +114,16 @@ export function Editor({
         keymap.of([
           {
             key: "Cmd-Enter",
+            run: (view: EditorView) => {
+              const currentText = view.state.doc.toString();
+              const cursorPos = view.state.selection.main.head;
+              const cursorLine = view.state.doc.lineAt(cursorPos).number;
+              onExecuteCurrentRef.current?.(currentText, cursorLine);
+              return true;
+            },
+          },
+          {
+            key: "Cmd-Shift-Enter",
             run: (view: EditorView) => {
               const currentText = view.state.doc.toString();
               onExecuteRef.current?.(currentText);
@@ -143,6 +163,7 @@ export function Editor({
         r(),
         resultGroupingExtension,
         lineGroupLayoutExtension,
+        executionGutterExtension,
         debugPanelExtension(),
         lineGroupTopCallbackCompartment.of(
           lineGroupTopChangeFacet.of(onLineGroupTopChange ?? null)
@@ -202,9 +223,11 @@ export function Editor({
       applyExecutionUpdate: ({
         doc,
         lineGroups,
+        preserveCursor = false,
       }: {
         doc: string;
         lineGroups: LineGroup[];
+        preserveCursor?: boolean;
       }) => {
         const view = viewRef.current;
         if (!view) {
@@ -212,9 +235,13 @@ export function Editor({
         }
 
         const transaction: any = {
-          selection: { anchor: doc.length },
           effects: [setLineGroups.of(lineGroups)],
         };
+
+        // Only move cursor to end if not preserving cursor position
+        if (!preserveCursor) {
+          transaction.selection = { anchor: doc.length };
+        }
 
         if (doc !== view.state.doc.toString()) {
           transaction.changes = {
@@ -225,6 +252,13 @@ export function Editor({
         }
 
         view.dispatch(transaction);
+      },
+      updateExecutionHistory: (lineGroups: LineGroup[]) => {
+        const view = viewRef.current;
+        if (!view) {
+          return;
+        }
+        setExecutionHistory(view, lineGroups);
       },
     }),
     []

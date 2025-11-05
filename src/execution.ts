@@ -1,4 +1,5 @@
 import { getWebR, startImageCollection, stopImageCollection } from './webr-instance';
+import { findExpressionAtLine } from './expression-finder';
 
 export interface OutputItem {
   type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message';
@@ -127,6 +128,87 @@ export async function executeScript(script: string): Promise<ExecutionResult> {
     return { results };
   } catch (error) {
     console.error('Error in executeScript:', error);
+    throw error;
+  }
+}
+
+/**
+ * Execute only the R expression at the given cursor line.
+ * Returns the result for that single expression.
+ */
+export async function executeCurrentExpression(
+  script: string,
+  cursorLine: number
+): Promise<ExecutionOutput | null> {
+  const webR = getWebR();
+
+  try {
+    // Find which expression contains the cursor
+    const exprInfo = await findExpressionAtLine(script, cursorLine);
+    if (!exprInfo) {
+      console.warn('No expression found at line', cursorLine);
+      return null;
+    }
+
+    // Store the code in R and parse with source information
+    await webR.evalRVoid(`
+      .rdit_code <- ${JSON.stringify(script)}
+      .rdit_parsed <- parse(text = .rdit_code, keep.source = TRUE)
+    `);
+
+    const shelter = await new webR.Shelter();
+    try {
+      // Start collecting canvas images
+      startImageCollection();
+
+      // Execute this specific expression
+      const result = await shelter.captureR(`
+        {
+          .tmp <- withVisible(eval(.rdit_parsed[[${exprInfo.index}]]))
+          # Ensure plot is flushed if there's an active device
+          if (length(dev.list()) > 0) {
+            dev.flush()
+          }
+          # Preserve invisibility flag
+          if (.tmp$visible) .tmp$value else invisible(.tmp$value)
+        }
+      `, {
+        withAutoprint: true,
+        captureStreams: true,
+        captureConditions: false,
+        captureGraphics: false,
+      });
+
+      // Flush all pending messages from the output queue
+      await webR.flush();
+
+      // Stop collecting and get images
+      const images = stopImageCollection();
+
+      // Convert output to our format
+      const output: OutputItem[] = [];
+      for (const item of result.output) {
+        if (item.type === 'stdout' || item.type === 'stderr') {
+          output.push({
+            type: item.type,
+            text: item.data as string,
+          });
+        }
+      }
+
+      // Return result with proper line numbers
+      return {
+        id: globalIdCounter++,
+        lineStart: exprInfo.lineStart,
+        lineEnd: exprInfo.lineEnd,
+        output: output,
+        images: images.length > 0 ? images : undefined,
+      };
+    } finally {
+      shelter.purge();
+    }
+  } catch (error) {
+    console.error('Error in executeCurrentExpression:', error);
     throw error;
   }
 }

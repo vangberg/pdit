@@ -1,7 +1,7 @@
 import "./style.css";
 import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
-import { executeScript, ExecutionResult } from "./execution";
+import { executeScript, executeCurrentExpression, ExecutionResult } from "./execution";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { computeLineGroups, LineGroup } from "./compute-line-groups";
@@ -107,6 +107,9 @@ function App() {
           doc: script,
           lineGroups: groups,
         });
+
+        // Update execution history - all groups are newly executed
+        editorRef.current?.updateExecutionHistory(groups);
       } catch (error) {
         console.error("Execution error:", error);
       }
@@ -114,19 +117,78 @@ function App() {
     [isWebRReady]
   );
 
+  const handleExecuteCurrent = useCallback(
+    async (script: string, cursorLine: number) => {
+      if (!isWebRReady) {
+        console.warn("webR is not ready yet");
+        return;
+      }
+
+      try {
+        const result = await executeCurrentExpression(script, cursorLine);
+        console.log("Execute current result:", result);
+
+        if (!result) {
+          console.warn("No expression found at cursor line");
+          return;
+        }
+
+        // Merge with existing results
+        const existingResults = executeResults?.results || [];
+
+        // Remove any existing results that overlap with the new result's line range
+        const filteredResults = existingResults.filter(
+          (r) => r.lineEnd < result.lineStart || r.lineStart > result.lineEnd
+        );
+
+        // Add the new result and sort by line number
+        const mergedResults = [...filteredResults, result].sort(
+          (a, b) => a.lineStart - b.lineStart
+        );
+
+        const newExecuteResults = { results: mergedResults };
+        setExecuteResults(newExecuteResults);
+
+        const groups = computeLineGroups(mergedResults);
+        setCurrentLineGroups(groups);
+
+        editorRef.current?.applyExecutionUpdate({
+          doc: script,
+          lineGroups: groups,
+          preserveCursor: true,
+        });
+
+        // Update execution history - only the newly executed result
+        const newlyExecutedGroups = computeLineGroups([result]);
+        editorRef.current?.updateExecutionHistory(newlyExecutedGroups);
+      } catch (error) {
+        console.error("Execution error:", error);
+      }
+    },
+    [isWebRReady, executeResults]
+  );
+
   const handleRunAll = useCallback(() => {
     handleExecute(doc?.toString() || "");
   }, [handleExecute, doc]);
 
+  const handleRunCurrent = useCallback(() => {
+    if (!doc) return;
+    // We'll use the last known cursor position
+    // In practice, the keyboard shortcut will provide the actual cursor position
+    handleExecuteCurrent(doc.toString(), 1);
+  }, [handleExecuteCurrent, doc]);
+
   return (
     <div id="app">
-      <TopBar isWebRReady={isWebRReady} onRunAll={handleRunAll} />
+      <TopBar isWebRReady={isWebRReady} onRunAll={handleRunAll} onRunCurrent={handleRunCurrent} />
       <div className="split-container">
         <div className="editor-half">
           <Editor
             ref={editorRef}
             initialCode={initialCode}
             onExecute={handleExecute}
+            onExecuteCurrent={handleExecuteCurrent}
             onDocumentChange={handleDocumentChange}
             onLineGroupsChange={handleLineGroupsChange}
             onLineGroupTopChange={handleLineGroupTopChange}
