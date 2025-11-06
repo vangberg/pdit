@@ -1,12 +1,13 @@
 import "./style.css";
 import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
-import { executeScript, ExecutionResult } from "./execution";
+import { executeScript, ExecutionOutput } from "./execution";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { computeLineGroups, LineGroup } from "./compute-line-groups";
 import { initializeWebR } from "./webr-instance";
 import { TopBar } from "./TopBar";
+import { addResultsToStore, updateActiveResults } from "./results";
 
 const initialCode = `# Dataset overview and summary statistics
 head(mtcars)
@@ -35,8 +36,11 @@ function App() {
   const [lineGroupHeights, setLineGroupHeights] = useState<Map<string, number>>(
     new Map()
   );
-  const [executeResults, setExecuteResults] = useState<ExecutionResult | null>(
-    null
+  const [resultStore, setResultStore] = useState<Map<number, ExecutionOutput>>(
+    new Map()
+  );
+  const [activeResultIds, setActiveResultIds] = useState<Set<number>>(
+    new Set()
   );
   const [currentLineGroups, setCurrentLineGroups] = useState<LineGroup[]>([]);
   const [lineGroupTops, setLineGroupTops] = useState<Map<string, number>>(
@@ -98,9 +102,23 @@ function App() {
       try {
         const result = await executeScript(script);
         console.log("Execute result:", result);
-        setExecuteResults(result);
 
-        const groups = computeLineGroups(result.results);
+        // Add new results to store (non-destructive)
+        const newStore = addResultsToStore(resultStore, result.results);
+        setResultStore(newStore);
+
+        // Update active results: remove overlapping, add new
+        const newActiveIds = updateActiveResults(
+          activeResultIds,
+          newStore,
+          result.results
+        );
+        setActiveResultIds(newActiveIds);
+
+        // Compute line groups from active results only
+        const activeResults = Array.from(newActiveIds)
+          .map((id) => newStore.get(id)!);
+        const groups = computeLineGroups(activeResults);
         setCurrentLineGroups(groups);
 
         editorRef.current?.applyExecutionUpdate({
@@ -111,7 +129,7 @@ function App() {
         console.error("Execution error:", error);
       }
     },
-    [isWebRReady]
+    [isWebRReady, resultStore, activeResultIds]
   );
 
   const handleRunAll = useCallback(() => {
@@ -134,15 +152,13 @@ function App() {
           />
         </div>
         <div className="output-half">
-          {executeResults && (
-            <OutputPane
-              onLineGroupHeightChange={handleLineGroupHeightChange}
-              results={executeResults.results}
-              lineGroups={currentLineGroups}
-              lineGroupTops={lineGroupTops}
-              lineGroupHeights={lineGroupHeights}
-            />
-          )}
+          <OutputPane
+            onLineGroupHeightChange={handleLineGroupHeightChange}
+            results={Array.from(resultStore.values())}
+            lineGroups={currentLineGroups}
+            lineGroupTops={lineGroupTops}
+            lineGroupHeights={lineGroupHeights}
+          />
         </div>
       </div>
     </div>
