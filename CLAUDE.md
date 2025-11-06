@@ -1,3 +1,5 @@
+**Note**: This project uses [bd (beads)](https://github.com/steveyegge/beads) for issue tracking. Use `bd` commands instead of markdown TODOs. See AGENTS.md for workflow details.
+
 - Use React 19 API's
 - Use CodeMirror 6 API
 - Consult CodeMirror 6 docs in `docs/codemirror6/` when doing CodeMirror related tasks.
