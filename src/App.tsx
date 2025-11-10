@@ -7,7 +7,7 @@ import React, { useRef, useState, useCallback, useEffect } from "react";
 import { computeLineGroups, LineGroup } from "./compute-line-groups";
 import { initializeWebR } from "./webr-instance";
 import { TopBar } from "./TopBar";
-import { addResultsToStore, updateActiveResults } from "./results";
+import { addResultsToStore } from "./results";
 
 const initialCode = `# Dataset overview and summary statistics
 head(mtcars)
@@ -107,19 +107,13 @@ function App() {
         const newStore = addResultsToStore(resultStore, result.results);
         setResultStore(newStore);
 
-        // Update active results: remove overlapping, add new
-        const newActiveIds = updateActiveResults(
-          activeResultIds,
-          newStore,
-          result.results
-        );
-        setActiveResultIds(newActiveIds);
-
-        // Compute line groups from active results only
-        const activeResults = Array.from(newActiveIds)
-          .map((id) => newStore.get(id)!);
-        const groups = computeLineGroups(activeResults);
+        // Compute line groups from new results
+        const groups = computeLineGroups(result.results);
         setCurrentLineGroups(groups);
+
+        // Derive active IDs from line groups
+        const newActiveIds = new Set(groups.flatMap((g) => g.resultIds));
+        setActiveResultIds(newActiveIds);
 
         editorRef.current?.applyExecutionUpdate({
           doc: script,
@@ -129,7 +123,7 @@ function App() {
         console.error("Execution error:", error);
       }
     },
-    [isWebRReady, resultStore, activeResultIds]
+    [isWebRReady, resultStore]
   );
 
   const handleRunAll = useCallback(() => {
