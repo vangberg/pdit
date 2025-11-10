@@ -101,7 +101,13 @@ function updateSpacers(view: EditorView) {
   const targetHeights = view.state.field(lineGroupTargetHeightsField)
   const currentSpacers = view.state.field(spacersField)
 
-  if (targetHeights.size === 0 || groups.length === 0) return
+  if (targetHeights.size === 0 || groups.length === 0) {
+    // Clear spacers when there are no groups or target heights
+    if (currentSpacers.size > 0) {
+      view.dispatch({ effects: [adjustSpacers.of(Decoration.none)] })
+    }
+    return
+  }
 
   const doc = view.state.doc
   const builder = new RangeSetBuilder<Decoration>()
