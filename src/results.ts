@@ -49,7 +49,7 @@ export function useResults() {
       );
       setResults(newStore);
       setLineGroups(groups);
-      return groups;
+      return { lineGroups: groups };
     },
     [results]
   );

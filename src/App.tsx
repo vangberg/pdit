@@ -97,11 +97,11 @@ function App() {
         const result = await executeScript(script);
         console.log("Execute result:", result);
 
-        const groups = addResults(result.results);
+        const { lineGroups } = addResults(result.results);
 
         editorRef.current?.applyExecutionUpdate({
           doc: script,
-          lineGroups: groups,
+          lineGroups,
         });
       } catch (error) {
         console.error("Execution error:", error);
