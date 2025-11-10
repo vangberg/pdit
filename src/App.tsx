@@ -1,13 +1,13 @@
 import "./style.css";
 import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
-import { executeScript, ExecutionOutput } from "./execution";
+import { executeScript } from "./execution";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
-import { computeLineGroups, LineGroup } from "./compute-line-groups";
+import { LineGroup } from "./compute-line-groups";
 import { initializeWebR } from "./webr-instance";
 import { TopBar } from "./TopBar";
-import { addResultsToStore } from "./results";
+import { useResults } from "./results";
 
 const initialCode = `# Dataset overview and summary statistics
 head(mtcars)
@@ -33,16 +33,10 @@ summary(model)`;
 
 function App() {
   const editorRef = useRef<EditorHandles | null>(null);
+  const { results, lineGroups, setLineGroups, addResults } = useResults();
   const [lineGroupHeights, setLineGroupHeights] = useState<Map<string, number>>(
     new Map()
   );
-  const [resultStore, setResultStore] = useState<Map<number, ExecutionOutput>>(
-    new Map()
-  );
-  const [activeResultIds, setActiveResultIds] = useState<Set<number>>(
-    new Set()
-  );
-  const [currentLineGroups, setCurrentLineGroups] = useState<LineGroup[]>([]);
   const [lineGroupTops, setLineGroupTops] = useState<Map<string, number>>(
     new Map()
   );
@@ -81,8 +75,8 @@ function App() {
 
   const handleLineGroupsChange = useCallback((groups: LineGroup[]) => {
     console.log("App received line groups change:", groups);
-    setCurrentLineGroups(groups);
-  }, []);
+    setLineGroups(groups);
+  }, [setLineGroups]);
 
   const handleLineGroupTopChange = useCallback((tops: Map<string, number>) => {
     console.log(
@@ -103,17 +97,7 @@ function App() {
         const result = await executeScript(script);
         console.log("Execute result:", result);
 
-        // Add new results to store (non-destructive)
-        const newStore = addResultsToStore(resultStore, result.results);
-        setResultStore(newStore);
-
-        // Compute line groups from new results
-        const groups = computeLineGroups(result.results);
-        setCurrentLineGroups(groups);
-
-        // Derive active IDs from line groups
-        const newActiveIds = new Set(groups.flatMap((g) => g.resultIds));
-        setActiveResultIds(newActiveIds);
+        const groups = addResults(result.results);
 
         editorRef.current?.applyExecutionUpdate({
           doc: script,
@@ -123,7 +107,7 @@ function App() {
         console.error("Execution error:", error);
       }
     },
-    [isWebRReady, resultStore]
+    [isWebRReady, addResults]
   );
 
   const handleRunAll = useCallback(() => {
@@ -148,8 +132,8 @@ function App() {
         <div className="output-half">
           <OutputPane
             onLineGroupHeightChange={handleLineGroupHeightChange}
-            results={Array.from(resultStore.values())}
-            lineGroups={currentLineGroups}
+            results={Array.from(results.values())}
+            lineGroups={lineGroups}
             lineGroupTops={lineGroupTops}
             lineGroupHeights={lineGroupHeights}
           />
