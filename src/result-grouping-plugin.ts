@@ -38,11 +38,11 @@ export class GroupValue extends RangeValue {
 }
 
 export const setGroupRanges = StateEffect.define<RangeSet<GroupValue>>({
-  map(value) {
-    // The ranges are authored against the document that will be installed as
-    // part of the same transaction, so we leave them unchanged here. The field
-    // will perform its regular snapping pass once the transaction lands.
-    return value;
+  map(value, mapping) {
+    // Map the ranges through any document changes in this transaction.
+    // This is essential for undo/redo where the ranges need to be adjusted
+    // to match the document state after the changes are applied.
+    return value.map(mapping);
   },
 });
 
