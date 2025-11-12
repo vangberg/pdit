@@ -102,7 +102,9 @@ function App() {
         const result = await executeScript(script, options);
         console.log("Execute result:", result);
 
-        const { lineGroups } = addResults(result.results);
+        const { lineGroups } = addResults(result.results, {
+          lineRange: options?.lineRange,
+        });
 
         editorRef.current?.applyExecutionUpdate({
           doc: script,
