@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { playwright } from '@vitest/browser-playwright'
 
 export default defineConfig({
   plugins: [
@@ -20,5 +21,19 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ['webr'],
+  },
+  test: {
+    include: ['src/**/*.test.{ts,tsx}'],
+    browser: {
+      enabled: true,
+      provider: playwright({
+        launchOptions: {
+          headless: true,
+        },
+      }),
+      instances: [
+        { browser: 'chromium' },
+      ],
+    },
   },
 })
