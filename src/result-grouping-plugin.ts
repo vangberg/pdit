@@ -29,10 +29,6 @@ export class GroupValue extends RangeValue {
   }
 
   eq(other: GroupValue) {
-    // We only care about the index for equality because the `resultIds`
-    // array is just informational. Keeping equality lightweight prevents the
-    // RangeSet machinery from thinking two identical groups differ simply
-    // because the array instance changed.
     return this.groupIndex === other.groupIndex;
   }
 }
@@ -47,6 +43,12 @@ export const setGroupRanges = StateEffect.define<RangeSet<GroupValue>>({
 });
 
 export const setLineGroups = StateEffect.define<LineGroup[]>({
+  map(value) {
+    return value;
+  },
+});
+
+export const setLastExecutedIds = StateEffect.define<number[]>({
   map(value) {
     return value;
   },
@@ -241,6 +243,21 @@ export const lineGroupsField = StateField.define<LineGroup[]>({
   },
 });
 
+export const lastExecutedIdsField = StateField.define<Set<number>>({
+  create() {
+    return new Set();
+  },
+
+  update(ids, tr) {
+    for (const effect of tr.effects) {
+      if (effect.is(setLastExecutedIds)) {
+        return new Set(effect.value);
+      }
+    }
+    return ids;
+  },
+});
+
 function snapRangesToFullLines(
   ranges: RangeSet<GroupValue>,
   doc: Text
@@ -365,10 +382,15 @@ export const lineGroupBackgroundField = StateField.define<DecorationSet>({
 
     const decorations: any[] = [];
 
+    // Get the set of last executed result IDs
+    const lastExecutedIds = tr.state.field(lastExecutedIdsField);
+
     for (let groupIndex = 0; groupIndex < lineGroups.length; groupIndex++) {
       const group = lineGroups[groupIndex];
       const colorClass = `cm-line-group-bg-${groupIndex % 6}`;
-      const lineDecoration = Decoration.line({ class: colorClass });
+      const isRecent = group.resultIds.some(id => lastExecutedIds.has(id));
+      const classes = isRecent ? `${colorClass} cm-line-group-recent` : colorClass;
+      const lineDecoration = Decoration.line({ class: classes });
 
       for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
         const line = tr.state.doc.line(lineNum);
@@ -405,39 +427,58 @@ const groupTheme = EditorView.theme({
   },
   ".cm-line-group-bg-0": {
     backgroundColor: "rgba(252, 228, 236, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-line-group-bg-1": {
     backgroundColor: "rgba(225, 245, 254, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-line-group-bg-2": {
     backgroundColor: "rgba(241, 248, 233, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-line-group-bg-3": {
     backgroundColor: "rgba(255, 243, 224, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-line-group-bg-4": {
     backgroundColor: "rgba(243, 229, 245, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-line-group-bg-5": {
     backgroundColor: "rgba(224, 242, 241, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-preview-spacer-0": {
     backgroundColor: "rgba(252, 228, 236, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-preview-spacer-1": {
     backgroundColor: "rgba(225, 245, 254, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-preview-spacer-2": {
     backgroundColor: "rgba(241, 248, 233, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-preview-spacer-3": {
     backgroundColor: "rgba(255, 243, 224, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-preview-spacer-4": {
     backgroundColor: "rgba(243, 229, 245, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-preview-spacer-5": {
     backgroundColor: "rgba(224, 242, 241, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
+  },
+  // Darker border for most recently executed line groups
+  ".cm-line-group-recent": {
+    borderLeft: "3px solid #0284c7",
+  },
+  ".cm-preview-spacer-recent": {
+    borderLeft: "3px solid #0284c7",
   },
   // Make selections more visible on colored backgrounds
   ".cm-selectionBackground, ::selection": {
@@ -466,13 +507,30 @@ const groupRangesHistory = invertedEffects.of((tr) => {
   return [setGroupRanges.of(previous)];
 });
 
+const lastExecutedIdsHistory = invertedEffects.of((tr) => {
+  const previous = tr.startState.field(lastExecutedIdsField);
+  const hasExplicitEffect = tr.effects.some((effect) =>
+    effect.is(setLastExecutedIds)
+  );
+
+  if (!hasExplicitEffect) {
+    // Only store in history if lastExecutedIds was explicitly changed
+    return [];
+  }
+
+  // Store the previous set of IDs so undo can restore them
+  return [setLastExecutedIds.of(Array.from(previous))];
+});
+
 export const resultGroupingExtension = [
   // Order does not matter much here, but we keep the field first so other
   // extensions (decorations/history) can read from it during initialization.
   groupRangesField,
   lineGroupsField,
+  lastExecutedIdsField,
   groupDecorationsField,
   lineGroupBackgroundField,
   groupTheme,
   groupRangesHistory,
+  lastExecutedIdsHistory,
 ];

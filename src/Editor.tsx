@@ -33,6 +33,7 @@ import { r } from "codemirror-lang-r";
 import {
   resultGroupingExtension,
   setLineGroups,
+  setLastExecutedIds,
   lineGroupsField,
 } from "./result-grouping-plugin";
 import { LineGroup } from "./compute-line-groups";
@@ -50,6 +51,7 @@ export interface EditorHandles {
   applyExecutionUpdate: (update: {
     doc: string;
     lineGroups: LineGroup[];
+    lastExecutedResultIds?: number[];
   }) => void;
 }
 
@@ -220,18 +222,25 @@ export function Editor({
       applyExecutionUpdate: ({
         doc,
         lineGroups,
+        lastExecutedResultIds,
       }: {
         doc: string;
         lineGroups: LineGroup[];
+        lastExecutedResultIds?: number[];
       }) => {
         const view = viewRef.current;
         if (!view) {
           return;
         }
 
+        const effects: any[] = [setLineGroups.of(lineGroups)];
+        if (lastExecutedResultIds) {
+          effects.push(setLastExecutedIds.of(lastExecutedResultIds));
+        }
+
         const transaction: any = {
           selection: { anchor: doc.length },
-          effects: [setLineGroups.of(lineGroups)],
+          effects,
         };
 
         if (doc !== view.state.doc.toString()) {

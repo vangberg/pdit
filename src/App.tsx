@@ -102,6 +102,8 @@ function App() {
         const result = await executeScript(script, options);
         console.log("Execute result:", result);
 
+        const newResultIds = result.results.map(r => r.id);
+
         const { lineGroups } = addResults(result.results, {
           lineRange: options?.lineRange,
         });
@@ -109,6 +111,7 @@ function App() {
         editorRef.current?.applyExecutionUpdate({
           doc: script,
           lineGroups,
+          lastExecutedResultIds: newResultIds,
         });
       } catch (error) {
         console.error("Execution error:", error);
