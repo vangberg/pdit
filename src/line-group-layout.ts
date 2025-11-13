@@ -1,6 +1,6 @@
 import {EditorView, Decoration, WidgetType, DecorationSet} from "@codemirror/view"
 import {StateField, StateEffect, RangeSetBuilder, Facet} from "@codemirror/state"
-import { lineGroupsField } from "./result-grouping-plugin"
+import { lineGroupsField, lastExecutedIdsField } from "./result-grouping-plugin"
 
 // ============================================================================
 // Spacer Widget
@@ -127,10 +127,8 @@ function updateSpacers(view: EditorView) {
     }
   }
 
-  // Find the max executionId to determine which groups are most recent
-  const maxExecutionId = Math.max(
-    ...groups.map(g => g.executionId ?? 0)
-  )
+  // Get the set of last executed result IDs
+  const lastExecutedIds = view.state.field(lastExecutedIdsField)
 
   for (let groupIndex = 0; groupIndex < groups.length; groupIndex++) {
     const group = groups[groupIndex]
@@ -157,7 +155,7 @@ function updateSpacers(view: EditorView) {
 
     const diff = targetHeight - naturalHeight
     if (diff > 0.01) {
-      const isRecent = group.executionId === maxExecutionId && maxExecutionId > 0
+      const isRecent = group.resultIds.some(id => lastExecutedIds.has(id))
       builder.add(endLine.to, endLine.to, Decoration.widget({
         widget: new Spacer(diff, group.lineEnd, groupIndex, isRecent),
         block: true,

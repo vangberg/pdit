@@ -23,15 +23,13 @@ export class GroupValue extends RangeValue {
   // GroupValue carries metadata for a single group range. `groupIndex`
   // determines the color class assigned to the decoration and `resultIds`
   // tracks which execution results contributed to the group so that the
-  // debugger panel can present relevant information. `executionId` tracks
-  // when the group was last executed for visual differentiation.
-  constructor(public groupIndex: number, public resultIds: number[], public executionId?: number) {
+  // debugger panel can present relevant information.
+  constructor(public groupIndex: number, public resultIds: number[]) {
     super();
   }
 
   eq(other: GroupValue) {
-    // Compare groupIndex and executionId for equality
-    return this.groupIndex === other.groupIndex && this.executionId === other.executionId;
+    return this.groupIndex === other.groupIndex;
   }
 }
 
@@ -45,6 +43,12 @@ export const setGroupRanges = StateEffect.define<RangeSet<GroupValue>>({
 });
 
 export const setLineGroups = StateEffect.define<LineGroup[]>({
+  map(value) {
+    return value;
+  },
+});
+
+export const setLastExecutedIds = StateEffect.define<number[]>({
   map(value) {
     return value;
   },
@@ -126,7 +130,7 @@ export function lineGroupsToRangeSet(
     return {
       from: fromLine.from,
       to: toLine.to,
-      value: new GroupValue(index, group.resultIds, group.executionId),
+      value: new GroupValue(index, group.resultIds),
     };
   });
 
@@ -154,7 +158,6 @@ export function rangeSetToLineGroups(
       lineStart: startLine,
       lineEnd: endLine,
       resultIds: [...value.resultIds].sort((a, b) => a - b),
-      executionId: value.executionId,
     });
   });
 
@@ -237,6 +240,21 @@ export const lineGroupsField = StateField.define<LineGroup[]>({
     }
 
     return areLineGroupsEqual(groups, nextGroups) ? groups : nextGroups;
+  },
+});
+
+export const lastExecutedIdsField = StateField.define<Set<number>>({
+  create() {
+    return new Set();
+  },
+
+  update(ids, tr) {
+    for (const effect of tr.effects) {
+      if (effect.is(setLastExecutedIds)) {
+        return new Set(effect.value);
+      }
+    }
+    return ids;
   },
 });
 
@@ -364,15 +382,13 @@ export const lineGroupBackgroundField = StateField.define<DecorationSet>({
 
     const decorations: any[] = [];
 
-    // Find the max executionId to determine which groups are most recent
-    const maxExecutionId = Math.max(
-      ...lineGroups.map(g => g.executionId ?? 0)
-    );
+    // Get the set of last executed result IDs
+    const lastExecutedIds = tr.state.field(lastExecutedIdsField);
 
     for (let groupIndex = 0; groupIndex < lineGroups.length; groupIndex++) {
       const group = lineGroups[groupIndex];
       const colorClass = `cm-line-group-bg-${groupIndex % 6}`;
-      const isRecent = group.executionId === maxExecutionId && maxExecutionId > 0;
+      const isRecent = group.resultIds.some(id => lastExecutedIds.has(id));
       const classes = isRecent ? `${colorClass} cm-line-group-recent` : colorClass;
       const lineDecoration = Decoration.line({ class: classes });
 
@@ -496,6 +512,7 @@ export const resultGroupingExtension = [
   // extensions (decorations/history) can read from it during initialization.
   groupRangesField,
   lineGroupsField,
+  lastExecutedIdsField,
   groupDecorationsField,
   lineGroupBackgroundField,
   groupTheme,

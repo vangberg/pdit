@@ -5,14 +5,13 @@ export interface LineGroup {
   resultIds: number[];
   lineStart: number;
   lineEnd: number;
-  executionId?: number;
 }
 
 /**
  * Groups API execution results that share any lines using a union-find structure.
  * Results that touch the same line belong to the same group.
  */
-export function computeLineGroups(results: ExecutionOutput[], executionId?: number): LineGroup[] {
+export function computeLineGroups(results: ExecutionOutput[]): LineGroup[] {
   if (results.length === 0) {
     return [];
   }
@@ -88,7 +87,6 @@ export function computeLineGroups(results: ExecutionOutput[], executionId?: numb
         resultIds: [...resultIds].sort((a, b) => a - b),
         lineStart: minLine,
         lineEnd: maxLine,
-        executionId,
       });
     }
   }

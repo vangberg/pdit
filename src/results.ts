@@ -26,7 +26,6 @@ export function processExecutionResults(
   options?: {
     currentLineGroups?: LineGroup[];
     lineRange?: { from: number; to: number };
-    executionId?: number;
   }
 ): {
   newStore: Map<number, ExecutionOutput>;
@@ -35,7 +34,7 @@ export function processExecutionResults(
   const newStore = addResultsToStore(resultStore, newResults);
 
   // Compute new groups from executed results
-  const newGroups = computeLineGroups(newResults, options?.executionId);
+  const newGroups = computeLineGroups(newResults);
 
   // If this is a partial execution, merge with non-overlapping existing groups
   if (options?.lineRange && options?.currentLineGroups) {
@@ -72,7 +71,6 @@ export function useResults() {
       newResults: ExecutionOutput[],
       options?: {
         lineRange?: { from: number; to: number };
-        executionId?: number;
       }
     ) => {
       const { newStore, groups } = processExecutionResults(
@@ -81,7 +79,6 @@ export function useResults() {
         {
           currentLineGroups: lineGroups,
           lineRange: options?.lineRange,
-          executionId: options?.executionId,
         }
       );
       setResults(newStore);
