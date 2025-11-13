@@ -59,6 +59,11 @@ export const Output: React.FC<OutputProps> = ({ result, ref }) => {
             />
           </div>
         )}
+        {result.isInvisible && (
+          <div className="output-item output-invisible text-gray-400 text-xs">
+            <pre>·</pre>
+          </div>
+        )}
       </div>
     </div>
   );
