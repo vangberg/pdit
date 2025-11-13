@@ -507,6 +507,21 @@ const groupRangesHistory = invertedEffects.of((tr) => {
   return [setGroupRanges.of(previous)];
 });
 
+const lastExecutedIdsHistory = invertedEffects.of((tr) => {
+  const previous = tr.startState.field(lastExecutedIdsField);
+  const hasExplicitEffect = tr.effects.some((effect) =>
+    effect.is(setLastExecutedIds)
+  );
+
+  if (!hasExplicitEffect) {
+    // Only store in history if lastExecutedIds was explicitly changed
+    return [];
+  }
+
+  // Store the previous set of IDs so undo can restore them
+  return [setLastExecutedIds.of(Array.from(previous))];
+});
+
 export const resultGroupingExtension = [
   // Order does not matter much here, but we keep the field first so other
   // extensions (decorations/history) can read from it during initialization.
@@ -517,4 +532,5 @@ export const resultGroupingExtension = [
   lineGroupBackgroundField,
   groupTheme,
   groupRangesHistory,
+  lastExecutedIdsHistory,
 ];
