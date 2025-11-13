@@ -11,6 +11,7 @@ export interface ExecutionOutput {
   lineEnd: number;
   output: OutputItem[];
   images?: ImageBitmap[];
+  isInvisible?: boolean;
 }
 
 export interface ExecutionResult {
@@ -126,16 +127,16 @@ export async function executeScript(
           }
         }
 
-        // Only add result if there's output or images
-        if (output.length > 0 || images.length > 0) {
-          results.push({
-            id: globalIdCounter++,
-            lineStart: startLine,
-            lineEnd: endLine,
-            output: output,
-            images: images.length > 0 ? images : undefined,
-          });
-        }
+        // Always create result, mark as invisible if no output or images
+        const hasVisibleOutput = output.length > 0 || images.length > 0;
+        results.push({
+          id: globalIdCounter++,
+          lineStart: startLine,
+          lineEnd: endLine,
+          output: output,
+          images: images.length > 0 ? images : undefined,
+          isInvisible: !hasVisibleOutput,
+        });
       }
     } finally {
       // Clean up R objects
