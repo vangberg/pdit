@@ -44,6 +44,7 @@ function App() {
   );
   const [isWebRReady, setIsWebRReady] = useState(false);
   const [doc, setDoc] = useState<Text>();
+  const [executionCounter, setExecutionCounter] = useState(0);
 
   // Initialize webR on mount
   useEffect(() => {
@@ -102,8 +103,19 @@ function App() {
         const result = await executeScript(script, options);
         console.log("Execute result:", result);
 
+        const newExecutionId = executionCounter + 1;
+        setExecutionCounter(newExecutionId);
+
         const { lineGroups } = addResults(result.results, {
           lineRange: options?.lineRange,
+        });
+
+        // Mark newly executed groups with the current execution ID
+        const newResultIds = new Set(result.results.map(r => r.id));
+        lineGroups.forEach(group => {
+          if (group.resultIds.some(id => newResultIds.has(id))) {
+            group.executionId = newExecutionId;
+          }
         });
 
         editorRef.current?.applyExecutionUpdate({
@@ -114,7 +126,7 @@ function App() {
         console.error("Execution error:", error);
       }
     },
-    [isWebRReady, addResults]
+    [isWebRReady, addResults, executionCounter]
   );
 
   const handleExecuteCurrent = useCallback(

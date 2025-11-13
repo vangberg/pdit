@@ -7,20 +7,24 @@ import { lineGroupsField } from "./result-grouping-plugin"
 // ============================================================================
 
 class Spacer extends WidgetType {
-  constructor(readonly height: number, readonly lineNumber: number, readonly groupIndex: number) { super() }
+  constructor(readonly height: number, readonly lineNumber: number, readonly groupIndex: number, readonly isRecent: boolean) { super() }
 
-  eq(other: Spacer) { return this.height == other.height && this.lineNumber == other.lineNumber && this.groupIndex == other.groupIndex }
+  eq(other: Spacer) { return this.height == other.height && this.lineNumber == other.lineNumber && this.groupIndex == other.groupIndex && this.isRecent == other.isRecent }
 
   toDOM() {
     let elt = document.createElement("div")
     elt.style.height = this.height + "px"
-    elt.className = `cm-preview-spacer cm-preview-spacer-${this.groupIndex % 6}`
+    const colorClass = `cm-preview-spacer-${this.groupIndex % 6}`
+    const classes = this.isRecent ? `cm-preview-spacer ${colorClass} cm-preview-spacer-recent` : `cm-preview-spacer ${colorClass}`
+    elt.className = classes
     return elt
   }
 
   updateDOM(dom: HTMLElement) {
     dom.style.height = this.height + "px"
-    dom.className = `cm-preview-spacer cm-preview-spacer-${this.groupIndex % 6}`
+    const colorClass = `cm-preview-spacer-${this.groupIndex % 6}`
+    const classes = this.isRecent ? `cm-preview-spacer ${colorClass} cm-preview-spacer-recent` : `cm-preview-spacer ${colorClass}`
+    dom.className = classes
     return true
   }
 
@@ -88,8 +92,11 @@ function compareSpacers(a: DecorationSet, b: DecorationSet): boolean {
   if (a.size != b.size) return false
   let iA = a.iter(), iB = b.iter()
   while (iA.value) {
+    const spacerA = iA.value.spec.widget as Spacer
+    const spacerB = iB.value!.spec.widget as Spacer
     if (iA.from != iB.from ||
-        Math.abs((iA.value.spec.widget as Spacer).height - (iB.value!.spec.widget as Spacer).height) > 1)
+        Math.abs(spacerA.height - spacerB.height) > 1 ||
+        spacerA.isRecent !== spacerB.isRecent)
       return false
     iA.next(); iB.next()
   }
@@ -120,6 +127,11 @@ function updateSpacers(view: EditorView) {
     }
   }
 
+  // Find the max executionId to determine which groups are most recent
+  const maxExecutionId = Math.max(
+    ...groups.map(g => g.executionId ?? 0)
+  )
+
   for (let groupIndex = 0; groupIndex < groups.length; groupIndex++) {
     const group = groups[groupIndex]
     const targetHeight = targetHeights.get(group.id)
@@ -145,8 +157,9 @@ function updateSpacers(view: EditorView) {
 
     const diff = targetHeight - naturalHeight
     if (diff > 0.01) {
+      const isRecent = group.executionId === maxExecutionId && maxExecutionId > 0
       builder.add(endLine.to, endLine.to, Decoration.widget({
-        widget: new Spacer(diff, group.lineEnd, groupIndex),
+        widget: new Spacer(diff, group.lineEnd, groupIndex, isRecent),
         block: true,
         side: 1
       }))

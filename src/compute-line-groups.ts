@@ -5,6 +5,7 @@ export interface LineGroup {
   resultIds: number[];
   lineStart: number;
   lineEnd: number;
+  executionId?: number;
 }
 
 /**

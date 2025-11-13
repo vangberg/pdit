@@ -23,17 +23,15 @@ export class GroupValue extends RangeValue {
   // GroupValue carries metadata for a single group range. `groupIndex`
   // determines the color class assigned to the decoration and `resultIds`
   // tracks which execution results contributed to the group so that the
-  // debugger panel can present relevant information.
-  constructor(public groupIndex: number, public resultIds: number[]) {
+  // debugger panel can present relevant information. `executionId` tracks
+  // when the group was last executed for visual differentiation.
+  constructor(public groupIndex: number, public resultIds: number[], public executionId?: number) {
     super();
   }
 
   eq(other: GroupValue) {
-    // We only care about the index for equality because the `resultIds`
-    // array is just informational. Keeping equality lightweight prevents the
-    // RangeSet machinery from thinking two identical groups differ simply
-    // because the array instance changed.
-    return this.groupIndex === other.groupIndex;
+    // Compare groupIndex and executionId for equality
+    return this.groupIndex === other.groupIndex && this.executionId === other.executionId;
   }
 }
 
@@ -128,7 +126,7 @@ export function lineGroupsToRangeSet(
     return {
       from: fromLine.from,
       to: toLine.to,
-      value: new GroupValue(index, group.resultIds),
+      value: new GroupValue(index, group.resultIds, group.executionId),
     };
   });
 
@@ -156,6 +154,7 @@ export function rangeSetToLineGroups(
       lineStart: startLine,
       lineEnd: endLine,
       resultIds: [...value.resultIds].sort((a, b) => a - b),
+      executionId: value.executionId,
     });
   });
 
@@ -365,10 +364,17 @@ export const lineGroupBackgroundField = StateField.define<DecorationSet>({
 
     const decorations: any[] = [];
 
+    // Find the max executionId to determine which groups are most recent
+    const maxExecutionId = Math.max(
+      ...lineGroups.map(g => g.executionId ?? 0)
+    );
+
     for (let groupIndex = 0; groupIndex < lineGroups.length; groupIndex++) {
       const group = lineGroups[groupIndex];
       const colorClass = `cm-line-group-bg-${groupIndex % 6}`;
-      const lineDecoration = Decoration.line({ class: colorClass });
+      const isRecent = group.executionId === maxExecutionId && maxExecutionId > 0;
+      const classes = isRecent ? `${colorClass} cm-line-group-recent` : colorClass;
+      const lineDecoration = Decoration.line({ class: classes });
 
       for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
         const line = tr.state.doc.line(lineNum);
@@ -405,39 +411,58 @@ const groupTheme = EditorView.theme({
   },
   ".cm-line-group-bg-0": {
     backgroundColor: "rgba(252, 228, 236, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-line-group-bg-1": {
     backgroundColor: "rgba(225, 245, 254, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-line-group-bg-2": {
     backgroundColor: "rgba(241, 248, 233, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-line-group-bg-3": {
     backgroundColor: "rgba(255, 243, 224, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-line-group-bg-4": {
     backgroundColor: "rgba(243, 229, 245, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-line-group-bg-5": {
     backgroundColor: "rgba(224, 242, 241, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-preview-spacer-0": {
     backgroundColor: "rgba(252, 228, 236, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-preview-spacer-1": {
     backgroundColor: "rgba(225, 245, 254, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-preview-spacer-2": {
     backgroundColor: "rgba(241, 248, 233, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-preview-spacer-3": {
     backgroundColor: "rgba(255, 243, 224, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-preview-spacer-4": {
     backgroundColor: "rgba(243, 229, 245, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-preview-spacer-5": {
     backgroundColor: "rgba(224, 242, 241, 0.5)",
+    borderLeft: "3px solid #7dd3fc",
+  },
+  // Darker border for most recently executed line groups
+  ".cm-line-group-recent": {
+    borderLeft: "3px solid #0284c7",
+  },
+  ".cm-preview-spacer-recent": {
+    borderLeft: "3px solid #0284c7",
   },
   // Make selections more visible on colored backgrounds
   ".cm-selectionBackground, ::selection": {
