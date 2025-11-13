@@ -108,14 +108,7 @@ function App() {
 
         const { lineGroups } = addResults(result.results, {
           lineRange: options?.lineRange,
-        });
-
-        // Mark newly executed groups with the current execution ID
-        const newResultIds = new Set(result.results.map(r => r.id));
-        lineGroups.forEach(group => {
-          if (group.resultIds.some(id => newResultIds.has(id))) {
-            group.executionId = newExecutionId;
-          }
+          executionId: newExecutionId,
         });
 
         editorRef.current?.applyExecutionUpdate({
