@@ -1,8 +1,10 @@
+**Note**: This project uses [bd (beads)](https://github.com/steveyegge/beads) for issue tracking. Use `bd` commands instead of markdown TODOs. See @AGENTS.md for workflow details.
+
 - Use React 19 API's
 - Use CodeMirror 6 API
 - Consult CodeMirror 6 docs in `docs/codemirror6/` when doing CodeMirror related tasks.
-- Editor: execute code with Cmd+Enter
 - Prefer simple code over defensive code
+- Test with Chrome MCP
 
 ## UI style
 
@@ -18,3 +20,4 @@ UI STYLE: Terminal/Newslist
 - Pre-formatted text for output
 - Minimal hover states (hover:bg-gray-100)
 - Information-dense, compact layouts
+- Access CodeMirror debug information with Cmd+Shift+D in focused editor.

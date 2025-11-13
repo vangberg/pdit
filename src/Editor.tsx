@@ -33,6 +33,7 @@ import { r } from "codemirror-lang-r";
 import {
   resultGroupingExtension,
   setLineGroups,
+  setLastExecutedIds,
   lineGroupsField,
 } from "./result-grouping-plugin";
 import { LineGroup } from "./compute-line-groups";
@@ -50,12 +51,14 @@ export interface EditorHandles {
   applyExecutionUpdate: (update: {
     doc: string;
     lineGroups: LineGroup[];
+    lastExecutedResultIds?: number[];
   }) => void;
 }
 
 interface EditorProps {
   initialCode: string;
-  onExecute?: (script: string) => void;
+  onExecuteCurrent?: (script: string, lineRange: { from: number; to: number }) => void;
+  onExecuteAll?: (script: string) => void;
   onDocumentChange?: (doc: Text) => void;
   onLineGroupsChange?: (groups: LineGroup[]) => void;
   onLineGroupTopChange?: (tops: Map<string, number>) => void;
@@ -65,7 +68,8 @@ interface EditorProps {
 
 export function Editor({
   initialCode,
-  onExecute,
+  onExecuteCurrent,
+  onExecuteAll,
   onDocumentChange,
   onLineGroupsChange,
   onLineGroupTopChange,
@@ -75,15 +79,20 @@ export function Editor({
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
 
-  const onExecuteRef = useRef(onExecute);
+  const onExecuteCurrentRef = useRef(onExecuteCurrent);
+  const onExecuteAllRef = useRef(onExecuteAll);
   const onDocumentChangeRef = useRef(onDocumentChange);
   const onLineGroupsChangeRef = useRef(onLineGroupsChange);
   const lineGroupTopCallbackCompartment = useMemo(() => new Compartment(), []);
 
   // Mirror the latest callbacks so long-lived view listeners stay up to date
   useEffect(() => {
-    onExecuteRef.current = onExecute;
-  }, [onExecute]);
+    onExecuteCurrentRef.current = onExecuteCurrent;
+  }, [onExecuteCurrent]);
+
+  useEffect(() => {
+    onExecuteAllRef.current = onExecuteAll;
+  }, [onExecuteAll]);
 
   useEffect(() => {
     onDocumentChangeRef.current = onDocumentChange;
@@ -105,8 +114,19 @@ export function Editor({
           {
             key: "Cmd-Enter",
             run: (view: EditorView) => {
+              const selection = view.state.selection.main;
+              const fromLine = view.state.doc.lineAt(selection.from).number;
+              const toLine = view.state.doc.lineAt(selection.to).number;
               const currentText = view.state.doc.toString();
-              onExecuteRef.current?.(currentText);
+              onExecuteCurrentRef.current?.(currentText, { from: fromLine, to: toLine });
+              return true;
+            },
+          },
+          {
+            key: "Cmd-Shift-Enter",
+            run: (view: EditorView) => {
+              const currentText = view.state.doc.toString();
+              onExecuteAllRef.current?.(currentText);
               return true;
             },
           },
@@ -202,18 +222,25 @@ export function Editor({
       applyExecutionUpdate: ({
         doc,
         lineGroups,
+        lastExecutedResultIds,
       }: {
         doc: string;
         lineGroups: LineGroup[];
+        lastExecutedResultIds?: number[];
       }) => {
         const view = viewRef.current;
         if (!view) {
           return;
         }
 
+        const effects: any[] = [setLineGroups.of(lineGroups)];
+        if (lastExecutedResultIds) {
+          effects.push(setLastExecutedIds.of(lastExecutedResultIds));
+        }
+
         const transaction: any = {
           selection: { anchor: doc.length },
-          effects: [setLineGroups.of(lineGroups)],
+          effects,
         };
 
         if (doc !== view.state.doc.toString()) {

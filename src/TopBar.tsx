@@ -8,7 +8,8 @@ interface TopBarProps {
 
 export function TopBar({ isWebRReady, onRunAll, initMessage }: TopBarProps) {
   const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
-  const shortcut = isMac ? "CMD+ENTER" : "CTRL+ENTER";
+  const currentShortcut = isMac ? "⌘+ENTER" : "CTRL+ENTER";
+  const allShortcut = isMac ? "⌘⇧+ENTER" : "CTRL+SHIFT+ENTER";
 
   return (
     <div className="top-bar">
@@ -18,10 +19,13 @@ export function TopBar({ isWebRReady, onRunAll, initMessage }: TopBarProps) {
             className="run-all-button"
             onClick={onRunAll}
             disabled={!isWebRReady}
-            title={`Run all code (${shortcut})`}
+            title={`Run all code (${allShortcut})`}
           >
-            ▶ RUN ALL ({shortcut})
+            ▶ RUN ALL ({allShortcut})
           </button>
+          <span className="shortcuts-info" style={{ marginLeft: "1rem", fontSize: "0.75rem", color: "#666" }}>
+            {currentShortcut}: CURRENT | {allShortcut}: ALL
+          </span>
         </div>
         <div className="top-bar-right">
           {!isWebRReady && (

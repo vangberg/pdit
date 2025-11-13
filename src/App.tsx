@@ -1,17 +1,20 @@
 import "./style.css";
 import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
-import { executeScript, ExecutionResult } from "./execution";
+import { executeScript } from "./execution";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
-import { computeLineGroups, LineGroup } from "./compute-line-groups";
+import { LineGroup } from "./compute-line-groups";
 import { initializeWebR } from "./webr-instance";
 import { TopBar } from "./TopBar";
+import { useResults } from "./results";
 
 const initialCode = `# Dataset overview and summary statistics
 head(mtcars)
+Sys.time()
 summary(mtcars)
 
+Sys.time()
 # Visualization: fuel efficiency vs vehicle weight
 plot(mtcars$wt, mtcars$mpg,
      xlab = "Weight (1000 lbs)",
@@ -32,13 +35,10 @@ summary(model)`;
 
 function App() {
   const editorRef = useRef<EditorHandles | null>(null);
+  const { results, lineGroups, setLineGroups, addResults } = useResults();
   const [lineGroupHeights, setLineGroupHeights] = useState<Map<string, number>>(
     new Map()
   );
-  const [executeResults, setExecuteResults] = useState<ExecutionResult | null>(
-    null
-  );
-  const [currentLineGroups, setCurrentLineGroups] = useState<LineGroup[]>([]);
   const [lineGroupTops, setLineGroupTops] = useState<Map<string, number>>(
     new Map()
   );
@@ -75,10 +75,13 @@ function App() {
     setDoc(doc);
   }, []);
 
-  const handleLineGroupsChange = useCallback((groups: LineGroup[]) => {
-    console.log("App received line groups change:", groups);
-    setCurrentLineGroups(groups);
-  }, []);
+  const handleLineGroupsChange = useCallback(
+    (groups: LineGroup[]) => {
+      console.log("App received line groups change:", groups);
+      setLineGroups(groups);
+    },
+    [setLineGroups]
+  );
 
   const handleLineGroupTopChange = useCallback((tops: Map<string, number>) => {
     console.log(
@@ -89,34 +92,51 @@ function App() {
   }, []);
 
   const handleExecute = useCallback(
-    async (script: string) => {
+    async (script: string, options?: { lineRange?: { from: number; to: number } }) => {
       if (!isWebRReady) {
         console.warn("webR is not ready yet");
         return;
       }
 
       try {
-        const result = await executeScript(script);
+        const result = await executeScript(script, options);
         console.log("Execute result:", result);
-        setExecuteResults(result);
 
-        const groups = computeLineGroups(result.results);
-        setCurrentLineGroups(groups);
+        const newResultIds = result.results.map(r => r.id);
+
+        const { lineGroups } = addResults(result.results, {
+          lineRange: options?.lineRange,
+        });
 
         editorRef.current?.applyExecutionUpdate({
           doc: script,
-          lineGroups: groups,
+          lineGroups,
+          lastExecutedResultIds: newResultIds,
         });
       } catch (error) {
         console.error("Execution error:", error);
       }
     },
-    [isWebRReady]
+    [isWebRReady, addResults]
+  );
+
+  const handleExecuteCurrent = useCallback(
+    (script: string, lineRange: { from: number; to: number }) => {
+      handleExecute(script, { lineRange });
+    },
+    [handleExecute]
+  );
+
+  const handleExecuteAll = useCallback(
+    (script: string) => {
+      handleExecute(script);
+    },
+    [handleExecute]
   );
 
   const handleRunAll = useCallback(() => {
-    handleExecute(doc?.toString() || "");
-  }, [handleExecute, doc]);
+    handleExecuteAll(doc?.toString() || "");
+  }, [handleExecuteAll, doc]);
 
   return (
     <div id="app">
@@ -126,7 +146,8 @@ function App() {
           <Editor
             ref={editorRef}
             initialCode={initialCode}
-            onExecute={handleExecute}
+            onExecuteCurrent={handleExecuteCurrent}
+            onExecuteAll={handleExecuteAll}
             onDocumentChange={handleDocumentChange}
             onLineGroupsChange={handleLineGroupsChange}
             onLineGroupTopChange={handleLineGroupTopChange}
@@ -134,15 +155,13 @@ function App() {
           />
         </div>
         <div className="output-half">
-          {executeResults && (
-            <OutputPane
-              onLineGroupHeightChange={handleLineGroupHeightChange}
-              results={executeResults.results}
-              lineGroups={currentLineGroups}
-              lineGroupTops={lineGroupTops}
-              lineGroupHeights={lineGroupHeights}
-            />
-          )}
+          <OutputPane
+            onLineGroupHeightChange={handleLineGroupHeightChange}
+            results={Array.from(results.values())}
+            lineGroups={lineGroups}
+            lineGroupTops={lineGroupTops}
+            lineGroupHeights={lineGroupHeights}
+          />
         </div>
       </div>
     </div>

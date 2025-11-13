@@ -11,6 +11,7 @@ export interface ExecutionOutput {
   lineEnd: number;
   output: OutputItem[];
   images?: ImageBitmap[];
+  isInvisible?: boolean;
 }
 
 export interface ExecutionResult {
@@ -23,8 +24,16 @@ let globalIdCounter = 1;
  * Execute R code using webR.
  * Parses the code into expressions and executes them one at a time,
  * capturing output and line numbers for each expression.
+ *
+ * @param script - The R code to execute
+ * @param options.lineRange - Optional line range to filter which expressions to execute (1-based, inclusive)
  */
-export async function executeScript(script: string): Promise<ExecutionResult> {
+export async function executeScript(
+  script: string,
+  options?: {
+    lineRange?: { from: number; to: number };
+  }
+): Promise<ExecutionResult> {
   const webR = getWebR();
   const results: ExecutionOutput[] = [];
 
@@ -70,6 +79,16 @@ export async function executeScript(script: string): Promise<ExecutionResult> {
           }
         `);
 
+        // Filter expressions by line range if specified
+        if (options?.lineRange) {
+          const { from, to } = options.lineRange;
+          // Skip expressions that don't overlap with the requested range
+          // An expression overlaps if: endLine >= from AND startLine <= to
+          if (endLine < from || startLine > to) {
+            continue;
+          }
+        }
+
         // Start collecting canvas images
         startImageCollection();
 
@@ -108,16 +127,16 @@ export async function executeScript(script: string): Promise<ExecutionResult> {
           }
         }
 
-        // Only add result if there's output or images
-        if (output.length > 0 || images.length > 0) {
-          results.push({
-            id: globalIdCounter++,
-            lineStart: startLine,
-            lineEnd: endLine,
-            output: output,
-            images: images.length > 0 ? images : undefined,
-          });
-        }
+        // Always create result, mark as invisible if no output or images
+        const hasVisibleOutput = output.length > 0 || images.length > 0;
+        results.push({
+          id: globalIdCounter++,
+          lineStart: startLine,
+          lineEnd: endLine,
+          output: output,
+          images: images.length > 0 ? images : undefined,
+          isInvisible: !hasVisibleOutput,
+        });
       }
     } finally {
       // Clean up R objects
