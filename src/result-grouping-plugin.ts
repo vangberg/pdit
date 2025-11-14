@@ -322,16 +322,7 @@ function mergeSnappedRanges(
   return merged;
 }
 
-const groupDecorations = [
-  // Pre-create decorations for each color bucket so we can reuse them when we
-  // iterate through the range set. This keeps decoration creation cheap.
-  Decoration.mark({ class: "cm-result-line-0" }),
-  Decoration.mark({ class: "cm-result-line-1" }),
-  Decoration.mark({ class: "cm-result-line-2" }),
-  Decoration.mark({ class: "cm-result-line-3" }),
-  Decoration.mark({ class: "cm-result-line-4" }),
-  Decoration.mark({ class: "cm-result-line-5" }),
-];
+const groupDecoration = Decoration.mark({ class: "cm-result-line" });
 
 export const groupDecorationsField = StateField.define<DecorationSet>({
   create() {
@@ -348,14 +339,9 @@ export const groupDecorationsField = StateField.define<DecorationSet>({
 
     const groupRanges = tr.state.field(groupRangesField);
     const decorations: any[] = [];
-    let colorIndex = 0;
 
     groupRanges.between(0, tr.state.doc.length, (from, to) => {
-      // Pick the color bucket deterministically so each group gets a stable
-      // appearance across renders.
-      const decoration = groupDecorations[colorIndex % groupDecorations.length];
-      decorations.push(decoration.range(from, to));
-      colorIndex++;
+      decorations.push(groupDecoration.range(from, to));
     });
 
     // If no groups are active we return `Decoration.none` to avoid pointless
@@ -410,23 +396,8 @@ export const lineGroupBackgroundField = StateField.define<DecorationSet>({
 });
 
 const groupTheme = EditorView.theme({
-  ".cm-result-line-0": {
-    backgroundColor: "rgba(255, 215, 0, 0.1)",
-  },
-  ".cm-result-line-1": {
-    backgroundColor: "rgba(0, 123, 255, 0.1)",
-  },
-  ".cm-result-line-2": {
-    backgroundColor: "rgba(40, 167, 69, 0.1)",
-  },
-  ".cm-result-line-3": {
-    backgroundColor: "rgba(220, 53, 69, 0.1)",
-  },
-  ".cm-result-line-4": {
-    backgroundColor: "rgba(255, 101, 0, 0.1)",
-  },
-  ".cm-result-line-5": {
-    backgroundColor: "rgba(108, 117, 125, 0.1)",
+  ".cm-result-line": {
+    backgroundColor: "rgba(225, 239, 254, 0.3)",
   },
   ".cm-line-group-bg": {
     backgroundColor: "rgba(225, 239, 254, 0.3)",
