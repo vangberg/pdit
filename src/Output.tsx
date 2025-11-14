@@ -37,7 +37,7 @@ export const Output: React.FC<OutputProps> = ({ result, ref }) => {
   return (
     <div
       ref={elementRef}
-      className="output-container"
+      className={result.isInvisible ? "output-container-invisible" : "output-container"}
     >
       <div className="output-line">
         {result.output.map((item, i) => (
