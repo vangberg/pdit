@@ -7,22 +7,34 @@ import { lineGroupsField, lastExecutedIdsField } from "./result-grouping-plugin"
 // ============================================================================
 
 class Spacer extends WidgetType {
-  constructor(readonly height: number, readonly lineNumber: number, readonly isRecent: boolean) { super() }
+  constructor(readonly height: number, readonly lineNumber: number, readonly isRecent: boolean, readonly isInvisibleOnly: boolean) { super() }
 
-  eq(other: Spacer) { return this.height == other.height && this.lineNumber == other.lineNumber && this.isRecent == other.isRecent }
+  eq(other: Spacer) { return this.height == other.height && this.lineNumber == other.lineNumber && this.isRecent == other.isRecent && this.isInvisibleOnly == other.isInvisibleOnly }
 
   toDOM() {
     let elt = document.createElement("div")
     elt.style.height = this.height + "px"
-    const classes = this.isRecent ? 'cm-preview-spacer cm-preview-spacer-recent' : 'cm-preview-spacer'
-    elt.className = classes
+
+    // Invisible-only groups get no styling for spacers
+    if (this.isInvisibleOnly) {
+      elt.className = 'cm-preview-spacer-invisible'
+    } else {
+      const classes = this.isRecent ? 'cm-preview-spacer cm-preview-spacer-recent' : 'cm-preview-spacer'
+      elt.className = classes
+    }
     return elt
   }
 
   updateDOM(dom: HTMLElement) {
     dom.style.height = this.height + "px"
-    const classes = this.isRecent ? 'cm-preview-spacer cm-preview-spacer-recent' : 'cm-preview-spacer'
-    dom.className = classes
+
+    // Invisible-only groups get no styling for spacers
+    if (this.isInvisibleOnly) {
+      dom.className = 'cm-preview-spacer-invisible'
+    } else {
+      const classes = this.isRecent ? 'cm-preview-spacer cm-preview-spacer-recent' : 'cm-preview-spacer'
+      dom.className = classes
+    }
     return true
   }
 
@@ -94,7 +106,8 @@ function compareSpacers(a: DecorationSet, b: DecorationSet): boolean {
     const spacerB = iB.value!.spec.widget as Spacer
     if (iA.from != iB.from ||
         Math.abs(spacerA.height - spacerB.height) > 1 ||
-        spacerA.isRecent !== spacerB.isRecent)
+        spacerA.isRecent !== spacerB.isRecent ||
+        spacerA.isInvisibleOnly !== spacerB.isInvisibleOnly)
       return false
     iA.next(); iB.next()
   }
@@ -155,7 +168,7 @@ function updateSpacers(view: EditorView) {
     if (diff > 0.01) {
       const isRecent = group.resultIds.some(id => lastExecutedIds.has(id))
       builder.add(endLine.to, endLine.to, Decoration.widget({
-        widget: new Spacer(diff, group.lineEnd, isRecent),
+        widget: new Spacer(diff, group.lineEnd, isRecent, group.isInvisibleOnly),
         block: true,
         side: 1
       }))

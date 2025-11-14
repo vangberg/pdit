@@ -158,6 +158,7 @@ export function rangeSetToLineGroups(
       lineStart: startLine,
       lineEnd: endLine,
       resultIds: [...value.resultIds].sort((a, b) => a - b),
+      isInvisibleOnly: false, // Not tracked in history, defaults to false
     });
   });
 
@@ -374,15 +375,24 @@ export const lineGroupBackgroundField = StateField.define<DecorationSet>({
 
     for (const group of lineGroups) {
       const isRecent = group.resultIds.some(id => lastExecutedIds.has(id));
-      const bgClass = isRecent ? 'cm-line-group-bg cm-line-group-recent' : 'cm-line-group-bg';
 
-      for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
-        const line = tr.state.doc.line(lineNum);
-        // Add background color to all lines in group
-        decorations.push(Decoration.line({ class: bgClass }).range(line.from));
-        // Add border to first line of each group
-        if (lineNum === group.lineStart) {
-          decorations.push(Decoration.line({ class: 'cm-line-group-top' }).range(line.from));
+      // Invisible-only groups get minimal styling: just left border, no background or top border
+      if (group.isInvisibleOnly) {
+        const invisibleClass = isRecent ? 'cm-line-group-invisible cm-line-group-recent' : 'cm-line-group-invisible';
+        for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
+          const line = tr.state.doc.line(lineNum);
+          decorations.push(Decoration.line({ class: invisibleClass }).range(line.from));
+        }
+      } else {
+        // Regular groups get background, left border, and top border
+        const bgClass = isRecent ? 'cm-line-group-bg cm-line-group-recent' : 'cm-line-group-bg';
+        for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
+          const line = tr.state.doc.line(lineNum);
+          decorations.push(Decoration.line({ class: bgClass }).range(line.from));
+          // Add border to first line of each group
+          if (lineNum === group.lineStart) {
+            decorations.push(Decoration.line({ class: 'cm-line-group-top' }).range(line.from));
+          }
         }
       }
     }
@@ -403,6 +413,9 @@ const groupTheme = EditorView.theme({
     backgroundColor: "rgba(225, 239, 254, 0.3)",
     borderLeft: "3px solid #7dd3fc",
   },
+  ".cm-line-group-invisible": {
+    borderLeft: "3px solid #7dd3fc",
+  },
   ".cm-line-group-top": {
     borderTop: "1px solid rgba(96, 165, 250, 0.4)",
   },
@@ -412,6 +425,9 @@ const groupTheme = EditorView.theme({
   ".cm-preview-spacer": {
     backgroundColor: "rgba(225, 239, 254, 0.3)",
     borderLeft: "3px solid #7dd3fc",
+  },
+  ".cm-preview-spacer-invisible": {
+    // No background, no border for invisible-only output
   },
   ".cm-preview-spacer-recent": {
     borderLeft: "3px solid #0284c7",
