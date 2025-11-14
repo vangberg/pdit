@@ -1,7 +1,7 @@
 import "./style.css";
 import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
-import { executeScript } from "./execution";
+import { executeScript, ExecutionOutput } from "./execution";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { LineGroup } from "./compute-line-groups";
@@ -11,7 +11,7 @@ import { useResults } from "./results";
 
 const initialCode = `# Dataset overview and summary statistics
 head(mtcars)
-Sys.time()
+Sys.sleep(1)
 summary(mtcars)
 
 Sys.time()
@@ -92,27 +92,33 @@ function App() {
   }, []);
 
   const handleExecute = useCallback(
-    async (script: string, options?: { lineRange?: { from: number; to: number } }) => {
+    async (
+      script: string,
+      options?: { lineRange?: { from: number; to: number } }
+    ) => {
       if (!isWebRReady) {
         console.warn("webR is not ready yet");
         return;
       }
 
       try {
-        const result = await executeScript(script, options);
-        console.log("Execute result:", result);
+        const allResults: ExecutionOutput[] = [];
 
-        const newResultIds = result.results.map(r => r.id);
+        for await (const result of executeScript(script, options)) {
+          console.log("Execute result:", result);
 
-        const { lineGroups } = addResults(result.results, {
-          lineRange: options?.lineRange,
-        });
+          allResults.push(result);
 
-        editorRef.current?.applyExecutionUpdate({
-          doc: script,
-          lineGroups,
-          lastExecutedResultIds: newResultIds,
-        });
+          const { lineGroups } = addResults(allResults, {
+            lineRange: options?.lineRange,
+          });
+
+          editorRef.current?.applyExecutionUpdate({
+            doc: script,
+            lineGroups,
+            lastExecutedResultIds: allResults.map((r) => r.id),
+          });
+        }
       } catch (error) {
         console.error("Execution error:", error);
       }

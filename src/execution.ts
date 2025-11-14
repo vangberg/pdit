@@ -24,18 +24,18 @@ let globalIdCounter = 1;
  * Execute R code using webR.
  * Parses the code into expressions and executes them one at a time,
  * capturing output and line numbers for each expression.
+ * Yields each result as it completes for streaming execution.
  *
  * @param script - The R code to execute
  * @param options.lineRange - Optional line range to filter which expressions to execute (1-based, inclusive)
  */
-export async function executeScript(
+export async function* executeScript(
   script: string,
   options?: {
     lineRange?: { from: number; to: number };
   }
-): Promise<ExecutionResult> {
+): AsyncGenerator<ExecutionOutput, void, unknown> {
   const webR = getWebR();
-  const results: ExecutionOutput[] = [];
 
   try {
     // Store the code in R and parse with source information
@@ -129,21 +129,19 @@ export async function executeScript(
 
         // Always create result, mark as invisible if no output or images
         const hasVisibleOutput = output.length > 0 || images.length > 0;
-        results.push({
+        yield {
           id: globalIdCounter++,
           lineStart: startLine,
           lineEnd: endLine,
           output: output,
           images: images.length > 0 ? images : undefined,
           isInvisible: !hasVisibleOutput,
-        });
+        };
       }
     } finally {
       // Clean up R objects
       shelter.purge();
     }
-
-    return { results };
   } catch (error) {
     console.error('Error in executeScript:', error);
     throw error;

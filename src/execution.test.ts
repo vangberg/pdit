@@ -1,6 +1,18 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { executeScript } from './execution';
+import { executeScript, ExecutionOutput } from './execution';
 import { initializeWebR } from './webr-instance';
+
+// Helper function to collect all results from the async generator
+async function collectResults(
+  script: string,
+  options?: { lineRange?: { from: number; to: number } }
+): Promise<ExecutionOutput[]> {
+  const results: ExecutionOutput[] = [];
+  for await (const result of executeScript(script, options)) {
+    results.push(result);
+  }
+  return results;
+}
 
 describe('executeScript', () => {
   beforeAll(async () => {
@@ -11,71 +23,71 @@ describe('executeScript', () => {
   describe('without lineRange', () => {
     it('executes all expressions in the script', async () => {
       const script = 'x <- 1\ny <- 2\nz <- 3';
-      const result = await executeScript(script);
+      const results = await collectResults(script);
 
       // Should execute all three expressions with invisible output
-      expect(result.results).toHaveLength(3);
-      expect(result.results[0].isInvisible).toBe(true);
-      expect(result.results[1].isInvisible).toBe(true);
-      expect(result.results[2].isInvisible).toBe(true);
+      expect(results).toHaveLength(3);
+      expect(results[0].isInvisible).toBe(true);
+      expect(results[1].isInvisible).toBe(true);
+      expect(results[2].isInvisible).toBe(true);
     });
 
     it('executes all expressions with output', async () => {
       const script = 'print("first")\nprint("second")\nprint("third")';
-      const result = await executeScript(script);
+      const results = await collectResults(script);
 
-      expect(result.results).toHaveLength(3);
-      expect(result.results[0].lineStart).toBe(1);
-      expect(result.results[0].lineEnd).toBe(1);
-      expect(result.results[1].lineStart).toBe(2);
-      expect(result.results[1].lineEnd).toBe(2);
-      expect(result.results[2].lineStart).toBe(3);
-      expect(result.results[2].lineEnd).toBe(3);
+      expect(results).toHaveLength(3);
+      expect(results[0].lineStart).toBe(1);
+      expect(results[0].lineEnd).toBe(1);
+      expect(results[1].lineStart).toBe(2);
+      expect(results[1].lineEnd).toBe(2);
+      expect(results[2].lineStart).toBe(3);
+      expect(results[2].lineEnd).toBe(3);
     });
   });
 
   describe('with lineRange - single line', () => {
     it('executes only the expression on the specified line', async () => {
       const script = 'print("first")\nprint("second")\nprint("third")';
-      const result = await executeScript(script, { lineRange: { from: 2, to: 2 } });
+      const results = await collectResults(script, { lineRange: { from: 2, to: 2 } });
 
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].lineStart).toBe(2);
-      expect(result.results[0].lineEnd).toBe(2);
-      expect(result.results[0].output[0].text).toContain('second');
+      expect(results).toHaveLength(1);
+      expect(results[0].lineStart).toBe(2);
+      expect(results[0].lineEnd).toBe(2);
+      expect(results[0].output[0].text).toContain('second');
     });
 
     it('executes expression on line 1', async () => {
       const script = 'print("first")\nprint("second")\nprint("third")';
-      const result = await executeScript(script, { lineRange: { from: 1, to: 1 } });
+      const results = await collectResults(script, { lineRange: { from: 1, to: 1 } });
 
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].lineStart).toBe(1);
-      expect(result.results[0].output[0].text).toContain('first');
+      expect(results).toHaveLength(1);
+      expect(results[0].lineStart).toBe(1);
+      expect(results[0].output[0].text).toContain('first');
     });
 
     it('executes expression on last line', async () => {
       const script = 'print("first")\nprint("second")\nprint("third")';
-      const result = await executeScript(script, { lineRange: { from: 3, to: 3 } });
+      const results = await collectResults(script, { lineRange: { from: 3, to: 3 } });
 
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].lineStart).toBe(3);
-      expect(result.results[0].output[0].text).toContain('third');
+      expect(results).toHaveLength(1);
+      expect(results[0].lineStart).toBe(3);
+      expect(results[0].output[0].text).toContain('third');
     });
   });
 
   describe('with lineRange - multiple expressions per line', () => {
     it('executes all expressions on the same line (semicolon-separated)', async () => {
       const script = 'x <- 1; y <- 2; print("done")';
-      const result = await executeScript(script, { lineRange: { from: 1, to: 1 } });
+      const results = await collectResults(script, { lineRange: { from: 1, to: 1 } });
 
       // All three expressions should execute
-      expect(result.results).toHaveLength(3);
-      expect(result.results[0].isInvisible).toBe(true);
-      expect(result.results[1].isInvisible).toBe(true);
-      expect(result.results[2].isInvisible).toBe(false); // print has visible output
-      expect(result.results[2].lineStart).toBe(1);
-      expect(result.results[2].output[0].text).toContain('done');
+      expect(results).toHaveLength(3);
+      expect(results[0].isInvisible).toBe(true);
+      expect(results[1].isInvisible).toBe(true);
+      expect(results[2].isInvisible).toBe(false); // print has visible output
+      expect(results[2].lineStart).toBe(1);
+      expect(results[2].output[0].text).toContain('done');
     });
   });
 
@@ -85,11 +97,11 @@ describe('executeScript', () => {
   print("hello from function")
 }
 print("outside")`;
-      const result = await executeScript(script, { lineRange: { from: 1, to: 1 } });
+      const results = await collectResults(script, { lineRange: { from: 1, to: 1 } });
 
       // Should execute the function definition (lines 1-3) with invisible output
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].isInvisible).toBe(true);
+      expect(results).toHaveLength(1);
+      expect(results[0].isInvisible).toBe(true);
     });
 
     it('executes entire multi-line expression when cursor is on middle line', async () => {
@@ -97,11 +109,11 @@ print("outside")`;
   print("hello from function")
 }
 print("outside")`;
-      const result = await executeScript(script, { lineRange: { from: 2, to: 2 } });
+      const results = await collectResults(script, { lineRange: { from: 2, to: 2 } });
 
       // Should execute the function definition (lines 1-3) with invisible output
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].isInvisible).toBe(true);
+      expect(results).toHaveLength(1);
+      expect(results[0].isInvisible).toBe(true);
     });
 
     it('executes entire multi-line expression when cursor is on last line', async () => {
@@ -109,24 +121,24 @@ print("outside")`;
   print("hello from function")
 }
 print("outside")`;
-      const result = await executeScript(script, { lineRange: { from: 3, to: 3 } });
+      const results = await collectResults(script, { lineRange: { from: 3, to: 3 } });
 
       // Should execute the function definition (lines 1-3) with invisible output
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].isInvisible).toBe(true);
+      expect(results).toHaveLength(1);
+      expect(results[0].isInvisible).toBe(true);
     });
   });
 
   describe('with lineRange - selection spanning multiple expressions', () => {
     it('executes all expressions in the selected range', async () => {
       const script = 'print("first")\nprint("second")\nprint("third")\nprint("fourth")';
-      const result = await executeScript(script, { lineRange: { from: 2, to: 3 } });
+      const results = await collectResults(script, { lineRange: { from: 2, to: 3 } });
 
-      expect(result.results).toHaveLength(2);
-      expect(result.results[0].lineStart).toBe(2);
-      expect(result.results[0].output[0].text).toContain('second');
-      expect(result.results[1].lineStart).toBe(3);
-      expect(result.results[1].output[0].text).toContain('third');
+      expect(results).toHaveLength(2);
+      expect(results[0].lineStart).toBe(2);
+      expect(results[0].output[0].text).toContain('second');
+      expect(results[1].lineStart).toBe(3);
+      expect(results[1].output[0].text).toContain('third');
     });
 
     it('executes expressions partially overlapping the range', async () => {
@@ -135,43 +147,43 @@ my_func <- function() {
   print("in function")
 }
 print("after")`;
-      const result = await executeScript(script, { lineRange: { from: 2, to: 4 } });
+      const results = await collectResults(script, { lineRange: { from: 2, to: 4 } });
 
       // Should execute the function definition (lines 2-4) with invisible output
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].isInvisible).toBe(true);
+      expect(results).toHaveLength(1);
+      expect(results[0].isInvisible).toBe(true);
     });
   });
 
   describe('edge cases', () => {
     it('returns empty results when range has no expressions', async () => {
       const script = 'print("first")\n\n\nprint("second")';
-      const result = await executeScript(script, { lineRange: { from: 2, to: 3 } });
+      const results = await collectResults(script, { lineRange: { from: 2, to: 3 } });
 
-      expect(result.results).toHaveLength(0);
+      expect(results).toHaveLength(0);
     });
 
     it('handles empty lines in range', async () => {
       const script = 'print("first")\n\nprint("second")';
-      const result = await executeScript(script, { lineRange: { from: 1, to: 3 } });
+      const results = await collectResults(script, { lineRange: { from: 1, to: 3 } });
 
-      expect(result.results).toHaveLength(2);
+      expect(results).toHaveLength(2);
     });
 
     it('handles range beyond script length', async () => {
       const script = 'print("only line")';
-      const result = await executeScript(script, { lineRange: { from: 5, to: 10 } });
+      const results = await collectResults(script, { lineRange: { from: 5, to: 10 } });
 
-      expect(result.results).toHaveLength(0);
+      expect(results).toHaveLength(0);
     });
 
     it('handles comments within range', async () => {
       const script = '# This is a comment\nprint("hello")\n# Another comment';
-      const result = await executeScript(script, { lineRange: { from: 1, to: 3 } });
+      const results = await collectResults(script, { lineRange: { from: 1, to: 3 } });
 
       // Comments don't generate output, only the print statement
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].lineStart).toBe(2);
+      expect(results).toHaveLength(1);
+      expect(results[0].lineStart).toBe(2);
     });
   });
 
@@ -181,13 +193,13 @@ print("after")`;
   print("in function")
 }
 print("after")`;
-      const result = await executeScript(script, { lineRange: { from: 2, to: 4 } });
+      const results = await collectResults(script, { lineRange: { from: 2, to: 4 } });
 
       // Function (lines 1-3) overlaps with range [2-4], plus print statement on line 4
-      expect(result.results).toHaveLength(2);
-      expect(result.results[0].isInvisible).toBe(true); // Function definition
-      expect(result.results[1].isInvisible).toBe(false); // Print statement
-      expect(result.results[1].lineStart).toBe(4);
+      expect(results).toHaveLength(2);
+      expect(results[0].isInvisible).toBe(true); // Function definition
+      expect(results[1].isInvisible).toBe(false); // Print statement
+      expect(results[1].lineStart).toBe(4);
     });
 
     it('includes expression that starts within and ends after range', async () => {
@@ -195,38 +207,38 @@ print("after")`;
 x <- function() {
   print("in function")
 }`;
-      const result = await executeScript(script, { lineRange: { from: 1, to: 2 } });
+      const results = await collectResults(script, { lineRange: { from: 1, to: 2 } });
 
       // Function (lines 2-4) overlaps with range [1-2], plus print statement on line 1
-      expect(result.results).toHaveLength(2);
-      expect(result.results[0].isInvisible).toBe(false); // Print statement
-      expect(result.results[0].lineStart).toBe(1);
-      expect(result.results[1].isInvisible).toBe(true); // Function definition
+      expect(results).toHaveLength(2);
+      expect(results[0].isInvisible).toBe(false); // Print statement
+      expect(results[0].lineStart).toBe(1);
+      expect(results[1].isInvisible).toBe(true); // Function definition
     });
 
     it('includes expression fully contained within range', async () => {
       const script = `print("before")
 print("middle")
 print("after")`;
-      const result = await executeScript(script, { lineRange: { from: 1, to: 3 } });
+      const results = await collectResults(script, { lineRange: { from: 1, to: 3 } });
 
-      expect(result.results).toHaveLength(3);
+      expect(results).toHaveLength(3);
     });
 
     it('excludes expression completely before range', async () => {
       const script = 'print("before")\nprint("target")\nprint("after")';
-      const result = await executeScript(script, { lineRange: { from: 2, to: 2 } });
+      const results = await collectResults(script, { lineRange: { from: 2, to: 2 } });
 
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].lineStart).toBe(2);
+      expect(results).toHaveLength(1);
+      expect(results[0].lineStart).toBe(2);
     });
 
     it('excludes expression completely after range', async () => {
       const script = 'print("before")\nprint("target")\nprint("after")';
-      const result = await executeScript(script, { lineRange: { from: 1, to: 1 } });
+      const results = await collectResults(script, { lineRange: { from: 1, to: 1 } });
 
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].lineStart).toBe(1);
+      expect(results).toHaveLength(1);
+      expect(results[0].lineStart).toBe(1);
     });
   });
 });
