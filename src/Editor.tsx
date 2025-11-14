@@ -239,7 +239,6 @@ export function Editor({
         }
 
         const transaction: any = {
-          selection: { anchor: doc.length },
           effects,
         };
 
