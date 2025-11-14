@@ -96,8 +96,7 @@ function compareSpacers(a: DecorationSet, b: DecorationSet): boolean {
     const spacerB = iB.value!.spec.widget as Spacer
     if (iA.from != iB.from ||
         Math.abs(spacerA.height - spacerB.height) > 1 ||
-        spacerA.isRecent !== spacerB.isRecent ||
-        spacerA.isInvisibleOnly !== spacerB.isInvisibleOnly)
+        spacerA.isRecent !== spacerB.isRecent)
       return false
     iA.next(); iB.next()
   }
