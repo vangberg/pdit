@@ -89,13 +89,6 @@ export function computeLineGroups(results: ExecutionOutput[]): LineGroup[] {
       const isInvisibleOnly = groupResults.length > 0 &&
         groupResults.every(r => r.isInvisible === true);
 
-      console.log('Line group:', {
-        lineStart: minLine,
-        lineEnd: maxLine,
-        isInvisibleOnly,
-        results: groupResults.map(r => ({ id: r.id, isInvisible: r.isInvisible, hasOutput: r.output.length > 0 }))
-      });
-
       groups.push({
         id: `lg-${idCounter++}`,
         resultIds: [...resultIds].sort((a, b) => a - b),

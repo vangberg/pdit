@@ -139,7 +139,8 @@ export function lineGroupsToRangeSet(
 
 export function rangeSetToLineGroups(
   ranges: RangeSet<GroupValue>,
-  doc: Text
+  doc: Text,
+  preserveFrom?: LineGroup[]
 ): LineGroup[] {
   if (ranges.size === 0) {
     return [];
@@ -153,12 +154,25 @@ export function rangeSetToLineGroups(
     const endPos = to > from ? to - 1 : to;
     const endLine = doc.lineAt(endPos).number;
 
+    // Try to find a matching group in preserveFrom to keep isInvisibleOnly flag
+    let isInvisibleOnly = false;
+    if (preserveFrom) {
+      const match = preserveFrom.find(
+        g => g.lineStart === startLine && g.lineEnd === endLine &&
+             g.resultIds.length === value.resultIds.length &&
+             g.resultIds.every((id, i) => id === value.resultIds[i])
+      );
+      if (match) {
+        isInvisibleOnly = match.isInvisibleOnly;
+      }
+    }
+
     groups.push({
       id: `lg-${idCounter++}`,
       lineStart: startLine,
       lineEnd: endLine,
       resultIds: [...value.resultIds].sort((a, b) => a - b),
-      isInvisibleOnly: false, // Not tracked in history, defaults to false
+      isInvisibleOnly,
     });
   });
 
@@ -175,7 +189,7 @@ function normalizeLineGroups(groups: LineGroup[], doc: Text): LineGroup[] {
     doc
   );
 
-  return rangeSetToLineGroups(normalizedSet, doc);
+  return rangeSetToLineGroups(normalizedSet, doc, groups);
 }
 
 function areLineGroupsEqual(a: LineGroup[], b: LineGroup[]): boolean {
@@ -226,14 +240,14 @@ export const lineGroupsField = StateField.define<LineGroup[]>({
 
       if (effect.is(setGroupRanges)) {
         const normalized = normalizeGroupRanges(effect.value, doc);
-        nextGroups = rangeSetToLineGroups(normalized, doc);
+        nextGroups = rangeSetToLineGroups(normalized, doc, groups);
         break;
       }
     }
 
     if (!nextGroups && tr.docChanged) {
       const ranges = tr.state.field(groupRangesField);
-      nextGroups = rangeSetToLineGroups(ranges, doc);
+      nextGroups = rangeSetToLineGroups(ranges, doc, groups);
     }
 
     if (!nextGroups) {
