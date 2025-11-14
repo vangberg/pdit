@@ -30,7 +30,6 @@ body {
 
 .top-bar {
   background: #ffffff;
-  border-bottom: 1px solid #d1d5db;
   padding: 0.125rem 0.25rem;
   display: flex;
   align-items: center;
@@ -104,7 +103,6 @@ body {
 }
 
 .output-half {
-  border-left: 1px solid #d1d5db;
 }
 
 h1 {
@@ -156,31 +154,16 @@ h1 {
   padding-top: 4px;
 }
 
-.output-group:nth-child(6n+1) {
-  background: rgba(252, 228, 236, 0.5);
-}
-
-.output-group:nth-child(6n+2) {
-  background: rgba(225, 245, 254, 0.5);
-}
-
-.output-group:nth-child(6n+3) {
-  background: rgba(241, 248, 233, 0.5);
-}
-
-.output-group:nth-child(6n+4) {
-  background: rgba(255, 243, 224, 0.5);
-}
-
-.output-group:nth-child(6n+5) {
-  background: rgba(243, 229, 245, 0.5);
-}
-
-.output-group:nth-child(6n+6) {
-  background: rgba(224, 242, 241, 0.5);
+.output-group {
+  background: transparent;
+  border-top: 1px solid rgba(156, 163, 175, 0.4);
 }
 
 .output-container {
+  padding: 0.5rem;
+  padding-left: 0.75rem;
+  background: #f3f4f6;
+  border-left: 2px solid #9ca3af;
 }
 
 .output-line {
@@ -188,7 +171,7 @@ h1 {
 }
 
 .output-line:not(.empty-line) {
-  padding: 0.125rem 0.25rem;
+  padding: 0;
 }
 
 .output-line pre {
@@ -203,11 +186,12 @@ h1 {
 }
 
 .output-item.output-stdout {
-  color: #000;
+  color: #4b5563;
 }
 
 .output-item.output-stderr {
-  color: #6b7280;
+  color: #dc2626;
+  font-weight: 500;
 }
 
 .output-item.output-error {
@@ -228,10 +212,10 @@ h1 {
 
 .output-plot canvas {
   display: block;
-  border: 1px solid #d1d5db;
   background: #ffffff;
   width: 400px;
   height: 300px;
+  border: 1px solid #d1d5db;
 }
 
 .output-table {

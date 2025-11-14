@@ -71,12 +71,14 @@ export function computeLineGroups(results: ExecutionOutput[]): LineGroup[] {
   for (const resultIds of grouped.values()) {
     let minLine = Number.POSITIVE_INFINITY;
     let maxLine = Number.NEGATIVE_INFINITY;
+    const groupResults: ExecutionOutput[] = [];
 
     for (const id of resultIds) {
       const result = results.find((item) => item.id === id);
       if (!result) {
         continue;
       }
+      groupResults.push(result);
       minLine = Math.min(minLine, result.lineStart);
       maxLine = Math.max(maxLine, result.lineEnd);
     }

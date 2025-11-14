@@ -20,16 +20,16 @@ import { LineGroup } from "./compute-line-groups";
 import { debugPanelState } from "./codemirror-debug-panel";
 
 export class GroupValue extends RangeValue {
-  // GroupValue carries metadata for a single group range. `groupIndex`
-  // determines the color class assigned to the decoration and `resultIds`
+  // GroupValue carries metadata for a single group range. `resultIds`
   // tracks which execution results contributed to the group so that the
   // debugger panel can present relevant information.
-  constructor(public groupIndex: number, public resultIds: number[]) {
+  constructor(public resultIds: number[]) {
     super();
   }
 
-  eq(other: GroupValue) {
-    return this.groupIndex === other.groupIndex;
+  eq(_other: GroupValue) {
+    // For decoration purposes, groups are interchangeable
+    return true;
   }
 }
 
@@ -123,14 +123,14 @@ export function lineGroupsToRangeSet(
     return RangeSet.empty;
   }
 
-  const ranges = groups.map((group, index) => {
+  const ranges = groups.map((group) => {
     const fromLine = doc.line(group.lineStart);
     const toLine = doc.line(group.lineEnd);
 
     return {
       from: fromLine.from,
       to: toLine.to,
-      value: new GroupValue(index, group.resultIds),
+      value: new GroupValue(group.resultIds),
     };
   });
 
@@ -309,7 +309,7 @@ function mergeSnappedRanges(
       current = {
         ...current,
         to: Math.max(current.to, next.to),
-        value: new GroupValue(current.value.groupIndex, uniqueResultIds)
+        value: new GroupValue(uniqueResultIds)
       };
       continue;
     }
@@ -322,16 +322,7 @@ function mergeSnappedRanges(
   return merged;
 }
 
-const groupDecorations = [
-  // Pre-create decorations for each color bucket so we can reuse them when we
-  // iterate through the range set. This keeps decoration creation cheap.
-  Decoration.mark({ class: "cm-result-line-0" }),
-  Decoration.mark({ class: "cm-result-line-1" }),
-  Decoration.mark({ class: "cm-result-line-2" }),
-  Decoration.mark({ class: "cm-result-line-3" }),
-  Decoration.mark({ class: "cm-result-line-4" }),
-  Decoration.mark({ class: "cm-result-line-5" }),
-];
+const groupDecoration = Decoration.mark({ class: "cm-result-line" });
 
 export const groupDecorationsField = StateField.define<DecorationSet>({
   create() {
@@ -349,12 +340,8 @@ export const groupDecorationsField = StateField.define<DecorationSet>({
     const groupRanges = tr.state.field(groupRangesField);
     const decorations: any[] = [];
 
-    groupRanges.between(0, tr.state.doc.length, (from, to, value) => {
-      // Pick the color bucket deterministically so each group gets a stable
-      // appearance across renders.
-      const colorIndex = value.groupIndex % groupDecorations.length;
-      const decoration = groupDecorations[colorIndex];
-      decorations.push(decoration.range(from, to));
+    groupRanges.between(0, tr.state.doc.length, (from, to) => {
+      decorations.push(groupDecoration.range(from, to));
     });
 
     // If no groups are active we return `Decoration.none` to avoid pointless
@@ -385,16 +372,17 @@ export const lineGroupBackgroundField = StateField.define<DecorationSet>({
     // Get the set of last executed result IDs
     const lastExecutedIds = tr.state.field(lastExecutedIdsField);
 
-    for (let groupIndex = 0; groupIndex < lineGroups.length; groupIndex++) {
-      const group = lineGroups[groupIndex];
-      const colorClass = `cm-line-group-bg-${groupIndex % 6}`;
+    for (const group of lineGroups) {
       const isRecent = group.resultIds.some(id => lastExecutedIds.has(id));
-      const classes = isRecent ? `${colorClass} cm-line-group-recent` : colorClass;
-      const lineDecoration = Decoration.line({ class: classes });
 
+      const bgClass = isRecent ? 'cm-line-group-bg cm-line-group-recent' : 'cm-line-group-bg';
       for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
         const line = tr.state.doc.line(lineNum);
-        decorations.push(lineDecoration.range(line.from));
+        decorations.push(Decoration.line({ class: bgClass }).range(line.from));
+        // Add border to first line of each group
+        if (lineNum === group.lineStart) {
+          decorations.push(Decoration.line({ class: 'cm-line-group-top' }).range(line.from));
+        }
       }
     }
 
@@ -407,75 +395,22 @@ export const lineGroupBackgroundField = StateField.define<DecorationSet>({
 });
 
 const groupTheme = EditorView.theme({
-  ".cm-result-line-0": {
-    backgroundColor: "rgba(255, 215, 0, 0.1)",
+  ".cm-result-line": {
+    backgroundColor: "rgba(225, 239, 254, 0.3)",
   },
-  ".cm-result-line-1": {
-    backgroundColor: "rgba(0, 123, 255, 0.1)",
-  },
-  ".cm-result-line-2": {
-    backgroundColor: "rgba(40, 167, 69, 0.1)",
-  },
-  ".cm-result-line-3": {
-    backgroundColor: "rgba(220, 53, 69, 0.1)",
-  },
-  ".cm-result-line-4": {
-    backgroundColor: "rgba(255, 101, 0, 0.1)",
-  },
-  ".cm-result-line-5": {
-    backgroundColor: "rgba(108, 117, 125, 0.1)",
-  },
-  ".cm-line-group-bg-0": {
-    backgroundColor: "rgba(252, 228, 236, 0.5)",
+  ".cm-line-group-bg": {
+    backgroundColor: "rgba(225, 239, 254, 0.3)",
     borderLeft: "3px solid #7dd3fc",
   },
-  ".cm-line-group-bg-1": {
-    backgroundColor: "rgba(225, 245, 254, 0.5)",
-    borderLeft: "3px solid #7dd3fc",
+  ".cm-line-group-top": {
+    borderTop: "1px solid rgba(96, 165, 250, 0.4)",
   },
-  ".cm-line-group-bg-2": {
-    backgroundColor: "rgba(241, 248, 233, 0.5)",
-    borderLeft: "3px solid #7dd3fc",
-  },
-  ".cm-line-group-bg-3": {
-    backgroundColor: "rgba(255, 243, 224, 0.5)",
-    borderLeft: "3px solid #7dd3fc",
-  },
-  ".cm-line-group-bg-4": {
-    backgroundColor: "rgba(243, 229, 245, 0.5)",
-    borderLeft: "3px solid #7dd3fc",
-  },
-  ".cm-line-group-bg-5": {
-    backgroundColor: "rgba(224, 242, 241, 0.5)",
-    borderLeft: "3px solid #7dd3fc",
-  },
-  ".cm-preview-spacer-0": {
-    backgroundColor: "rgba(252, 228, 236, 0.5)",
-    borderLeft: "3px solid #7dd3fc",
-  },
-  ".cm-preview-spacer-1": {
-    backgroundColor: "rgba(225, 245, 254, 0.5)",
-    borderLeft: "3px solid #7dd3fc",
-  },
-  ".cm-preview-spacer-2": {
-    backgroundColor: "rgba(241, 248, 233, 0.5)",
-    borderLeft: "3px solid #7dd3fc",
-  },
-  ".cm-preview-spacer-3": {
-    backgroundColor: "rgba(255, 243, 224, 0.5)",
-    borderLeft: "3px solid #7dd3fc",
-  },
-  ".cm-preview-spacer-4": {
-    backgroundColor: "rgba(243, 229, 245, 0.5)",
-    borderLeft: "3px solid #7dd3fc",
-  },
-  ".cm-preview-spacer-5": {
-    backgroundColor: "rgba(224, 242, 241, 0.5)",
-    borderLeft: "3px solid #7dd3fc",
-  },
-  // Darker border for most recently executed line groups
   ".cm-line-group-recent": {
     borderLeft: "3px solid #0284c7",
+  },
+  ".cm-preview-spacer": {
+    backgroundColor: "rgba(225, 239, 254, 0.3)",
+    borderLeft: "3px solid #7dd3fc",
   },
   ".cm-preview-spacer-recent": {
     borderLeft: "3px solid #0284c7",
