@@ -159,20 +159,11 @@ h1 {
   border-top: 1px solid rgba(156, 163, 175, 0.4);
 }
 
-.output-group-invisible {
-  background: transparent;
-}
-
 .output-container {
   padding: 0.5rem;
   padding-left: 0.75rem;
   background: #f3f4f6;
   border-left: 2px solid #9ca3af;
-}
-
-.output-container-invisible {
-  padding: 0.5rem;
-  padding-left: 0.75rem;
 }
 
 .output-line {

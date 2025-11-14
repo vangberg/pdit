@@ -91,7 +91,7 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
           const topValue = lineGroupTops?.get(group.id);
           return (
             <div
-              className={group.isInvisibleOnly ? "output-group-invisible" : "output-group"}
+              className="output-group"
               key={group.id}
               ref={(el) => {
                 if (el) {

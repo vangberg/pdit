@@ -139,8 +139,7 @@ export function lineGroupsToRangeSet(
 
 export function rangeSetToLineGroups(
   ranges: RangeSet<GroupValue>,
-  doc: Text,
-  preserveFrom?: LineGroup[]
+  doc: Text
 ): LineGroup[] {
   if (ranges.size === 0) {
     return [];
@@ -154,25 +153,11 @@ export function rangeSetToLineGroups(
     const endPos = to > from ? to - 1 : to;
     const endLine = doc.lineAt(endPos).number;
 
-    // Try to find a matching group in preserveFrom to keep isInvisibleOnly flag
-    let isInvisibleOnly = false;
-    if (preserveFrom) {
-      const match = preserveFrom.find(
-        g => g.lineStart === startLine && g.lineEnd === endLine &&
-             g.resultIds.length === value.resultIds.length &&
-             g.resultIds.every((id, i) => id === value.resultIds[i])
-      );
-      if (match) {
-        isInvisibleOnly = match.isInvisibleOnly;
-      }
-    }
-
     groups.push({
       id: `lg-${idCounter++}`,
       lineStart: startLine,
       lineEnd: endLine,
       resultIds: [...value.resultIds].sort((a, b) => a - b),
-      isInvisibleOnly,
     });
   });
 
@@ -189,7 +174,7 @@ function normalizeLineGroups(groups: LineGroup[], doc: Text): LineGroup[] {
     doc
   );
 
-  return rangeSetToLineGroups(normalizedSet, doc, groups);
+  return rangeSetToLineGroups(normalizedSet, doc);
 }
 
 function areLineGroupsEqual(a: LineGroup[], b: LineGroup[]): boolean {
@@ -240,14 +225,14 @@ export const lineGroupsField = StateField.define<LineGroup[]>({
 
       if (effect.is(setGroupRanges)) {
         const normalized = normalizeGroupRanges(effect.value, doc);
-        nextGroups = rangeSetToLineGroups(normalized, doc, groups);
+        nextGroups = rangeSetToLineGroups(normalized, doc);
         break;
       }
     }
 
     if (!nextGroups && tr.docChanged) {
       const ranges = tr.state.field(groupRangesField);
-      nextGroups = rangeSetToLineGroups(ranges, doc, groups);
+      nextGroups = rangeSetToLineGroups(ranges, doc);
     }
 
     if (!nextGroups) {
@@ -390,23 +375,13 @@ export const lineGroupBackgroundField = StateField.define<DecorationSet>({
     for (const group of lineGroups) {
       const isRecent = group.resultIds.some(id => lastExecutedIds.has(id));
 
-      // Invisible-only groups get minimal styling: just left border, no background or top border
-      if (group.isInvisibleOnly) {
-        const invisibleClass = isRecent ? 'cm-line-group-invisible cm-line-group-recent' : 'cm-line-group-invisible';
-        for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
-          const line = tr.state.doc.line(lineNum);
-          decorations.push(Decoration.line({ class: invisibleClass }).range(line.from));
-        }
-      } else {
-        // Regular groups get background, left border, and top border
-        const bgClass = isRecent ? 'cm-line-group-bg cm-line-group-recent' : 'cm-line-group-bg';
-        for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
-          const line = tr.state.doc.line(lineNum);
-          decorations.push(Decoration.line({ class: bgClass }).range(line.from));
-          // Add border to first line of each group
-          if (lineNum === group.lineStart) {
-            decorations.push(Decoration.line({ class: 'cm-line-group-top' }).range(line.from));
-          }
+      const bgClass = isRecent ? 'cm-line-group-bg cm-line-group-recent' : 'cm-line-group-bg';
+      for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
+        const line = tr.state.doc.line(lineNum);
+        decorations.push(Decoration.line({ class: bgClass }).range(line.from));
+        // Add border to first line of each group
+        if (lineNum === group.lineStart) {
+          decorations.push(Decoration.line({ class: 'cm-line-group-top' }).range(line.from));
         }
       }
     }
@@ -427,9 +402,6 @@ const groupTheme = EditorView.theme({
     backgroundColor: "rgba(225, 239, 254, 0.3)",
     borderLeft: "3px solid #7dd3fc",
   },
-  ".cm-line-group-invisible": {
-    borderLeft: "3px solid #7dd3fc",
-  },
   ".cm-line-group-top": {
     borderTop: "1px solid rgba(96, 165, 250, 0.4)",
   },
@@ -439,9 +411,6 @@ const groupTheme = EditorView.theme({
   ".cm-preview-spacer": {
     backgroundColor: "rgba(225, 239, 254, 0.3)",
     borderLeft: "3px solid #7dd3fc",
-  },
-  ".cm-preview-spacer-invisible": {
-    // No background, no border for invisible-only output
   },
   ".cm-preview-spacer-recent": {
     borderLeft: "3px solid #0284c7",

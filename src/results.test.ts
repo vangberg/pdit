@@ -28,9 +28,9 @@ describe('processExecutionResults', () => {
     store.set(3, { id: 3, lineStart: 5, lineEnd: 5, output: [] });
 
     const currentLineGroups: LineGroup[] = [
-      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 1, isInvisibleOnly: false },
-      { id: 'g2', resultIds: [2], lineStart: 3, lineEnd: 3, isInvisibleOnly: false },
-      { id: 'g3', resultIds: [3], lineStart: 5, lineEnd: 5, isInvisibleOnly: false },
+      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 1 },
+      { id: 'g2', resultIds: [2], lineStart: 3, lineEnd: 3 },
+      { id: 'g3', resultIds: [3], lineStart: 5, lineEnd: 5 },
     ];
 
     const newResults: ExecutionOutput[] = [
@@ -55,8 +55,8 @@ describe('processExecutionResults', () => {
   it('removes overlapping group when lineEnd < from', () => {
     const store = new Map<number, ExecutionOutput>();
     const currentLineGroups: LineGroup[] = [
-      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 2, isInvisibleOnly: false },
-      { id: 'g2', resultIds: [2], lineStart: 5, lineEnd: 6, isInvisibleOnly: false },
+      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 2 },
+      { id: 'g2', resultIds: [2], lineStart: 5, lineEnd: 6 },
     ];
 
     const newResults: ExecutionOutput[] = [
@@ -78,8 +78,8 @@ describe('processExecutionResults', () => {
   it('removes overlapping group when lineStart > to', () => {
     const store = new Map<number, ExecutionOutput>();
     const currentLineGroups: LineGroup[] = [
-      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 2, isInvisibleOnly: false },
-      { id: 'g2', resultIds: [2], lineStart: 5, lineEnd: 6, isInvisibleOnly: false },
+      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 2 },
+      { id: 'g2', resultIds: [2], lineStart: 5, lineEnd: 6 },
     ];
 
     const newResults: ExecutionOutput[] = [
@@ -101,10 +101,10 @@ describe('processExecutionResults', () => {
   it('removes multiple overlapping groups', () => {
     const store = new Map<number, ExecutionOutput>();
     const currentLineGroups: LineGroup[] = [
-      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 2, isInvisibleOnly: false },
-      { id: 'g2', resultIds: [2], lineStart: 3, lineEnd: 4, isInvisibleOnly: false },
-      { id: 'g3', resultIds: [3], lineStart: 5, lineEnd: 6, isInvisibleOnly: false },
-      { id: 'g4', resultIds: [4], lineStart: 10, lineEnd: 11, isInvisibleOnly: false },
+      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 2 },
+      { id: 'g2', resultIds: [2], lineStart: 3, lineEnd: 4 },
+      { id: 'g3', resultIds: [3], lineStart: 5, lineEnd: 6 },
+      { id: 'g4', resultIds: [4], lineStart: 10, lineEnd: 11 },
     ];
 
     const newResults: ExecutionOutput[] = [
@@ -128,8 +128,8 @@ describe('processExecutionResults', () => {
   it('sorts merged groups by lineStart', () => {
     const store = new Map<number, ExecutionOutput>();
     const currentLineGroups: LineGroup[] = [
-      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 2, isInvisibleOnly: false },
-      { id: 'g2', resultIds: [2], lineStart: 10, lineEnd: 11, isInvisibleOnly: false },
+      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 2 },
+      { id: 'g2', resultIds: [2], lineStart: 10, lineEnd: 11 },
     ];
 
     const newResults: ExecutionOutput[] = [
@@ -150,8 +150,8 @@ describe('processExecutionResults', () => {
   it('handles empty new results with partial execution', () => {
     const store = new Map<number, ExecutionOutput>();
     const currentLineGroups: LineGroup[] = [
-      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 2, isInvisibleOnly: false },
-      { id: 'g2', resultIds: [2], lineStart: 5, lineEnd: 6, isInvisibleOnly: false },
+      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 2 },
+      { id: 'g2', resultIds: [2], lineStart: 5, lineEnd: 6 },
     ];
 
     const newResults: ExecutionOutput[] = [];
@@ -169,8 +169,8 @@ describe('processExecutionResults', () => {
   it('replaces all groups when lineRange covers everything', () => {
     const store = new Map<number, ExecutionOutput>();
     const currentLineGroups: LineGroup[] = [
-      { id: 'g1', resultIds: [1], lineStart: 2, lineEnd: 3, isInvisibleOnly: false },
-      { id: 'g2', resultIds: [2], lineStart: 5, lineEnd: 6, isInvisibleOnly: false },
+      { id: 'g1', resultIds: [1], lineStart: 2, lineEnd: 3 },
+      { id: 'g2', resultIds: [2], lineStart: 5, lineEnd: 6 },
     ];
 
     const newResults: ExecutionOutput[] = [
