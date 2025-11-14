@@ -29,60 +29,99 @@ body {
 }
 
 .top-bar {
-  background: #ffffff;
-  padding: 0.125rem 0.25rem;
+  background: #374151;
+  padding: 0.4rem 1rem;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   flex-shrink: 0;
   font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  border-bottom: 1px solid #4b5563;
 }
 
 .top-bar-content {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-
-.top-bar-left {
-  display: flex;
+  gap: 0.5rem;
   align-items: center;
 }
 
-.top-bar-right {
-  display: flex;
-  align-items: center;
+.top-bar-button-wrapper {
+  position: relative;
 }
 
-.init-message,
-.ready-message {
-  color: #000;
-  font-size: 0.75rem;
-  padding: 0.125rem 0.25rem;
-}
-
-.ready-message {
-  color: #000;
-}
-
-.run-all-button {
-  background: #ffffff;
-  color: #000;
-  border: 1px solid #9ca3af;
-  padding: 0.125rem 0.25rem;
+.top-bar-button {
+  background: transparent;
+  color: #93c5fd;
+  border: 1px solid #93c5fd;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
   font-size: 0.75rem;
   cursor: pointer;
   font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  transition: all 0.2s;
 }
 
-.run-all-button:hover:not(:disabled) {
-  background: #f3f4f6;
+.top-bar-button:hover:not(:disabled) {
+  background: rgba(147, 197, 253, 0.2);
 }
 
-.run-all-button:disabled {
+.top-bar-button:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
-  color: #6b7280;
+  color: #9ca3af;
+  border-color: #9ca3af;
+}
+
+.top-bar-tooltip {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #f9fafb;
+  color: #374151;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.top-bar-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 0.75rem;
+}
+
+.top-bar-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.top-bar-status-dot.ready {
+  background: #60a5fa;
+}
+
+.top-bar-status-dot.initializing {
+  background: #f97316;
+}
+
+.top-bar-status-text {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.top-bar-status-text.ready {
+  color: #60a5fa;
+}
+
+.top-bar-status-text.initializing {
+  color: #f97316;
 }
 
 .split-container {
@@ -402,4 +441,13 @@ h1 {
   font-family: monospace;
   text-align: right;
   color: #374151;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
