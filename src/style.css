@@ -159,6 +159,10 @@ h1 {
   border-top: 1px solid rgba(156, 163, 175, 0.4);
 }
 
+.output-group-invisible {
+  background: transparent;
+}
+
 .output-container {
   padding: 0.5rem;
   padding-left: 0.75rem;
