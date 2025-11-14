@@ -13,8 +13,11 @@ describe('executeScript', () => {
       const script = 'x <- 1\ny <- 2\nz <- 3';
       const result = await executeScript(script);
 
-      // Should execute all three expressions
-      expect(result.results).toHaveLength(0); // No output generated for assignments
+      // Should execute all three expressions with invisible output
+      expect(result.results).toHaveLength(3);
+      expect(result.results[0].isInvisible).toBe(true);
+      expect(result.results[1].isInvisible).toBe(true);
+      expect(result.results[2].isInvisible).toBe(true);
     });
 
     it('executes all expressions with output', async () => {
@@ -66,10 +69,13 @@ describe('executeScript', () => {
       const script = 'x <- 1; y <- 2; print("done")';
       const result = await executeScript(script, { lineRange: { from: 1, to: 1 } });
 
-      // All three expressions should execute, but only print produces output
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].lineStart).toBe(1);
-      expect(result.results[0].output[0].text).toContain('done');
+      // All three expressions should execute
+      expect(result.results).toHaveLength(3);
+      expect(result.results[0].isInvisible).toBe(true);
+      expect(result.results[1].isInvisible).toBe(true);
+      expect(result.results[2].isInvisible).toBe(false); // print has visible output
+      expect(result.results[2].lineStart).toBe(1);
+      expect(result.results[2].output[0].text).toContain('done');
     });
   });
 
@@ -81,8 +87,9 @@ describe('executeScript', () => {
 print("outside")`;
       const result = await executeScript(script, { lineRange: { from: 1, to: 1 } });
 
-      // Should execute the function definition (lines 1-3) but not produce output
-      expect(result.results).toHaveLength(0);
+      // Should execute the function definition (lines 1-3) with invisible output
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0].isInvisible).toBe(true);
     });
 
     it('executes entire multi-line expression when cursor is on middle line', async () => {
@@ -92,8 +99,9 @@ print("outside")`;
 print("outside")`;
       const result = await executeScript(script, { lineRange: { from: 2, to: 2 } });
 
-      // Should execute the function definition (lines 1-3) but not produce output
-      expect(result.results).toHaveLength(0);
+      // Should execute the function definition (lines 1-3) with invisible output
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0].isInvisible).toBe(true);
     });
 
     it('executes entire multi-line expression when cursor is on last line', async () => {
@@ -103,8 +111,9 @@ print("outside")`;
 print("outside")`;
       const result = await executeScript(script, { lineRange: { from: 3, to: 3 } });
 
-      // Should execute the function definition (lines 1-3) but not produce output
-      expect(result.results).toHaveLength(0);
+      // Should execute the function definition (lines 1-3) with invisible output
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0].isInvisible).toBe(true);
     });
   });
 
@@ -128,8 +137,9 @@ my_func <- function() {
 print("after")`;
       const result = await executeScript(script, { lineRange: { from: 2, to: 4 } });
 
-      // Should execute the function definition (lines 2-4) and the print statement (line 5 is not in range)
-      expect(result.results).toHaveLength(0); // Function definition has no output
+      // Should execute the function definition (lines 2-4) with invisible output
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0].isInvisible).toBe(true);
     });
   });
 
@@ -173,9 +183,11 @@ print("after")`;
 print("after")`;
       const result = await executeScript(script, { lineRange: { from: 2, to: 4 } });
 
-      // Function (lines 1-3) overlaps with range [2-4]
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].lineStart).toBe(4);
+      // Function (lines 1-3) overlaps with range [2-4], plus print statement on line 4
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0].isInvisible).toBe(true); // Function definition
+      expect(result.results[1].isInvisible).toBe(false); // Print statement
+      expect(result.results[1].lineStart).toBe(4);
     });
 
     it('includes expression that starts within and ends after range', async () => {
@@ -185,9 +197,11 @@ x <- function() {
 }`;
       const result = await executeScript(script, { lineRange: { from: 1, to: 2 } });
 
-      // Function (lines 2-4) overlaps with range [1-2]
-      expect(result.results).toHaveLength(1);
+      // Function (lines 2-4) overlaps with range [1-2], plus print statement on line 1
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0].isInvisible).toBe(false); // Print statement
       expect(result.results[0].lineStart).toBe(1);
+      expect(result.results[1].isInvisible).toBe(true); // Function definition
     });
 
     it('includes expression fully contained within range', async () => {
