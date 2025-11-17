@@ -7,6 +7,8 @@ export interface LineGroup {
   lineEnd: number;
 }
 
+let lineGroupIdCounter = 0;
+
 /**
  * Groups API execution results that share any lines using a union-find structure.
  * Results that touch the same line belong to the same group.
@@ -67,7 +69,6 @@ export function computeLineGroups(results: Expression[]): LineGroup[] {
   }
 
   const groups: LineGroup[] = [];
-  let idCounter = 0;
   for (const resultIds of grouped.values()) {
     let minLine = Number.POSITIVE_INFINITY;
     let maxLine = Number.NEGATIVE_INFINITY;
@@ -85,7 +86,7 @@ export function computeLineGroups(results: Expression[]): LineGroup[] {
 
     if (minLine !== Number.POSITIVE_INFINITY && maxLine !== Number.NEGATIVE_INFINITY) {
       groups.push({
-        id: `lg-${idCounter++}`,
+        id: `lg-${lineGroupIdCounter++}`,
         resultIds: [...resultIds].sort((a, b) => a - b),
         lineStart: minLine,
         lineEnd: maxLine,
