@@ -5,17 +5,17 @@ export interface OutputItem {
   text: string;
 }
 
-export interface ExecutionOutput {
+export interface Expression {
   id: number;
   lineStart: number;
   lineEnd: number;
+  result?: ExpressionResult;
+}
+
+export interface ExpressionResult {
   output: OutputItem[];
   images?: ImageBitmap[];
   isInvisible?: boolean;
-}
-
-export interface ExecutionResult {
-  results: ExecutionOutput[];
 }
 
 let globalIdCounter = 1;
@@ -34,7 +34,7 @@ export async function* executeScript(
   options?: {
     lineRange?: { from: number; to: number };
   }
-): AsyncGenerator<ExecutionOutput, void, unknown> {
+): AsyncGenerator<Expression, void, unknown> {
   const webR = getWebR();
 
   try {
@@ -133,9 +133,11 @@ export async function* executeScript(
           id: globalIdCounter++,
           lineStart: startLine,
           lineEnd: endLine,
-          output: output,
-          images: images.length > 0 ? images : undefined,
-          isInvisible: !hasVisibleOutput,
+          result: {
+            output: output,
+            images: images.length > 0 ? images : undefined,
+            isInvisible: !hasVisibleOutput,
+          },
         };
       }
     } finally {

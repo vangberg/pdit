@@ -1,14 +1,14 @@
 import { useState, useCallback } from "react";
-import { ExecutionOutput } from "./execution";
+import { Expression } from "./execution";
 import { computeLineGroups, LineGroup } from "./compute-line-groups";
 
 /**
  * Adds new results to the result store (non-destructive).
  */
 export function addResultsToStore(
-  resultStore: Map<number, ExecutionOutput>,
-  newResults: ExecutionOutput[]
-): Map<number, ExecutionOutput> {
+  resultStore: Map<number, Expression>,
+  newResults: Expression[]
+): Map<number, Expression> {
   const newStore = new Map(resultStore);
   for (const r of newResults) {
     newStore.set(r.id, r);
@@ -21,14 +21,14 @@ export function addResultsToStore(
  * For partial execution, merges new groups with non-overlapping existing groups.
  */
 export function processExecutionResults(
-  resultStore: Map<number, ExecutionOutput>,
-  newResults: ExecutionOutput[],
+  resultStore: Map<number, Expression>,
+  newResults: Expression[],
   options?: {
     currentLineGroups?: LineGroup[];
     lineRange?: { from: number; to: number };
   }
 ): {
-  newStore: Map<number, ExecutionOutput>;
+  newStore: Map<number, Expression>;
   groups: LineGroup[];
 } {
   const newStore = addResultsToStore(resultStore, newResults);
@@ -61,14 +61,14 @@ export function processExecutionResults(
  * Custom hook to manage result store and line groups.
  */
 export function useResults() {
-  const [results, setResults] = useState<Map<number, ExecutionOutput>>(
+  const [results, setResults] = useState<Map<number, Expression>>(
     new Map()
   );
   const [lineGroups, setLineGroups] = useState<LineGroup[]>([]);
 
   const addResults = useCallback(
     (
-      newResults: ExecutionOutput[],
+      newResults: Expression[],
       options?: {
         lineRange?: { from: number; to: number };
       }

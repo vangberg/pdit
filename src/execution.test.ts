@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { executeScript, ExecutionOutput } from './execution';
+import { executeScript, Expression } from './execution';
 import { initializeWebR } from './webr-instance';
 
 // Helper function to collect all results from the async generator
 async function collectResults(
   script: string,
   options?: { lineRange?: { from: number; to: number } }
-): Promise<ExecutionOutput[]> {
-  const results: ExecutionOutput[] = [];
+): Promise<Expression[]> {
+  const results: Expression[] = [];
   for await (const result of executeScript(script, options)) {
     results.push(result);
   }
@@ -27,9 +27,9 @@ describe('executeScript', () => {
 
       // Should execute all three expressions with invisible output
       expect(results).toHaveLength(3);
-      expect(results[0].isInvisible).toBe(true);
-      expect(results[1].isInvisible).toBe(true);
-      expect(results[2].isInvisible).toBe(true);
+      expect(results[0].result?.isInvisible).toBe(true);
+      expect(results[1].result?.isInvisible).toBe(true);
+      expect(results[2].result?.isInvisible).toBe(true);
     });
 
     it('executes all expressions with output', async () => {
@@ -54,7 +54,7 @@ describe('executeScript', () => {
       expect(results).toHaveLength(1);
       expect(results[0].lineStart).toBe(2);
       expect(results[0].lineEnd).toBe(2);
-      expect(results[0].output[0].text).toContain('second');
+      expect(results[0].result?.output[0].text).toContain('second');
     });
 
     it('executes expression on line 1', async () => {
@@ -63,7 +63,7 @@ describe('executeScript', () => {
 
       expect(results).toHaveLength(1);
       expect(results[0].lineStart).toBe(1);
-      expect(results[0].output[0].text).toContain('first');
+      expect(results[0].result?.output[0].text).toContain('first');
     });
 
     it('executes expression on last line', async () => {
@@ -72,7 +72,7 @@ describe('executeScript', () => {
 
       expect(results).toHaveLength(1);
       expect(results[0].lineStart).toBe(3);
-      expect(results[0].output[0].text).toContain('third');
+      expect(results[0].result?.output[0].text).toContain('third');
     });
   });
 
@@ -83,11 +83,11 @@ describe('executeScript', () => {
 
       // All three expressions should execute
       expect(results).toHaveLength(3);
-      expect(results[0].isInvisible).toBe(true);
-      expect(results[1].isInvisible).toBe(true);
-      expect(results[2].isInvisible).toBe(false); // print has visible output
+      expect(results[0].result?.isInvisible).toBe(true);
+      expect(results[1].result?.isInvisible).toBe(true);
+      expect(results[2].result?.isInvisible).toBe(false); // print has visible output
       expect(results[2].lineStart).toBe(1);
-      expect(results[2].output[0].text).toContain('done');
+      expect(results[2].result?.output[0].text).toContain('done');
     });
   });
 
@@ -101,7 +101,7 @@ print("outside")`;
 
       // Should execute the function definition (lines 1-3) with invisible output
       expect(results).toHaveLength(1);
-      expect(results[0].isInvisible).toBe(true);
+      expect(results[0].result?.isInvisible).toBe(true);
     });
 
     it('executes entire multi-line expression when cursor is on middle line', async () => {
@@ -113,7 +113,7 @@ print("outside")`;
 
       // Should execute the function definition (lines 1-3) with invisible output
       expect(results).toHaveLength(1);
-      expect(results[0].isInvisible).toBe(true);
+      expect(results[0].result?.isInvisible).toBe(true);
     });
 
     it('executes entire multi-line expression when cursor is on last line', async () => {
@@ -125,7 +125,7 @@ print("outside")`;
 
       // Should execute the function definition (lines 1-3) with invisible output
       expect(results).toHaveLength(1);
-      expect(results[0].isInvisible).toBe(true);
+      expect(results[0].result?.isInvisible).toBe(true);
     });
   });
 
@@ -136,9 +136,9 @@ print("outside")`;
 
       expect(results).toHaveLength(2);
       expect(results[0].lineStart).toBe(2);
-      expect(results[0].output[0].text).toContain('second');
+      expect(results[0].result?.output[0].text).toContain('second');
       expect(results[1].lineStart).toBe(3);
-      expect(results[1].output[0].text).toContain('third');
+      expect(results[1].result?.output[0].text).toContain('third');
     });
 
     it('executes expressions partially overlapping the range', async () => {
@@ -151,7 +151,7 @@ print("after")`;
 
       // Should execute the function definition (lines 2-4) with invisible output
       expect(results).toHaveLength(1);
-      expect(results[0].isInvisible).toBe(true);
+      expect(results[0].result?.isInvisible).toBe(true);
     });
   });
 
@@ -197,8 +197,8 @@ print("after")`;
 
       // Function (lines 1-3) overlaps with range [2-4], plus print statement on line 4
       expect(results).toHaveLength(2);
-      expect(results[0].isInvisible).toBe(true); // Function definition
-      expect(results[1].isInvisible).toBe(false); // Print statement
+      expect(results[0].result?.isInvisible).toBe(true); // Function definition
+      expect(results[1].result?.isInvisible).toBe(false); // Print statement
       expect(results[1].lineStart).toBe(4);
     });
 
@@ -211,9 +211,9 @@ x <- function() {
 
       // Function (lines 2-4) overlaps with range [1-2], plus print statement on line 1
       expect(results).toHaveLength(2);
-      expect(results[0].isInvisible).toBe(false); // Print statement
+      expect(results[0].result?.isInvisible).toBe(false); // Print statement
       expect(results[0].lineStart).toBe(1);
-      expect(results[1].isInvisible).toBe(true); // Function definition
+      expect(results[1].result?.isInvisible).toBe(true); // Function definition
     });
 
     it('includes expression fully contained within range', async () => {

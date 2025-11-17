@@ -1,7 +1,7 @@
 import "./style.css";
 import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
-import { executeScript, ExecutionOutput } from "./execution";
+import { executeScript, Expression } from "./execution";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { LineGroup } from "./compute-line-groups";
@@ -102,7 +102,7 @@ function App() {
       }
 
       try {
-        const allResults: ExecutionOutput[] = [];
+        const allResults: Expression[] = [];
 
         for await (const result of executeScript(script, options)) {
           console.log("Execute result:", result);

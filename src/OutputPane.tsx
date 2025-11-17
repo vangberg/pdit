@@ -1,12 +1,12 @@
 import React, { useRef, useEffect, useCallback, useMemo } from "react";
 import { Output } from "./Output";
-import { ExecutionOutput } from "./execution";
+import { Expression } from "./execution";
 import { LineGroup } from "./compute-line-groups";
 import { CSSProperties } from "react";
 
 interface OutputPaneProps {
   onLineGroupHeightChange?: (heights: Map<string, number>) => void;
-  results: ExecutionOutput[];
+  results: Expression[];
   lineGroups: LineGroup[];
   lineGroupTops?: Map<string, number>;
   lineGroupHeights?: Map<string, number>;
