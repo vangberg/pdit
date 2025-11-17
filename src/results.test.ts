@@ -4,18 +4,18 @@ import { Expression } from './execution';
 import { LineGroup } from './compute-line-groups';
 
 describe('processExecutionResults', () => {
-  it('computes line groups from new results without options', () => {
+  it('computes line groups from new expressions without options', () => {
     const store = new Map<number, Expression>();
-    const newResults: Expression[] = [
+    const newExpressions: Expression[] = [
       { id: 1, lineStart: 1, lineEnd: 1, result: { output: [] } },
       { id: 2, lineStart: 3, lineEnd: 3, result: { output: [] } },
     ];
 
-    const { newStore, groups } = processExecutionResults(store, newResults);
+    const { newStore, groups } = processExecutionResults(store, newExpressions);
 
     expect(newStore.size).toBe(2);
-    expect(newStore.get(1)).toEqual(newResults[0]);
-    expect(newStore.get(2)).toEqual(newResults[1]);
+    expect(newStore.get(1)).toEqual(newExpressions[0]);
+    expect(newStore.get(2)).toEqual(newExpressions[1]);
     expect(groups).toHaveLength(2);
     expect(groups[0].resultIds).toEqual([1]);
     expect(groups[1].resultIds).toEqual([2]);
@@ -33,11 +33,11 @@ describe('processExecutionResults', () => {
       { id: 'g3', resultIds: [3], lineStart: 5, lineEnd: 5 },
     ];
 
-    const newResults: Expression[] = [
+    const newExpressions: Expression[] = [
       { id: 4, lineStart: 3, lineEnd: 3, result: { output: [] } },
     ];
 
-    const { newStore, groups } = processExecutionResults(store, newResults, {
+    const { newStore, groups } = processExecutionResults(store, newExpressions, {
       currentLineGroups,
       lineRange: { from: 3, to: 3 },
     });
@@ -59,11 +59,11 @@ describe('processExecutionResults', () => {
       { id: 'g2', resultIds: [2], lineStart: 5, lineEnd: 6 },
     ];
 
-    const newResults: Expression[] = [
+    const newExpressions: Expression[] = [
       { id: 3, lineStart: 1, lineEnd: 1, result: { output: [] } },
     ];
 
-    const { groups } = processExecutionResults(store, newResults, {
+    const { groups } = processExecutionResults(store, newExpressions, {
       currentLineGroups,
       lineRange: { from: 1, to: 2 },
     });
@@ -82,11 +82,11 @@ describe('processExecutionResults', () => {
       { id: 'g2', resultIds: [2], lineStart: 5, lineEnd: 6 },
     ];
 
-    const newResults: Expression[] = [
+    const newExpressions: Expression[] = [
       { id: 3, lineStart: 5, lineEnd: 5, result: { output: [] } },
     ];
 
-    const { groups } = processExecutionResults(store, newResults, {
+    const { groups } = processExecutionResults(store, newExpressions, {
       currentLineGroups,
       lineRange: { from: 5, to: 6 },
     });
@@ -107,11 +107,11 @@ describe('processExecutionResults', () => {
       { id: 'g4', resultIds: [4], lineStart: 10, lineEnd: 11 },
     ];
 
-    const newResults: Expression[] = [
+    const newExpressions: Expression[] = [
       { id: 5, lineStart: 3, lineEnd: 5, result: { output: [] } },
     ];
 
-    const { groups } = processExecutionResults(store, newResults, {
+    const { groups } = processExecutionResults(store, newExpressions, {
       currentLineGroups,
       lineRange: { from: 3, to: 6 },
     });
@@ -132,11 +132,11 @@ describe('processExecutionResults', () => {
       { id: 'g2', resultIds: [2], lineStart: 10, lineEnd: 11 },
     ];
 
-    const newResults: Expression[] = [
+    const newExpressions: Expression[] = [
       { id: 3, lineStart: 5, lineEnd: 5, result: { output: [] } },
     ];
 
-    const { groups } = processExecutionResults(store, newResults, {
+    const { groups } = processExecutionResults(store, newExpressions, {
       currentLineGroups,
       lineRange: { from: 5, to: 5 },
     });
@@ -154,9 +154,9 @@ describe('processExecutionResults', () => {
       { id: 'g2', resultIds: [2], lineStart: 5, lineEnd: 6 },
     ];
 
-    const newResults: Expression[] = [];
+    const newExpressions: Expression[] = [];
 
-    const { groups } = processExecutionResults(store, newResults, {
+    const { groups } = processExecutionResults(store, newExpressions, {
       currentLineGroups,
       lineRange: { from: 3, to: 4 },
     });
@@ -173,11 +173,11 @@ describe('processExecutionResults', () => {
       { id: 'g2', resultIds: [2], lineStart: 5, lineEnd: 6 },
     ];
 
-    const newResults: Expression[] = [
+    const newExpressions: Expression[] = [
       { id: 3, lineStart: 1, lineEnd: 1, result: { output: [] } },
     ];
 
-    const { groups } = processExecutionResults(store, newResults, {
+    const { groups } = processExecutionResults(store, newExpressions, {
       currentLineGroups,
       lineRange: { from: 1, to: 10 },
     });
