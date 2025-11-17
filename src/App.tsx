@@ -163,7 +163,7 @@ function App() {
         <div className="output-half">
           <OutputPane
             onLineGroupHeightChange={handleLineGroupHeightChange}
-            results={Array.from(results.values())}
+            expressions={Array.from(results.values())}
             lineGroups={lineGroups}
             lineGroupTops={lineGroupTops}
             lineGroupHeights={lineGroupHeights}
