@@ -23,7 +23,7 @@ export class GroupValue extends RangeValue {
   // GroupValue carries metadata for a single group range. `resultIds`
   // tracks which execution results contributed to the group so that the
   // debugger panel can present relevant information.
-  constructor(public resultIds: number[]) {
+  constructor(public id: string, public resultIds: number[]) {
     super();
   }
 
@@ -130,7 +130,7 @@ export function lineGroupsToRangeSet(
     return {
       from: fromLine.from,
       to: toLine.to,
-      value: new GroupValue(group.resultIds),
+      value: new GroupValue(group.id, group.resultIds),
     };
   });
 
@@ -146,7 +146,6 @@ export function rangeSetToLineGroups(
   }
 
   const groups: LineGroup[] = [];
-  let idCounter = 0;
 
   ranges.between(0, doc.length, (from, to, value) => {
     const startLine = doc.lineAt(from).number;
@@ -154,7 +153,7 @@ export function rangeSetToLineGroups(
     const endLine = doc.lineAt(endPos).number;
 
     groups.push({
-      id: `lg-${idCounter++}`,
+      id: value.id,
       lineStart: startLine,
       lineEnd: endLine,
       resultIds: [...value.resultIds].sort((a, b) => a - b),
@@ -309,7 +308,7 @@ function mergeSnappedRanges(
       current = {
         ...current,
         to: Math.max(current.to, next.to),
-        value: new GroupValue(uniqueResultIds)
+        value: new GroupValue(current.value.id, uniqueResultIds)
       };
       continue;
     }

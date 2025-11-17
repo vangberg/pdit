@@ -36,6 +36,23 @@ export function processExecutionResults(
   // Compute new groups from executed expressions
   const newGroups = computeLineGroups(newExpressions);
 
+  // Reuse existing line groups with matching line ranges
+  if (options?.currentLineGroups) {
+    for (const newGroup of newGroups) {
+      const matchingGroup = options.currentLineGroups.find(
+        (group) =>
+          group.lineStart === newGroup.lineStart &&
+          group.lineEnd === newGroup.lineEnd
+      );
+      if (matchingGroup) {
+        // Reuse existing group ID
+        newGroup.id = matchingGroup.id;
+        // Copy existing resultIds to previousResultIds
+        newGroup.previousResultIds = matchingGroup.resultIds;
+      }
+    }
+  }
+
   // If this is a partial execution, merge with non-overlapping existing groups
   if (options?.lineRange && options?.currentLineGroups) {
     const { from, to } = options.lineRange;
