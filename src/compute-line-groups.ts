@@ -3,6 +3,7 @@ import { Expression } from "./execution";
 export interface LineGroup {
   id: string;
   resultIds: number[];
+  previousResultIds?: number[];
   lineStart: number;
   lineEnd: number;
 }
