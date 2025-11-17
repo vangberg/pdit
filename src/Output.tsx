@@ -1,13 +1,13 @@
 import React, { useImperativeHandle, useRef, useEffect } from "react";
-import { ExecutionOutput } from "./execution";
+import { Expression } from "./execution";
 
 interface OutputProps {
-  result: ExecutionOutput;
+  expression: Expression;
   index: number;
   ref?: (element: HTMLDivElement | null) => void;
 }
 
-export const Output: React.FC<OutputProps> = ({ result, ref }) => {
+export const Output: React.FC<OutputProps> = ({ expression, ref }) => {
   const elementRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -15,22 +15,22 @@ export const Output: React.FC<OutputProps> = ({ result, ref }) => {
 
   // Composite all images onto a single canvas
   useEffect(() => {
-    if (result.images && result.images.length > 0 && canvasRef.current) {
+    if (expression.result?.images && expression.result.images.length > 0 && canvasRef.current) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       if (ctx) {
         // Clear canvas first
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         // Draw all images on top of each other
-        result.images.forEach((image) => {
+        expression.result.images.forEach((image) => {
           ctx.drawImage(image, 0, 0);
         });
       }
     }
-  }, [result.images]);
+  }, [expression.result?.images]);
 
   // Get dimensions from first image if available
-  const firstImage = result.images?.[0];
+  const firstImage = expression.result?.images?.[0];
   const width = firstImage?.width || 800;
   const height = firstImage?.height || 600;
 
@@ -40,7 +40,7 @@ export const Output: React.FC<OutputProps> = ({ result, ref }) => {
       className="output-container"
     >
       <div className="output-line">
-        {result.output.map((item, i) => (
+        {expression.result?.output.map((item, i) => (
           <div
             key={i}
             className={`output-item output-${item.type}`}
@@ -48,7 +48,7 @@ export const Output: React.FC<OutputProps> = ({ result, ref }) => {
             <pre>{item.text}</pre>
           </div>
         ))}
-        {result.images && result.images.length > 0 && (
+        {expression.result?.images && expression.result.images.length > 0 && (
           <div
             className="output-item output-plot"
           >

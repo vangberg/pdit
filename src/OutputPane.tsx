@@ -1,12 +1,12 @@
 import React, { useRef, useEffect, useCallback, useMemo } from "react";
 import { Output } from "./Output";
-import { ExecutionOutput } from "./execution";
+import { Expression } from "./execution";
 import { LineGroup } from "./compute-line-groups";
 import { CSSProperties } from "react";
 
 interface OutputPaneProps {
   onLineGroupHeightChange?: (heights: Map<string, number>) => void;
-  results: ExecutionOutput[];
+  expressions: Expression[];
   lineGroups: LineGroup[];
   lineGroupTops?: Map<string, number>;
   lineGroupHeights?: Map<string, number>;
@@ -14,7 +14,7 @@ interface OutputPaneProps {
 
 export const OutputPane: React.FC<OutputPaneProps> = ({
   onLineGroupHeightChange,
-  results,
+  expressions,
   lineGroups,
   lineGroupTops,
   lineGroupHeights,
@@ -112,14 +112,14 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
               }
             >
               {group.resultIds.map((resultId) => {
-                const index = results.findIndex((res) => res.id === resultId);
+                const index = expressions.findIndex((expr) => expr.id === resultId);
                 if (index === -1) return null;
-                const result = results[index];
+                const expression = expressions[index];
 
                 return (
                   <Output
-                    key={result.id}
-                    result={result}
+                    key={expression.id}
+                    expression={expression}
                     index={index}
                   />
                 );

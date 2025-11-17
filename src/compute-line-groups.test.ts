@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeLineGroups } from './compute-line-groups';
-import { ExecutionOutput } from './execution';
+import { Expression } from './execution';
 
 describe('computeLineGroups', () => {
   it('returns empty array for empty input', () => {
@@ -9,8 +9,8 @@ describe('computeLineGroups', () => {
   });
 
   it('creates single group for single result', () => {
-    const results: ExecutionOutput[] = [
-      { id: 1, lineStart: 1, lineEnd: 1, output: [] },
+    const results: Expression[] = [
+      { id: 1, lineStart: 1, lineEnd: 1, result: { output: [] } },
     ];
     const groups = computeLineGroups(results);
     expect(groups).toHaveLength(1);
@@ -20,9 +20,9 @@ describe('computeLineGroups', () => {
   });
 
   it('creates separate groups for non-overlapping results', () => {
-    const results: ExecutionOutput[] = [
-      { id: 1, lineStart: 1, lineEnd: 2, output: [] },
-      { id: 2, lineStart: 5, lineEnd: 6, output: [] },
+    const results: Expression[] = [
+      { id: 1, lineStart: 1, lineEnd: 2, result: { output: [] } },
+      { id: 2, lineStart: 5, lineEnd: 6, result: { output: [] } },
     ];
     const groups = computeLineGroups(results);
     expect(groups).toHaveLength(2);
@@ -31,9 +31,9 @@ describe('computeLineGroups', () => {
   });
 
   it('merges results that share a line', () => {
-    const results: ExecutionOutput[] = [
-      { id: 1, lineStart: 1, lineEnd: 3, output: [] },
-      { id: 2, lineStart: 3, lineEnd: 5, output: [] },
+    const results: Expression[] = [
+      { id: 1, lineStart: 1, lineEnd: 3, result: { output: [] } },
+      { id: 2, lineStart: 3, lineEnd: 5, result: { output: [] } },
     ];
     const groups = computeLineGroups(results);
     expect(groups).toHaveLength(1);
@@ -43,10 +43,10 @@ describe('computeLineGroups', () => {
   });
 
   it('merges transitively connected results', () => {
-    const results: ExecutionOutput[] = [
-      { id: 1, lineStart: 1, lineEnd: 2, output: [] },
-      { id: 2, lineStart: 2, lineEnd: 3, output: [] },
-      { id: 3, lineStart: 3, lineEnd: 4, output: [] },
+    const results: Expression[] = [
+      { id: 1, lineStart: 1, lineEnd: 2, result: { output: [] } },
+      { id: 2, lineStart: 2, lineEnd: 3, result: { output: [] } },
+      { id: 3, lineStart: 3, lineEnd: 4, result: { output: [] } },
     ];
     const groups = computeLineGroups(results);
     expect(groups).toHaveLength(1);
@@ -56,10 +56,10 @@ describe('computeLineGroups', () => {
   });
 
   it('creates mixed groups: some merged, some separate', () => {
-    const results: ExecutionOutput[] = [
-      { id: 1, lineStart: 1, lineEnd: 2, output: [] },
-      { id: 2, lineStart: 2, lineEnd: 3, output: [] },
-      { id: 3, lineStart: 10, lineEnd: 11, output: [] },
+    const results: Expression[] = [
+      { id: 1, lineStart: 1, lineEnd: 2, result: { output: [] } },
+      { id: 2, lineStart: 2, lineEnd: 3, result: { output: [] } },
+      { id: 3, lineStart: 10, lineEnd: 11, result: { output: [] } },
     ];
     const groups = computeLineGroups(results);
     expect(groups).toHaveLength(2);
@@ -72,10 +72,10 @@ describe('computeLineGroups', () => {
   });
 
   it('handles multiple results on exact same lines', () => {
-    const results: ExecutionOutput[] = [
-      { id: 1, lineStart: 5, lineEnd: 5, output: [] },
-      { id: 2, lineStart: 5, lineEnd: 5, output: [] },
-      { id: 3, lineStart: 5, lineEnd: 5, output: [] },
+    const results: Expression[] = [
+      { id: 1, lineStart: 5, lineEnd: 5, result: { output: [] } },
+      { id: 2, lineStart: 5, lineEnd: 5, result: { output: [] } },
+      { id: 3, lineStart: 5, lineEnd: 5, result: { output: [] } },
     ];
     const groups = computeLineGroups(results);
     expect(groups).toHaveLength(1);
@@ -85,10 +85,10 @@ describe('computeLineGroups', () => {
   });
 
   it('sorts groups by lineStart', () => {
-    const results: ExecutionOutput[] = [
-      { id: 3, lineStart: 20, lineEnd: 21, output: [] },
-      { id: 1, lineStart: 1, lineEnd: 2, output: [] },
-      { id: 2, lineStart: 10, lineEnd: 11, output: [] },
+    const results: Expression[] = [
+      { id: 3, lineStart: 20, lineEnd: 21, result: { output: [] } },
+      { id: 1, lineStart: 1, lineEnd: 2, result: { output: [] } },
+      { id: 2, lineStart: 10, lineEnd: 11, result: { output: [] } },
     ];
     const groups = computeLineGroups(results);
     expect(groups).toHaveLength(3);

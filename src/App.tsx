@@ -1,7 +1,7 @@
 import "./style.css";
 import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
-import { executeScript, ExecutionOutput } from "./execution";
+import { executeScript, Expression } from "./execution";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { LineGroup } from "./compute-line-groups";
@@ -35,7 +35,7 @@ summary(model)`;
 
 function App() {
   const editorRef = useRef<EditorHandles | null>(null);
-  const { results, lineGroups, setLineGroups, addResults } = useResults();
+  const { expressions, lineGroups, setLineGroups, addExpressions } = useResults();
   const [lineGroupHeights, setLineGroupHeights] = useState<Map<string, number>>(
     new Map()
   );
@@ -102,28 +102,28 @@ function App() {
       }
 
       try {
-        const allResults: ExecutionOutput[] = [];
+        const allExpressions: Expression[] = [];
 
-        for await (const result of executeScript(script, options)) {
-          console.log("Execute result:", result);
+        for await (const expression of executeScript(script, options)) {
+          console.log("Execute expression:", expression);
 
-          allResults.push(result);
+          allExpressions.push(expression);
 
-          const { lineGroups } = addResults(allResults, {
+          const { lineGroups } = addExpressions(allExpressions, {
             lineRange: options?.lineRange,
           });
 
           editorRef.current?.applyExecutionUpdate({
             doc: script,
             lineGroups,
-            lastExecutedResultIds: allResults.map((r) => r.id),
+            lastExecutedResultIds: allExpressions.map((expr) => expr.id),
           });
         }
       } catch (error) {
         console.error("Execution error:", error);
       }
     },
-    [isWebRReady, addResults]
+    [isWebRReady, addExpressions]
   );
 
   const handleExecuteCurrent = useCallback(
@@ -163,7 +163,7 @@ function App() {
         <div className="output-half">
           <OutputPane
             onLineGroupHeightChange={handleLineGroupHeightChange}
-            results={Array.from(results.values())}
+            expressions={Array.from(expressions.values())}
             lineGroups={lineGroups}
             lineGroupTops={lineGroupTops}
             lineGroupHeights={lineGroupHeights}
