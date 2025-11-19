@@ -151,30 +151,9 @@ try:
     code = ${JSON.stringify(code)}
     compiled = compile(code, '<string>', 'eval')
     result = eval(compiled)
-
-    # Print result if it's not None and not a matplotlib object (REPL behavior)
+    # Print result if it's not None (REPL behavior)
     if result is not None:
-        # Check if it's a matplotlib object (Figure, Axes, Artist, etc.)
-        is_mpl_object = False
-        try:
-            import matplotlib
-            if isinstance(result, (
-                matplotlib.figure.Figure,
-                matplotlib.axes.Axes,
-                matplotlib.artist.Artist,
-                matplotlib.lines.Line2D,
-                matplotlib.patches.Patch,
-                matplotlib.collections.Collection,
-                matplotlib.text.Text,
-                matplotlib.image.AxesImage,
-                list  # plt.plot() returns a list of Line2D objects
-            )):
-                is_mpl_object = True
-        except (ImportError, AttributeError):
-            pass
-
-        if not is_mpl_object:
-            print(repr(result))
+        print(repr(result))
 except SyntaxError:
     # If eval fails, use exec (statement)
     code = ${JSON.stringify(code)}
