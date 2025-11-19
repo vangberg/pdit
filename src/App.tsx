@@ -1,36 +1,38 @@
 import "./style.css";
 import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
-import { executeScript, Expression } from "./execution";
+import { executeScript, Expression } from "./execution-python";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { LineGroup } from "./compute-line-groups";
-import { initializeWebR } from "./webr-instance";
+import { initializePyodide } from "./pyodide-instance";
 import { TopBar } from "./TopBar";
 import { useResults } from "./results";
 
-const initialCode = `# Dataset overview and summary statistics
-head(mtcars)
-summary(mtcars)
+const initialCode = `# Python/Pyodide Demo
+import numpy as np
+import matplotlib.pyplot as plt
 
-Sys.time()
-# Visualization: fuel efficiency vs vehicle weight
-plot(mtcars$wt, mtcars$mpg,
-     xlab = "Weight (1000 lbs)",
-     ylab = "Miles per Gallon",
-     main = "Fuel Efficiency vs Vehicle Weight",
-     pch = 19)
+# Create sample data
+x = np.linspace(0, 10, 100)
+y = np.sin(x)
 
-# Fitted linear regression line
-trend <- lm(mpg ~ wt, data = mtcars)
-abline(trend, col = "red", lwd = 2)
+# Create a plot
+plt.figure(figsize=(8, 4))
+plt.plot(x, y, 'b-', linewidth=2)
+plt.title('Sine Wave')
+plt.xlabel('x')
+plt.ylabel('sin(x)')
+plt.grid(True, alpha=0.3)
+plt.show()
 
-# Calculate correlation
-cor(mtcars$mpg, mtcars$wt)
+# Print some results
+print("Mean:", np.mean(y))
+print("Std dev:", np.std(y))
 
-# Multiple linear regression model
-model <- lm(mpg ~ wt + hp + cyl, data = mtcars)
-summary(model)`;
+# Calculate some values
+result = np.sum(y)
+result`;
 
 function App() {
   const editorRef = useRef<EditorHandles | null>(null);
@@ -42,19 +44,19 @@ function App() {
   const [lineGroupTops, setLineGroupTops] = useState<Map<string, number>>(
     new Map()
   );
-  const [isWebRReady, setIsWebRReady] = useState(false);
+  const [isPyodideReady, setIsPyodideReady] = useState(false);
   const [doc, setDoc] = useState<Text>();
 
-  // Initialize webR on mount
+  // Initialize Pyodide on mount
   useEffect(() => {
     const init = async () => {
       try {
-        console.log("Initializing webR...");
-        await initializeWebR();
-        console.log("webR ready!");
-        setIsWebRReady(true);
+        console.log("Initializing Pyodide...");
+        await initializePyodide();
+        console.log("Pyodide ready!");
+        setIsPyodideReady(true);
       } catch (error) {
-        console.error("Failed to initialize webR:", error);
+        console.error("Failed to initialize Pyodide:", error);
       }
     };
     init();
@@ -96,8 +98,8 @@ function App() {
       script: string,
       options?: { lineRange?: { from: number; to: number } }
     ) => {
-      if (!isWebRReady) {
-        console.warn("webR is not ready yet");
+      if (!isPyodideReady) {
+        console.warn("Pyodide is not ready yet");
         return;
       }
 
@@ -123,7 +125,7 @@ function App() {
         console.error("Execution error:", error);
       }
     },
-    [isWebRReady, addExpressions]
+    [isPyodideReady, addExpressions]
   );
 
   const handleExecuteCurrent = useCallback(
@@ -153,7 +155,7 @@ function App() {
   return (
     <div id="app">
       <TopBar
-        isWebRReady={isWebRReady}
+        isWebRReady={isPyodideReady}
         onRunAll={handleRunAll}
         onRunCurrent={handleRunCurrent}
       />

@@ -20,7 +20,7 @@ export default defineConfig({
     open: true,
   },
   optimizeDeps: {
-    exclude: ['webr'],
+    exclude: ['webr', 'pyodide'],
   },
   test: {
     include: ['src/**/*.test.{ts,tsx}'],

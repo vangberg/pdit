@@ -29,7 +29,7 @@ import {
   closeBracketsKeymap,
 } from "@codemirror/autocomplete";
 import { lintKeymap } from "@codemirror/lint";
-import { r } from "codemirror-lang-r";
+import { python } from "@codemirror/lang-python";
 import {
   resultGroupingExtension,
   setLineGroups,
@@ -166,7 +166,7 @@ export function Editor({
           ...completionKeymap,
           ...lintKeymap,
         ]),
-        r(),
+        python(),
         resultGroupingExtension,
         lineGroupLayoutExtension,
         debugPanelExtension(),
