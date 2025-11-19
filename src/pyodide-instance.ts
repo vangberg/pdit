@@ -28,16 +28,10 @@ export async function initializePyodide(): Promise<void> {
       indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/',
     });
 
-    // Install plotnine and dependencies for plotting support
-    await pyodideInstance.loadPackage(['numpy', 'pandas', 'matplotlib', 'micropip']);
+    // Install matplotlib and dependencies for plotting support
+    await pyodideInstance.loadPackage(['numpy', 'matplotlib']);
 
-    // Install plotnine via micropip
-    await pyodideInstance.runPythonAsync(`
-import micropip
-await micropip.install('plotnine')
-`);
-
-    // Set up matplotlib backend and configure figure capture for plotnine
+    // Set up matplotlib backend and configure figure capture
     await pyodideInstance.runPythonAsync(`
 import sys
 import io

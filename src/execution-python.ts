@@ -132,9 +132,6 @@ _rdit_original_stderr = sys.stderr
         }
       }
 
-      // Start collecting figures
-      startFigureCollection();
-
       // Reset output buffers
       await pyodide.runPythonAsync(`
 _rdit_stdout = io.StringIO()
@@ -156,19 +153,28 @@ try:
     compiled = compile(code, '<string>', 'eval')
     result = eval(compiled)
 
-    # Handle plotnine plots - render them to display
+    # Print result if it's not None and not a matplotlib object (REPL behavior)
     if result is not None:
+        # Check if it's a matplotlib object (Figure, Axes, Artist, etc.)
+        is_mpl_object = False
         try:
-            from plotnine import ggplot
-            if isinstance(result, ggplot):
-                # Render the plotnine plot (creates matplotlib figure)
-                result.draw()
-                # Don't print the repr for plotnine objects
-            else:
-                # Print result for non-plotnine objects (REPL behavior)
-                print(repr(result))
-        except ImportError:
-            # plotnine not available, just print repr
+            import matplotlib
+            if isinstance(result, (
+                matplotlib.figure.Figure,
+                matplotlib.axes.Axes,
+                matplotlib.artist.Artist,
+                matplotlib.lines.Line2D,
+                matplotlib.patches.Patch,
+                matplotlib.collections.Collection,
+                matplotlib.text.Text,
+                matplotlib.image.AxesImage,
+                list  # plt.plot() returns a list of Line2D objects
+            )):
+                is_mpl_object = True
+        except (ImportError, AttributeError):
+            pass
+
+        if not is_mpl_object:
             print(repr(result))
 except SyntaxError:
     # If eval fails, use exec (statement)
@@ -211,17 +217,28 @@ _rdit_stderr.getvalue()
         });
       }
 
-      // Stop collecting and get figures
-      const figureBase64s = await stopFigureCollection();
+      // Only capture figures if this statement should display them
+      // Check if code indicates we want to show a plot
+      const shouldCaptureFigures =
+        code.includes('plt.show()') ||
+        code.includes('.show()') ||
+        code.includes('plt.savefig');
+
       const images: ImageBitmap[] = [];
 
-      // Convert base64 figures to ImageBitmaps
-      for (const base64 of figureBase64s) {
-        try {
-          const bitmap = await base64ToImageBitmap(base64);
-          images.push(bitmap);
-        } catch (error) {
-          console.error('Error converting figure to ImageBitmap:', error);
+      if (shouldCaptureFigures) {
+        // Start and stop collection to capture figures
+        startFigureCollection();
+        const figureBase64s = await stopFigureCollection();
+
+        // Convert base64 figures to ImageBitmaps
+        for (const base64 of figureBase64s) {
+          try {
+            const bitmap = await base64ToImageBitmap(base64);
+            images.push(bitmap);
+          } catch (error) {
+            console.error('Error converting figure to ImageBitmap:', error);
+          }
         }
       }
 
