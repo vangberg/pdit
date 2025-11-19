@@ -89,9 +89,10 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
       >
         {lineGroups.map((group) => {
           const topValue = lineGroupTops?.get(group.id);
+          const groupClassName = group.allInvisible ? "output-group output-group-invisible" : "output-group";
           return (
             <div
-              className="output-group"
+              className={groupClassName}
               key={group.id}
               ref={(el) => {
                 if (el) {
@@ -121,6 +122,7 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
                     key={expression.id}
                     expression={expression}
                     index={index}
+                    allInvisible={group.allInvisible}
                   />
                 );
               })}

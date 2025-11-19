@@ -6,6 +6,7 @@ export interface LineGroup {
   previousResultIds?: number[];
   lineStart: number;
   lineEnd: number;
+  allInvisible?: boolean;
 }
 
 let lineGroupIdCounter = 0;
@@ -86,11 +87,17 @@ export function computeLineGroups(results: Expression[]): LineGroup[] {
     }
 
     if (minLine !== Number.POSITIVE_INFINITY && maxLine !== Number.NEGATIVE_INFINITY) {
+      // Check if all results in this group are invisible
+      const allInvisible = groupResults.every(
+        (result) => result.result?.isInvisible === true
+      );
+
       groups.push({
         id: `lg-${lineGroupIdCounter++}`,
         resultIds: [...resultIds].sort((a, b) => a - b),
         lineStart: minLine,
         lineEnd: maxLine,
+        allInvisible,
       });
     }
   }

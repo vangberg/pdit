@@ -5,9 +5,10 @@ interface OutputProps {
   expression: Expression;
   index: number;
   ref?: (element: HTMLDivElement | null) => void;
+  allInvisible?: boolean;
 }
 
-export const Output: React.FC<OutputProps> = ({ expression, ref }) => {
+export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible }) => {
   const elementRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -34,10 +35,12 @@ export const Output: React.FC<OutputProps> = ({ expression, ref }) => {
   const width = firstImage?.width || 800;
   const height = firstImage?.height || 600;
 
+  const containerClassName = allInvisible ? "output-container output-container-invisible" : "output-container";
+
   return (
     <div
       ref={elementRef}
-      className="output-container"
+      className={containerClassName}
     >
       <div className="output-line">
         {expression.result?.output.map((item, i) => (

@@ -23,13 +23,17 @@ export class GroupValue extends RangeValue {
   // GroupValue carries metadata for a single group range. `resultIds`
   // tracks which execution results contributed to the group so that the
   // debugger panel can present relevant information.
-  constructor(public id: string, public resultIds: number[]) {
+  constructor(
+    public id: string,
+    public resultIds: number[],
+    public allInvisible: boolean = false
+  ) {
     super();
   }
 
-  eq(_other: GroupValue) {
-    // For decoration purposes, groups are interchangeable
-    return true;
+  eq(other: GroupValue) {
+    // Compare allInvisible flag for proper decoration updates
+    return this.allInvisible === other.allInvisible;
   }
 }
 
@@ -130,7 +134,7 @@ export function lineGroupsToRangeSet(
     return {
       from: fromLine.from,
       to: toLine.to,
-      value: new GroupValue(group.id, group.resultIds),
+      value: new GroupValue(group.id, group.resultIds, group.allInvisible || false),
     };
   });
 
@@ -157,6 +161,7 @@ export function rangeSetToLineGroups(
       lineStart: startLine,
       lineEnd: endLine,
       resultIds: [...value.resultIds].sort((a, b) => a - b),
+      allInvisible: value.allInvisible,
     });
   });
 
@@ -192,7 +197,8 @@ function areLineGroupsEqual(a: LineGroup[], b: LineGroup[]): boolean {
     if (
       groupA.lineStart !== groupB.lineStart ||
       groupA.lineEnd !== groupB.lineEnd ||
-      groupA.resultIds.length !== groupB.resultIds.length
+      groupA.resultIds.length !== groupB.resultIds.length ||
+      groupA.allInvisible !== groupB.allInvisible
     ) {
       return false;
     }
@@ -305,10 +311,13 @@ function mergeSnappedRanges(
       // Deduplicate while preserving order (first occurrence wins)
       const uniqueResultIds = Array.from(new Set(combinedResultIds));
 
+      // Merged group is invisible only if both groups are invisible
+      const mergedAllInvisible = current.value.allInvisible && next.value.allInvisible;
+
       current = {
         ...current,
         to: Math.max(current.to, next.to),
-        value: new GroupValue(current.value.id, uniqueResultIds)
+        value: new GroupValue(current.value.id, uniqueResultIds, mergedAllInvisible)
       };
       continue;
     }
@@ -374,12 +383,19 @@ export const lineGroupBackgroundField = StateField.define<DecorationSet>({
     for (const group of lineGroups) {
       const isRecent = group.resultIds.some(id => lastExecutedIds.has(id));
 
-      const bgClass = isRecent ? 'cm-line-group-bg cm-line-group-recent' : 'cm-line-group-bg';
+      // For invisible groups, use different classes (border only, no background)
+      let bgClass: string;
+      if (group.allInvisible) {
+        bgClass = isRecent ? 'cm-line-group-invisible cm-line-group-recent' : 'cm-line-group-invisible';
+      } else {
+        bgClass = isRecent ? 'cm-line-group-bg cm-line-group-recent' : 'cm-line-group-bg';
+      }
+
       for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
         const line = tr.state.doc.line(lineNum);
         decorations.push(Decoration.line({ class: bgClass }).range(line.from));
-        // Add border to first line of each group
-        if (lineNum === group.lineStart) {
+        // Add border to first line of each group (skip for invisible groups)
+        if (lineNum === group.lineStart && !group.allInvisible) {
           decorations.push(Decoration.line({ class: 'cm-line-group-top' }).range(line.from));
         }
       }
@@ -399,6 +415,10 @@ const groupTheme = EditorView.theme({
   },
   ".cm-line-group-bg": {
     backgroundColor: "rgba(225, 239, 254, 0.3)",
+    borderLeft: "3px solid #7dd3fc",
+  },
+  ".cm-line-group-invisible": {
+    // Border only, no background for invisible groups
     borderLeft: "3px solid #7dd3fc",
   },
   ".cm-line-group-top": {
