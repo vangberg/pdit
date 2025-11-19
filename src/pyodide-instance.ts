@@ -36,9 +36,13 @@ export async function initializePyodide(): Promise<void> {
 import sys
 import io
 import base64
+import warnings
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
+# Suppress the "non-GUI backend" warning since we're intentionally using Agg
+warnings.filterwarnings('ignore', message='.*non-GUI backend.*')
 
 # Store for captured figures
 _rdit_figures = []
