@@ -1,4 +1,4 @@
-import React, { useEffect, useImperativeHandle, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import {
   EditorView,
   keymap,
@@ -53,6 +53,8 @@ export interface EditorHandles {
     lineGroups: LineGroup[];
     lastExecutedResultIds?: number[];
   }) => void;
+  executeCurrent: () => void;
+  focus: () => void;
 }
 
 interface EditorProps {
@@ -102,6 +104,14 @@ export function Editor({
     onLineGroupsChangeRef.current = onLineGroupsChange;
   }, [onLineGroupsChange]);
 
+  const executeCurrentSelection = useCallback((view: EditorView) => {
+    const selection = view.state.selection.main;
+    const fromLine = view.state.doc.lineAt(selection.from).number;
+    const toLine = view.state.doc.lineAt(selection.to).number;
+    const currentText = view.state.doc.toString();
+    onExecuteCurrentRef.current?.(currentText, { from: fromLine, to: toLine });
+  }, []);
+
   useEffect(() => {
     if (!editorRef.current) {
       return;
@@ -114,11 +124,7 @@ export function Editor({
           {
             key: "Cmd-Enter",
             run: (view: EditorView) => {
-              const selection = view.state.selection.main;
-              const fromLine = view.state.doc.lineAt(selection.from).number;
-              const toLine = view.state.doc.lineAt(selection.to).number;
-              const currentText = view.state.doc.toString();
-              onExecuteCurrentRef.current?.(currentText, { from: fromLine, to: toLine });
+              executeCurrentSelection(view);
               return true;
             },
           },
@@ -252,8 +258,22 @@ export function Editor({
 
         view.dispatch(transaction);
       },
+      executeCurrent: () => {
+        const view = viewRef.current;
+        if (!view) {
+          return;
+        }
+        executeCurrentSelection(view);
+      },
+      focus: () => {
+        const view = viewRef.current;
+        if (!view) {
+          return;
+        }
+        view.focus();
+      },
     }),
-    []
+    [executeCurrentSelection]
   );
 
   useEffect(() => {

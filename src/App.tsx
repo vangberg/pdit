@@ -11,7 +11,6 @@ import { useResults } from "./results";
 
 const initialCode = `# Dataset overview and summary statistics
 head(mtcars)
-Sys.sleep(1)
 summary(mtcars)
 
 Sys.time()
@@ -35,7 +34,8 @@ summary(model)`;
 
 function App() {
   const editorRef = useRef<EditorHandles | null>(null);
-  const { expressions, lineGroups, setLineGroups, addExpressions } = useResults();
+  const { expressions, lineGroups, setLineGroups, addExpressions } =
+    useResults();
   const [lineGroupHeights, setLineGroupHeights] = useState<Map<string, number>>(
     new Map()
   );
@@ -142,11 +142,21 @@ function App() {
 
   const handleRunAll = useCallback(() => {
     handleExecuteAll(doc?.toString() || "");
+    editorRef.current?.focus();
   }, [handleExecuteAll, doc]);
+
+  const handleRunCurrent = useCallback(() => {
+    editorRef.current?.executeCurrent();
+    editorRef.current?.focus();
+  }, []);
 
   return (
     <div id="app">
-      <TopBar isWebRReady={isWebRReady} onRunAll={handleRunAll} />
+      <TopBar
+        isWebRReady={isWebRReady}
+        onRunAll={handleRunAll}
+        onRunCurrent={handleRunCurrent}
+      />
       <div className="split-container">
         <div className="editor-half">
           <Editor
