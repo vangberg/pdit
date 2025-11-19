@@ -31,50 +31,53 @@ export async function initializePyodide(): Promise<void> {
     // Install matplotlib and dependencies for plotting support
     await pyodideInstance.loadPackage(['numpy', 'matplotlib']);
 
-    // Set up matplotlib backend and configure figure capture
+    // Set up custom matplotlib backend for figure capture
     await pyodideInstance.runPythonAsync(`
 import sys
 import io
 import base64
 import warnings
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 
-# Suppress the "non-GUI backend" warning since we're intentionally using Agg
-warnings.filterwarnings('ignore', message='.*non-GUI backend.*')
+# Create custom backend before importing matplotlib.pyplot
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.backend_bases import FigureManagerBase
+import matplotlib
+import matplotlib.pyplot as plt
 
 # Storage for captured figures
 _rdit_captured_figures = []
 
-def _rdit_capture_current_figures():
-    """Capture all current matplotlib figures as base64 PNG strings and clear them"""
-    global _rdit_captured_figures
-    figures = []
+class RditFigureManager(FigureManagerBase):
+    """Custom figure manager that captures figures when show() is called"""
 
-    for fignum in plt.get_fignums():
-        fig = plt.figure(fignum)
+    def show(self):
+        """Capture the figure as base64 PNG when show() is called"""
+        global _rdit_captured_figures
+
+        # Render to PNG
+        canvas = self.canvas
         buf = io.BytesIO()
-        fig.savefig(buf, format='png', dpi=100, bbox_inches='tight')
+        canvas.figure.savefig(buf, format='png', dpi=100, bbox_inches='tight')
         buf.seek(0)
         img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-        figures.append(img_base64)
         buf.close()
 
-    # Clear all figures after capturing
-    plt.close('all')
+        # Store the captured figure
+        _rdit_captured_figures.append(img_base64)
 
-    return figures
+        # Close the figure after capturing
+        plt.close(self.canvas.figure)
 
-# Override plt.show() to capture figures instead of trying to display
-_original_show = plt.show
+class RditFigureCanvas(FigureCanvasAgg):
+    """Custom canvas that uses our figure manager"""
+    manager_class = RditFigureManager
 
-def _rdit_show(*args, **kwargs):
-    """Custom show() that captures figures for display in the UI"""
-    global _rdit_captured_figures
-    _rdit_captured_figures = _rdit_capture_current_figures()
+# Register our custom backend
+matplotlib.backends.backend_agg.FigureCanvas = RditFigureCanvas
+matplotlib.use('Agg')
 
-plt.show = _rdit_show
+# Suppress warnings
+warnings.filterwarnings('ignore', message='.*non-GUI backend.*')
 
 def _rdit_get_captured_figures():
     """Get and clear captured figures"""
