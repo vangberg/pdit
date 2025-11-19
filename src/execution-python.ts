@@ -1,4 +1,4 @@
-import { getPyodide } from './pyodide-instance';
+import { getPyodide, capturePlots, base64ToImageBitmap } from './pyodide-instance';
 
 export interface OutputItem {
   type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message';
@@ -29,7 +29,7 @@ async function parseStatements(script: string): Promise<Array<{ code: string; li
 
   try {
     // Use Python's AST to parse and get statement boundaries
-    const result = pyodide.runPython(`
+    const result = await pyodide.runPythonAsync(`
 import ast
 
 script = ${JSON.stringify(script)}
@@ -191,9 +191,22 @@ _rdit_stderr.getvalue()
         });
       }
 
+      // Capture any matplotlib plots created during execution
+      let images: ImageBitmap[] | undefined;
+      try {
+        const plotsBase64 = await capturePlots();
+        if (plotsBase64.length > 0) {
+          images = await Promise.all(
+            plotsBase64.map(base64 => base64ToImageBitmap(base64))
+          );
+        }
+      } catch (error) {
+        console.warn('Failed to capture plots:', error);
+      }
+
       // Determine if output is invisible
-      // In Python, we consider output invisible if there's no stdout or stderr
-      const hasVisibleOutput = output.length > 0;
+      // In Python, we consider output invisible if there's no stdout, stderr, or images
+      const hasVisibleOutput = output.length > 0 || (images && images.length > 0);
 
       yield {
         id: globalIdCounter++,
@@ -201,6 +214,7 @@ _rdit_stderr.getvalue()
         lineEnd,
         result: {
           output,
+          images,
           isInvisible: !hasVisibleOutput,
         },
       };
