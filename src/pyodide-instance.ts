@@ -44,14 +44,14 @@ import matplotlib.pyplot as plt
 # Suppress the "non-GUI backend" warning since we're intentionally using Agg
 warnings.filterwarnings('ignore', message='.*non-GUI backend.*')
 
-# Store for captured figures
-_rdit_figures = []
-_rdit_collecting = False
+# Storage for captured figures
+_rdit_captured_figures = []
 
-def _rdit_capture_figures():
-    """Capture all current matplotlib figures as base64 PNG strings"""
-    global _rdit_figures
+def _rdit_capture_current_figures():
+    """Capture all current matplotlib figures as base64 PNG strings and clear them"""
+    global _rdit_captured_figures
     figures = []
+
     for fignum in plt.get_fignums():
         fig = plt.figure(fignum)
         buf = io.BytesIO()
@@ -60,11 +60,28 @@ def _rdit_capture_figures():
         img_base64 = base64.b64encode(buf.read()).decode('utf-8')
         figures.append(img_base64)
         buf.close()
+
+    # Clear all figures after capturing
+    plt.close('all')
+
     return figures
 
-def _rdit_clear_figures():
-    """Clear all matplotlib figures"""
-    plt.close('all')
+# Override plt.show() to capture figures instead of trying to display
+_original_show = plt.show
+
+def _rdit_show(*args, **kwargs):
+    """Custom show() that captures figures for display in the UI"""
+    global _rdit_captured_figures
+    _rdit_captured_figures = _rdit_capture_current_figures()
+
+plt.show = _rdit_show
+
+def _rdit_get_captured_figures():
+    """Get and clear captured figures"""
+    global _rdit_captured_figures
+    figs = _rdit_captured_figures
+    _rdit_captured_figures = []
+    return figs
 `);
 
     console.log('Pyodide initialized successfully');
@@ -92,34 +109,19 @@ export function isPyodideInitialized(): boolean {
 }
 
 /**
- * Start collecting matplotlib figures for the current expression
+ * Get any figures that were captured via plt.show()
  */
-export function startFigureCollection(): void {
-  // capturedFigures = [];
-  // isCollectingFigures = true;
-}
-
-/**
- * Stop collecting and return captured figures as base64 PNG strings
- */
-export async function stopFigureCollection(): Promise<string[]> {
-  // isCollectingFigures = false;
-
+export function getCapturedFigures(): string[] {
   if (!pyodideInstance) {
     return [];
   }
 
   try {
-    // Capture any figures created during execution
-    const figures = pyodideInstance.runPython(`_rdit_capture_figures()`);
+    const figures = pyodideInstance.runPython(`_rdit_get_captured_figures()`);
     const result = figures.toJs() as string[];
-
-    // Clear figures after capture
-    await pyodideInstance.runPythonAsync(`_rdit_clear_figures()`);
-
     return Array.from(result);
   } catch (error) {
-    console.error('Error capturing figures:', error);
+    console.error('Error getting captured figures:', error);
     return [];
   }
 }

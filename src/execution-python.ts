@@ -1,7 +1,6 @@
 import {
   getPyodide,
-  startFigureCollection,
-  stopFigureCollection,
+  getCapturedFigures,
   base64ToImageBitmap,
 } from './pyodide-instance';
 
@@ -217,28 +216,17 @@ _rdit_stderr.getvalue()
         });
       }
 
-      // Only capture figures if this statement should display them
-      // Check if code indicates we want to show a plot
-      const shouldCaptureFigures =
-        code.includes('plt.show()') ||
-        code.includes('.show()') ||
-        code.includes('plt.savefig');
-
+      // Get any figures that were captured during execution (via plt.show())
+      const figureBase64s = getCapturedFigures();
       const images: ImageBitmap[] = [];
 
-      if (shouldCaptureFigures) {
-        // Start and stop collection to capture figures
-        startFigureCollection();
-        const figureBase64s = await stopFigureCollection();
-
-        // Convert base64 figures to ImageBitmaps
-        for (const base64 of figureBase64s) {
-          try {
-            const bitmap = await base64ToImageBitmap(base64);
-            images.push(bitmap);
-          } catch (error) {
-            console.error('Error converting figure to ImageBitmap:', error);
-          }
+      // Convert base64 figures to ImageBitmaps
+      for (const base64 of figureBase64s) {
+        try {
+          const bitmap = await base64ToImageBitmap(base64);
+          images.push(bitmap);
+        } catch (error) {
+          console.error('Error converting figure to ImageBitmap:', error);
         }
       }
 
