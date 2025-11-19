@@ -34,40 +34,42 @@ async function parseStatements(script: string): Promise<Array<{ code: string; li
 
   try {
     // Use Python's AST to parse and get statement boundaries
-    const result = await pyodide.runPythonAsync(`
+    const result = pyodide.runPython(`
 import ast
-import sys
 
 script = ${JSON.stringify(script)}
 
-try:
-    tree = ast.parse(script)
-    statements = []
+def parse_statements():
+    try:
+        tree = ast.parse(script)
+        statements = []
 
-    for node in tree.body:
-        # Get the line range for this statement
-        line_start = node.lineno
-        line_end = node.end_lineno if hasattr(node, 'end_lineno') and node.end_lineno else node.lineno
+        for node in tree.body:
+            # Get the line range for this statement
+            line_start = node.lineno
+            line_end = node.end_lineno if hasattr(node, 'end_lineno') and node.end_lineno else node.lineno
 
-        # Extract the code for this statement
-        lines = script.split('\\n')
-        code_lines = lines[line_start - 1:line_end]
-        code = '\\n'.join(code_lines)
+            # Extract the code for this statement
+            lines = script.split('\\n')
+            code_lines = lines[line_start - 1:line_end]
+            code = '\\n'.join(code_lines)
 
-        statements.append({
-            'code': code,
-            'lineStart': line_start,
-            'lineEnd': line_end
-        })
+            statements.append({
+                'code': code,
+                'lineStart': line_start,
+                'lineEnd': line_end
+            })
 
-    statements
-except SyntaxError as e:
-    # If there's a syntax error, treat entire script as one statement
-    [{
-        'code': script,
-        'lineStart': 1,
-        'lineEnd': len(script.split('\\n'))
-    }]
+        return statements
+    except SyntaxError as e:
+        # If there's a syntax error, treat entire script as one statement
+        return [{
+            'code': script,
+            'lineStart': 1,
+            'lineEnd': len(script.split('\\n'))
+        }]
+
+parse_statements()
 `);
 
     return result.toJs({ dict_converter: Object.fromEntries });
