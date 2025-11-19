@@ -9,29 +9,37 @@ import { initializePyodide } from "./pyodide-instance";
 import { TopBar } from "./TopBar";
 import { useResults } from "./results";
 
-const initialCode = `# Python/Pyodide Demo
+const initialCode = `# Python/Pyodide with plotnine
+import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+from plotnine import ggplot, aes, geom_line, geom_point, labs, theme_minimal
 
 # Create sample data
-x = np.linspace(0, 10, 100)
-y = np.sin(x)
+data = pd.DataFrame({
+    'x': np.linspace(0, 10, 100),
+})
+data['y'] = np.sin(data['x'])
 
-# Create a plot
-plt.figure(figsize=(8, 4))
-plt.plot(x, y, 'b-', linewidth=2)
-plt.title('Sine Wave')
-plt.xlabel('x')
-plt.ylabel('sin(x)')
-plt.grid(True, alpha=0.3)
-plt.show()
+# Create a ggplot-style plot
+plot = (
+    ggplot(data, aes('x', 'y'))
+    + geom_line(color='blue', size=1)
+    + geom_point(alpha=0.3)
+    + labs(
+        title='Sine Wave',
+        x='x',
+        y='sin(x)'
+    )
+    + theme_minimal()
+)
+plot
 
 # Print some results
-print("Mean:", np.mean(y))
-print("Std dev:", np.std(y))
+print("Mean:", data['y'].mean())
+print("Std dev:", data['y'].std())
 
 # Calculate some values
-result = np.sum(y)
+result = data['y'].sum()
 result`;
 
 function App() {

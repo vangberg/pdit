@@ -155,9 +155,21 @@ try:
     code = ${JSON.stringify(code)}
     compiled = compile(code, '<string>', 'eval')
     result = eval(compiled)
-    # Print result if it's not None (REPL behavior)
+
+    # Handle plotnine plots - render them to display
     if result is not None:
-        print(repr(result))
+        try:
+            from plotnine import ggplot
+            if isinstance(result, ggplot):
+                # Render the plotnine plot (creates matplotlib figure)
+                result.draw()
+                # Don't print the repr for plotnine objects
+            else:
+                # Print result for non-plotnine objects (REPL behavior)
+                print(repr(result))
+        except ImportError:
+            # plotnine not available, just print repr
+            print(repr(result))
 except SyntaxError:
     # If eval fails, use exec (statement)
     code = ${JSON.stringify(code)}
