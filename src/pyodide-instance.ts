@@ -29,7 +29,7 @@ export async function initializePyodide(): Promise<void> {
     });
 
     // Install plotnine and dependencies for plotting support
-    await pyodideInstance.loadPackage(['numpy', 'pandas', 'matplotlib']);
+    await pyodideInstance.loadPackage(['numpy', 'pandas', 'matplotlib', 'micropip']);
 
     // Install plotnine via micropip
     await pyodideInstance.runPythonAsync(`
