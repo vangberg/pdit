@@ -37,12 +37,17 @@ import sys
 import io
 import base64
 import warnings
+import matplotlib
+matplotlib.use('Agg')
 
-# Create custom backend before importing matplotlib.pyplot
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.backend_bases import FigureManagerBase
-import matplotlib
+from matplotlib._pylab_helpers import Gcf
 import matplotlib.pyplot as plt
+import matplotlib.backends.backend_agg as backend_agg
+
+# Suppress warnings
+warnings.filterwarnings('ignore', message='.*non-GUI backend.*')
 
 # Storage for captured figures
 _rdit_captured_figures = []
@@ -72,12 +77,18 @@ class RditFigureCanvas(FigureCanvasAgg):
     """Custom canvas that uses our figure manager"""
     manager_class = RditFigureManager
 
-# Register our custom backend
-matplotlib.backends.backend_agg.FigureCanvas = RditFigureCanvas
-matplotlib.use('Agg')
+# Override new_figure_manager to use our custom manager
+_original_new_figure_manager = backend_agg.new_figure_manager
 
-# Suppress warnings
-warnings.filterwarnings('ignore', message='.*non-GUI backend.*')
+def new_figure_manager(num, *args, **kwargs):
+    """Create a new figure manager with our custom manager class"""
+    FigureClass = kwargs.pop('FigureClass', matplotlib.figure.Figure)
+    fig = FigureClass(*args, **kwargs)
+    canvas = RditFigureCanvas(fig)
+    manager = RditFigureManager(canvas, num)
+    return manager
+
+backend_agg.new_figure_manager = new_figure_manager
 
 def _rdit_get_captured_figures():
     """Get and clear captured figures"""
