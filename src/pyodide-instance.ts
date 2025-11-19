@@ -4,10 +4,6 @@ import { loadPyodide, type PyodideInterface } from 'pyodide';
 let pyodideInstance: PyodideInterface | null = null;
 let initializationPromise: Promise<void> | null = null;
 
-// Matplotlib figure capture (for future use)
-// let capturedFigures: string[] = [];
-// let isCollectingFigures = false;
-
 /**
  * Initialize the Pyodide instance.
  * This should be called once when the application starts.
@@ -27,76 +23,6 @@ export async function initializePyodide(): Promise<void> {
     pyodideInstance = await loadPyodide({
       indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/',
     });
-
-    // Install matplotlib and dependencies for plotting support
-    await pyodideInstance.loadPackage(['numpy', 'matplotlib']);
-
-    // Set up custom matplotlib backend for figure capture
-    await pyodideInstance.runPythonAsync(`
-import sys
-import io
-import base64
-import warnings
-import matplotlib
-matplotlib.use('Agg')
-
-from matplotlib.backends.backend_agg import FigureCanvasAgg
-from matplotlib.backend_bases import FigureManagerBase
-from matplotlib._pylab_helpers import Gcf
-import matplotlib.pyplot as plt
-import matplotlib.backends.backend_agg as backend_agg
-
-# Suppress warnings
-warnings.filterwarnings('ignore', message='.*non-GUI backend.*')
-
-# Storage for captured figures
-_rdit_captured_figures = []
-
-class RditFigureManager(FigureManagerBase):
-    """Custom figure manager that captures figures when show() is called"""
-
-    def show(self):
-        """Capture the figure as base64 PNG when show() is called"""
-        global _rdit_captured_figures
-
-        # Render to PNG
-        canvas = self.canvas
-        buf = io.BytesIO()
-        canvas.figure.savefig(buf, format='png', dpi=100, bbox_inches='tight')
-        buf.seek(0)
-        img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-        buf.close()
-
-        # Store the captured figure
-        _rdit_captured_figures.append(img_base64)
-
-        # Close the figure after capturing
-        plt.close(self.canvas.figure)
-
-class RditFigureCanvas(FigureCanvasAgg):
-    """Custom canvas that uses our figure manager"""
-    manager_class = RditFigureManager
-
-# Override new_figure_manager to use our custom manager
-_original_new_figure_manager = backend_agg.new_figure_manager
-
-def new_figure_manager(num, *args, **kwargs):
-    """Create a new figure manager with our custom manager class"""
-    FigureClass = kwargs.pop('FigureClass', matplotlib.figure.Figure)
-    fig = FigureClass(*args, **kwargs)
-    canvas = RditFigureCanvas(fig)
-    manager = RditFigureManager(canvas, num)
-    return manager
-
-backend_agg.new_figure_manager = new_figure_manager
-
-def _rdit_get_captured_figures():
-    """Get and clear captured figures"""
-    global _rdit_captured_figures
-    figs = _rdit_captured_figures
-    _rdit_captured_figures = []
-    return figs
-`);
 
     console.log('Pyodide initialized successfully');
   })();
@@ -120,31 +46,4 @@ export function getPyodide(): PyodideInterface {
  */
 export function isPyodideInitialized(): boolean {
   return pyodideInstance !== null;
-}
-
-/**
- * Get any figures that were captured via plt.show()
- */
-export function getCapturedFigures(): string[] {
-  if (!pyodideInstance) {
-    return [];
-  }
-
-  try {
-    const figures = pyodideInstance.runPython(`_rdit_get_captured_figures()`);
-    const result = figures.toJs() as string[];
-    return Array.from(result);
-  } catch (error) {
-    console.error('Error getting captured figures:', error);
-    return [];
-  }
-}
-
-/**
- * Convert base64 PNG string to ImageBitmap
- */
-export async function base64ToImageBitmap(base64: string): Promise<ImageBitmap> {
-  const response = await fetch(`data:image/png;base64,${base64}`);
-  const blob = await response.blob();
-  return createImageBitmap(blob);
 }

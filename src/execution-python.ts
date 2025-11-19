@@ -1,8 +1,4 @@
-import {
-  getPyodide,
-  getCapturedFigures,
-  base64ToImageBitmap,
-} from './pyodide-instance';
+import { getPyodide } from './pyodide-instance';
 
 export interface OutputItem {
   type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message';
@@ -195,23 +191,9 @@ _rdit_stderr.getvalue()
         });
       }
 
-      // Get any figures that were captured during execution (via plt.show())
-      const figureBase64s = getCapturedFigures();
-      const images: ImageBitmap[] = [];
-
-      // Convert base64 figures to ImageBitmaps
-      for (const base64 of figureBase64s) {
-        try {
-          const bitmap = await base64ToImageBitmap(base64);
-          images.push(bitmap);
-        } catch (error) {
-          console.error('Error converting figure to ImageBitmap:', error);
-        }
-      }
-
       // Determine if output is invisible
-      // In Python, we consider output invisible if there's no stdout, stderr, or images
-      const hasVisibleOutput = output.length > 0 || images.length > 0;
+      // In Python, we consider output invisible if there's no stdout or stderr
+      const hasVisibleOutput = output.length > 0;
 
       yield {
         id: globalIdCounter++,
@@ -219,7 +201,6 @@ _rdit_stderr.getvalue()
         lineEnd,
         result: {
           output,
-          images: images.length > 0 ? images : undefined,
           isInvisible: !hasVisibleOutput,
         },
       };

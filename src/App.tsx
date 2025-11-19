@@ -10,29 +10,25 @@ import { TopBar } from "./TopBar";
 import { useResults } from "./results";
 
 const initialCode = `# Python/Pyodide Demo
-import numpy as np
-import matplotlib.pyplot as plt
+# Simple calculations
+x = 5 + 3
+x
 
-# Create sample data
-x = np.linspace(0, 10, 100)
-y = np.sin(x)
+y = x * 2
+y
 
-# Create a plot
-plt.figure(figsize=(8, 4))
-plt.plot(x, y, 'b-', linewidth=2)
-plt.title('Sine Wave')
-plt.xlabel('x')
-plt.ylabel('sin(x)')
-plt.grid(True, alpha=0.3)
-plt.show()
+# String operations
+name = "Python"
+greeting = f"Hello, {name}!"
+print(greeting)
 
-# Print some results
-print("Mean:", np.mean(y))
-print("Std dev:", np.std(y))
+# List comprehension
+squares = [i**2 for i in range(10)]
+squares
 
-# Calculate some values
-result = np.sum(y)
-result`;
+# Sum calculation
+total = sum(squares)
+total`;
 
 function App() {
   const editorRef = useRef<EditorHandles | null>(null);
