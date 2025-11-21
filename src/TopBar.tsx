@@ -1,10 +1,15 @@
 import React from "react";
 
+export type BackendType = 'pyodide' | 'python-server';
+
 interface TopBarProps {
   isPyodideReady: boolean;
   onRunAll: () => void;
   onRunCurrent?: () => void;
   initMessage?: string;
+  backendType: BackendType;
+  onBackendChange: (backend: BackendType) => void;
+  pythonServerAvailable: boolean;
 }
 
 function detectMacOS(): boolean {
@@ -81,34 +86,74 @@ function StatusIndicator({ isReady, message }: StatusIndicatorProps) {
   );
 }
 
-export function TopBar({ isPyodideReady, onRunAll, onRunCurrent, initMessage }: TopBarProps) {
+interface BackendSelectorProps {
+  backendType: BackendType;
+  onChange: (backend: BackendType) => void;
+  pythonServerAvailable: boolean;
+}
+
+function BackendSelector({ backendType, onChange, pythonServerAvailable }: BackendSelectorProps) {
+  return (
+    <div className="backend-selector">
+      <label className="backend-selector-label">BACKEND:</label>
+      <select
+        className="backend-selector-dropdown"
+        value={backendType}
+        onChange={(e) => onChange(e.target.value as BackendType)}
+      >
+        <option value="pyodide">Pyodide (Browser)</option>
+        <option value="python-server" disabled={!pythonServerAvailable}>
+          Python Server {!pythonServerAvailable && '(Unavailable)'}
+        </option>
+      </select>
+    </div>
+  );
+}
+
+export function TopBar({
+  isPyodideReady,
+  onRunAll,
+  onRunCurrent,
+  initMessage,
+  backendType,
+  onBackendChange,
+  pythonServerAvailable
+}: TopBarProps) {
   const [hoveredButton, setHoveredButton] = React.useState<string | null>(null);
   const shortcuts = getShortcuts();
+
+  const isBackendReady = backendType === 'python-server' ? pythonServerAvailable : isPyodideReady;
 
   return (
     <div className="top-bar">
       <div className="top-bar-content">
+        <BackendSelector
+          backendType={backendType}
+          onChange={onBackendChange}
+          pythonServerAvailable={pythonServerAvailable}
+        />
+
         <ActionButton
           label="▶ RUN CURRENT"
           onClick={onRunCurrent || (() => {})}
-          disabled={!isPyodideReady}
+          disabled={!isBackendReady}
           onMouseEnter={() => setHoveredButton("current")}
           onMouseLeave={() => setHoveredButton(null)}
           tooltip={shortcuts.current}
-          showTooltip={hoveredButton === "current" && isPyodideReady}
+          showTooltip={hoveredButton === "current" && isBackendReady}
         />
 
         <ActionButton
           label="▶ RUN ALL"
           onClick={onRunAll}
-          disabled={!isPyodideReady}
+          disabled={!isBackendReady}
           onMouseEnter={() => setHoveredButton("all")}
           onMouseLeave={() => setHoveredButton(null)}
           tooltip={shortcuts.all}
-          showTooltip={hoveredButton === "all" && isPyodideReady}
+          showTooltip={hoveredButton === "all" && isBackendReady}
         />
 
-        <StatusIndicator isReady={isPyodideReady} message={initMessage} />
+        <StatusIndicator isReady={isBackendReady} message={initMessage} />
       </div>
     </div>
   );

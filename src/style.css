@@ -45,6 +45,50 @@ body {
   align-items: center;
 }
 
+.backend-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 1rem;
+  padding-right: 1rem;
+  border-right: 1px solid #4b5563;
+}
+
+.backend-selector-label {
+  color: #9ca3af;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.backend-selector-dropdown {
+  background: #1f2937;
+  color: #e5e7eb;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  transition: all 0.2s;
+}
+
+.backend-selector-dropdown:hover {
+  border-color: #6b7280;
+  background: #374151;
+}
+
+.backend-selector-dropdown:focus {
+  outline: none;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.2);
+}
+
+.backend-selector-dropdown option:disabled {
+  color: #6b7280;
+}
+
 .top-bar-button-wrapper {
   position: relative;
 }

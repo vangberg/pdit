@@ -1,7 +1,14 @@
 import "./style.css";
 import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
-import { executeScript, Expression } from "./execution-python";
+import {
+  executeScript,
+  Expression,
+  setBackendType,
+  getBackendType,
+  checkPythonServer,
+  type BackendType
+} from "./execution-python";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { LineGroup } from "./compute-line-groups";
@@ -42,12 +49,32 @@ function App() {
   );
   const [isPyodideReady, setIsPyodideReady] = useState(false);
   const [doc, setDoc] = useState<Text>();
+  const [backendType, setBackendTypeState] = useState<BackendType>(() => getBackendType());
+  const [pythonServerAvailable, setPythonServerAvailable] = useState(false);
 
-  // Initialize Pyodide on mount
+  // Check Python server availability on mount
+  useEffect(() => {
+    const checkServer = async () => {
+      const available = await checkPythonServer();
+      console.log('[App] Python server available:', available);
+      setPythonServerAvailable(available);
+
+      // If Python server is available, default to it
+      if (available) {
+        handleBackendChange('python-server');
+      }
+    };
+    checkServer();
+  }, []);
+
+  // Initialize Pyodide in background (for when user switches to it)
   useEffect(() => {
     const init = async () => {
       try {
-        console.log("Initializing Pyodide...");
+        // Give server check time to complete first
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        console.log("Initializing Pyodide in background...");
         await initializePyodide();
         console.log("Pyodide ready!");
         setIsPyodideReady(true);
@@ -56,6 +83,12 @@ function App() {
       }
     };
     init();
+  }, []);
+
+  const handleBackendChange = useCallback((backend: BackendType) => {
+    console.log('[App] Changing backend to:', backend);
+    setBackendType(backend);
+    setBackendTypeState(backend);
   }, []);
 
   const handleLineGroupHeightChange = useCallback(
@@ -94,10 +127,8 @@ function App() {
       script: string,
       options?: { lineRange?: { from: number; to: number } }
     ) => {
-      if (!isPyodideReady) {
-        console.warn("Pyodide is not ready yet");
-        return;
-      }
+      // Note: executeScript will check for Python server first,
+      // then fall back to Pyodide if needed. We only warn if neither is ready.
 
       try {
         const allExpressions: Expression[] = [];
@@ -121,7 +152,7 @@ function App() {
         console.error("Execution error:", error);
       }
     },
-    [isPyodideReady, addExpressions]
+    [addExpressions]
   );
 
   const handleExecuteCurrent = useCallback(
@@ -154,6 +185,9 @@ function App() {
         isPyodideReady={isPyodideReady}
         onRunAll={handleRunAll}
         onRunCurrent={handleRunCurrent}
+        backendType={backendType}
+        onBackendChange={handleBackendChange}
+        pythonServerAvailable={pythonServerAvailable}
       />
       <div className="split-container">
         <div className="editor-half">

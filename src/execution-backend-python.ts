@@ -144,11 +144,14 @@ export class PythonServerBackend implements ExecutionBackend {
    */
   async isAvailable(): Promise<boolean> {
     try {
+      console.log('[PythonServer] Checking health at:', `${this.baseUrl}/health`);
       const response = await fetch(`${this.baseUrl}/health`, {
         method: 'GET',
       });
+      console.log('[PythonServer] Health check response:', response.status, response.ok);
       return response.ok;
-    } catch {
+    } catch (error) {
+      console.log('[PythonServer] Health check failed:', error);
       return false;
     }
   }

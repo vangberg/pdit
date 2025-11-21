@@ -21,52 +21,66 @@ export interface ExpressionResult {
   isInvisible?: boolean;
 }
 
+export type BackendType = 'pyodide' | 'python-server';
+
 // Singleton backends
 let pyodideBackend: PyodideBackend | null = null;
 let pythonServerBackend: PythonServerBackend | null = null;
-let backendCheckPromise: Promise<ExecutionBackend> | null = null;
+let currentBackendType: BackendType = 'pyodide';
 
 /**
- * Get the appropriate execution backend.
- * Checks if Python server is available, otherwise falls back to Pyodide.
+ * Set the backend type to use for execution.
  */
-async function getBackend(): Promise<ExecutionBackend> {
-  // Return cached promise if already checking
-  if (backendCheckPromise) {
-    return backendCheckPromise;
-  }
-
-  backendCheckPromise = (async () => {
-    // Check for Python server via URL parameter or default
-    const params = new URLSearchParams(window.location.search);
-    const serverUrl = params.get('python-server') || 'http://127.0.0.1:8888';
-
-    // Try Python server first
-    if (!pythonServerBackend) {
-      pythonServerBackend = new PythonServerBackend(serverUrl);
-    }
-
-    const isServerAvailable = await pythonServerBackend.isAvailable();
-
-    if (isServerAvailable) {
-      console.log('Using Python server backend');
-      return pythonServerBackend;
-    }
-
-    // Fall back to Pyodide
-    console.log('Python server not available, using Pyodide backend');
-    if (!pyodideBackend) {
-      pyodideBackend = new PyodideBackend();
-    }
-    return pyodideBackend;
-  })();
-
-  return backendCheckPromise;
+export function setBackendType(type: BackendType): void {
+  console.log('[Backend] Setting backend type to:', type);
+  currentBackendType = type;
 }
 
 /**
- * Execute Python code using the appropriate backend.
- * Automatically detects if Python server is available, otherwise uses Pyodide.
+ * Get the current backend type.
+ */
+export function getBackendType(): BackendType {
+  return currentBackendType;
+}
+
+/**
+ * Get the backend instance for the selected type.
+ */
+function getBackend(): ExecutionBackend {
+  if (currentBackendType === 'python-server') {
+    if (!pythonServerBackend) {
+      const params = new URLSearchParams(window.location.search);
+      const serverUrl = params.get('python-server') || 'http://127.0.0.1:8888';
+      pythonServerBackend = new PythonServerBackend(serverUrl);
+      console.log('[Backend] Created Python server backend at', serverUrl);
+    }
+    return pythonServerBackend;
+  } else {
+    if (!pyodideBackend) {
+      pyodideBackend = new PyodideBackend();
+      console.log('[Backend] Created Pyodide backend');
+    }
+    return pyodideBackend;
+  }
+}
+
+/**
+ * Check if the Python server is available.
+ */
+export async function checkPythonServer(): Promise<boolean> {
+  const params = new URLSearchParams(window.location.search);
+  const serverUrl = params.get('python-server') || 'http://127.0.0.1:8888';
+
+  if (!pythonServerBackend) {
+    pythonServerBackend = new PythonServerBackend(serverUrl);
+  }
+
+  return await pythonServerBackend.isAvailable();
+}
+
+/**
+ * Execute Python code using the selected backend.
+ * Uses either Pyodide or Python server based on current backend type.
  * Parses the code into statements and executes them one at a time,
  * capturing output and line numbers for each statement.
  * Yields each result as it completes for streaming execution.
@@ -81,7 +95,8 @@ export async function* executeScript(
   }
 ): AsyncGenerator<Expression, void, unknown> {
   try {
-    const backend = await getBackend();
+    const backend = getBackend();
+    console.log('[Execution] Using backend:', currentBackendType);
 
     // For Python server, we can send the script directly
     if (backend instanceof PythonServerBackend) {
