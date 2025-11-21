@@ -6,7 +6,6 @@
 import type {
   ExecutionBackend,
   Expression,
-  ExpressionResult,
   OutputItem,
   Statement
 } from './execution-backend';

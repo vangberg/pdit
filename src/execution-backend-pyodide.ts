@@ -6,7 +6,6 @@ import { getPyodide } from './pyodide-instance';
 import type {
   ExecutionBackend,
   Expression,
-  ExpressionResult,
   OutputItem,
   Statement
 } from './execution-backend';

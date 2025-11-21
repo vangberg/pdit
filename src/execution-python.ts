@@ -1,4 +1,3 @@
-import { getPyodide } from './pyodide-instance';
 import { parseStatements } from './python-parser';
 import { PyodideBackend } from './execution-backend-pyodide';
 import { PythonServerBackend } from './execution-backend-python';
