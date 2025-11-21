@@ -1,5 +1,8 @@
 import { getPyodide } from './pyodide-instance';
 import { parseStatements } from './python-parser';
+import { PyodideBackend } from './execution-backend-pyodide';
+import { PythonServerBackend } from './execution-backend-python';
+import type { ExecutionBackend, Statement } from './execution-backend';
 
 export interface OutputItem {
   type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message';
@@ -19,103 +22,52 @@ export interface ExpressionResult {
   isInvisible?: boolean;
 }
 
-let globalIdCounter = 1;
+// Singleton backends
+let pyodideBackend: PyodideBackend | null = null;
+let pythonServerBackend: PythonServerBackend | null = null;
+let backendCheckPromise: Promise<ExecutionBackend> | null = null;
 
 /**
- * Initialize output capture infrastructure in Python.
- * Sets up StringIO buffers for stdout/stderr redirection.
+ * Get the appropriate execution backend.
+ * Checks if Python server is available, otherwise falls back to Pyodide.
  */
-async function setupOutputCapture(): Promise<void> {
-  const pyodide = getPyodide();
-  await pyodide.runPythonAsync(`
-import sys
-import io
+async function getBackend(): Promise<ExecutionBackend> {
+  // Return cached promise if already checking
+  if (backendCheckPromise) {
+    return backendCheckPromise;
+  }
 
-# Create output buffers
-_rdit_stdout = io.StringIO()
-_rdit_stderr = io.StringIO()
+  backendCheckPromise = (async () => {
+    // Check for Python server via URL parameter or default
+    const params = new URLSearchParams(window.location.search);
+    const serverUrl = params.get('python-server') || 'http://127.0.0.1:8888';
 
-# Save original stdout/stderr
-_rdit_original_stdout = sys.stdout
-_rdit_original_stderr = sys.stderr
-`);
+    // Try Python server first
+    if (!pythonServerBackend) {
+      pythonServerBackend = new PythonServerBackend(serverUrl);
+    }
+
+    const isServerAvailable = await pythonServerBackend.isAvailable();
+
+    if (isServerAvailable) {
+      console.log('Using Python server backend');
+      return pythonServerBackend;
+    }
+
+    // Fall back to Pyodide
+    console.log('Python server not available, using Pyodide backend');
+    if (!pyodideBackend) {
+      pyodideBackend = new PyodideBackend();
+    }
+    return pyodideBackend;
+  })();
+
+  return backendCheckPromise;
 }
 
 /**
- * Reset output buffers and redirect stdout/stderr.
- */
-async function resetOutputBuffers(): Promise<void> {
-  const pyodide = getPyodide();
-  await pyodide.runPythonAsync(`
-_rdit_stdout = io.StringIO()
-_rdit_stderr = io.StringIO()
-sys.stdout = _rdit_stdout
-sys.stderr = _rdit_stderr
-`);
-}
-
-/**
- * Execute a single compiled statement and capture its output.
- */
-async function executeStatement(nodeIndex: number): Promise<OutputItem[]> {
-  const pyodide = getPyodide();
-  const output: OutputItem[] = [];
-
-  try {
-    // Execute the pre-compiled statement
-    await pyodide.runPythonAsync(`
-node_info = _rdit_compiled_nodes[${nodeIndex}]
-compiled = node_info['compiled']
-is_expr = node_info['is_expr']
-
-# Always use eval() since code is compiled
-result = eval(compiled)
-
-# For expressions, print result if not None
-if is_expr and result is not None:
-    print(repr(result))
-`);
-  } catch (error: any) {
-    // Capture error message
-    const errorMessage = error.message || String(error);
-    output.push({
-      type: 'error',
-      text: errorMessage,
-    });
-  }
-
-  // Restore stdout/stderr and get captured output
-  const stdoutContent = await pyodide.runPythonAsync(`
-sys.stdout = _rdit_original_stdout
-sys.stderr = _rdit_original_stderr
-_rdit_stdout.getvalue()
-`);
-
-  const stderrContent = await pyodide.runPythonAsync(`
-_rdit_stderr.getvalue()
-`);
-
-  // Add stdout output
-  if (stdoutContent && stdoutContent.length > 0) {
-    output.push({
-      type: 'stdout',
-      text: stdoutContent as string,
-    });
-  }
-
-  // Add stderr output
-  if (stderrContent && stderrContent.length > 0) {
-    output.push({
-      type: 'stderr',
-      text: stderrContent as string,
-    });
-  }
-
-  return output;
-}
-
-/**
- * Execute Python code using Pyodide.
+ * Execute Python code using the appropriate backend.
+ * Automatically detects if Python server is available, otherwise uses Pyodide.
  * Parses the code into statements and executes them one at a time,
  * capturing output and line numbers for each statement.
  * Yields each result as it completes for streaming execution.
@@ -130,45 +82,25 @@ export async function* executeScript(
   }
 ): AsyncGenerator<Expression, void, unknown> {
   try {
-    // Parse script into statements
+    const backend = await getBackend();
+
+    // For Python server, we can send the script directly
+    if (backend instanceof PythonServerBackend) {
+      yield* backend.executeScript(script, options);
+      return;
+    }
+
+    // For Pyodide, we need to parse statements first
     const statements = await parseStatements(script);
 
-    // Set up output capture
-    await setupOutputCapture();
+    // Convert to Statement objects with code
+    const statementsWithCode: Statement[] = statements.map(stmt => ({
+      ...stmt,
+      code: '', // Code is already compiled in Pyodide
+      isExpr: false, // Will be determined during execution
+    }));
 
-    // Execute each statement
-    for (const stmt of statements) {
-      const { nodeIndex, lineStart, lineEnd } = stmt;
-
-      // Filter statements by line range if specified
-      if (options?.lineRange) {
-        const { from, to } = options.lineRange;
-        // Skip statements that don't overlap with the requested range
-        if (lineEnd < from || lineStart > to) {
-          continue;
-        }
-      }
-
-      // Reset output buffers
-      await resetOutputBuffers();
-
-      // Execute statement and capture output
-      const output = await executeStatement(nodeIndex);
-
-      // Determine if output is invisible
-      // In Python, we consider output invisible if there's no stdout or stderr
-      const hasVisibleOutput = output.length > 0;
-
-      yield {
-        id: globalIdCounter++,
-        lineStart,
-        lineEnd,
-        result: {
-          output,
-          isInvisible: !hasVisibleOutput,
-        },
-      };
-    }
+    yield* backend.executeStatements(statementsWithCode, options);
   } catch (error) {
     console.error('Error in executeScript:', error);
     throw error;

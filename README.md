@@ -1,19 +1,26 @@
 # rdit
 
-An interactive R code editor powered by WebR, running entirely in the browser.
+A modern, reactive notebook for Python and R, inspired by Observable.
 
 ## Features
 
-- **Browser-based R execution** - Run R code without server-side infrastructure using WebAssembly
-- **Interactive editor** - CodeMirror 6-based editor with R syntax highlighting
+- **Multiple execution backends**:
+  - **Python (Pyodide)** - Run Python in the browser using WebAssembly
+  - **Python (Local)** - Run Python locally with full access to your filesystem and packages
+  - **R (WebR)** - Run R code in the browser using WebAssembly
+- **Interactive editor** - CodeMirror 6-based editor with syntax highlighting
 - **Inline results** - Execution results displayed inline next to code
-- **Visualizations** - Support for R plots and graphics
+- **Visualizations** - Support for plots and graphics
 - **Execute with Cmd+Enter** - Quick code execution
+- **Reactive execution** - Observable-style automatic re-execution on edits
 
 ## Tech Stack
 
 - React 19
 - CodeMirror 6
+- Python backends:
+  - Pyodide (browser-based)
+  - FastAPI server (local execution)
 - WebR 0.5.6 (R in WebAssembly)
 - Vite 5
 - TypeScript
@@ -40,6 +47,37 @@ npm run dev
 ```
 
 The app will open automatically in your browser with hot module replacement enabled.
+
+### Running with Local Python Backend
+
+To use rdit with local Python execution (access to local files and packages):
+
+1. Install the Python package:
+
+```bash
+cd python
+pip install -e .
+```
+
+2. Run rdit with a Python script:
+
+```bash
+rdit path/to/your/script.py
+```
+
+Or using `uvx` without installation:
+
+```bash
+cd python
+uvx --from . rdit path/to/your/script.py
+```
+
+This will:
+- Start a local FastAPI server on port 8888
+- Open your browser with the rdit interface
+- Execute Python code locally with access to your filesystem and installed packages
+
+The frontend will automatically detect the local Python server and use it instead of Pyodide.
 
 ### Build
 
@@ -97,12 +135,26 @@ Test files are automatically discovered by the pattern `src/**/*.test.{ts,tsx}`.
 
 ```
 src/
-  App.tsx              # Main application component
-  Editor.tsx           # CodeMirror editor component
-  execution.ts         # WebR execution logic
-  compute-line-groups.ts  # Result grouping algorithm
-  results.ts           # Result store management
-  webr-instance.ts     # WebR initialization
+  App.tsx                       # Main application component
+  Editor.tsx                    # CodeMirror editor component
+  execution.ts                  # Execution orchestration
+  execution-python.ts           # Python execution logic
+  execution-backend.ts          # Backend interface
+  execution-backend-pyodide.ts  # Pyodide (browser) backend
+  execution-backend-python.ts   # Python server (local) backend
+  python-parser.ts              # Python AST parser for Pyodide
+  pyodide-instance.ts           # Pyodide initialization
+  compute-line-groups.ts        # Result grouping algorithm
+  results.ts                    # Result store management
+  webr-instance.ts              # WebR initialization
+
+python/
+  src/rdit/
+    __init__.py         # Package initialization
+    server.py           # FastAPI server for local Python execution
+    cli.py              # CLI entry point
+  pyproject.toml        # Python package configuration
+  test_script.py        # Example test script
 ```
 
 ## License
