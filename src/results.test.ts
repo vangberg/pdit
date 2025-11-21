@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { processExecutionResults } from './results';
-import { Expression } from './execution';
+import { Expression } from './execution-python';
 import { LineGroup } from './compute-line-groups';
 
 describe('processExecutionResults', () => {

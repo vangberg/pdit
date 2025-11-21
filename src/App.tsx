@@ -1,36 +1,34 @@
 import "./style.css";
 import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
-import { executeScript, Expression } from "./execution";
+import { executeScript, Expression } from "./execution-python";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { LineGroup } from "./compute-line-groups";
-import { initializeWebR } from "./webr-instance";
+import { initializePyodide } from "./pyodide-instance";
 import { TopBar } from "./TopBar";
 import { useResults } from "./results";
 
-const initialCode = `# Dataset overview and summary statistics
-head(mtcars)
-summary(mtcars)
+const initialCode = `# Python/Pyodide Demo
+# Simple calculations
+x = 5 + 3
+x
 
-Sys.time()
-# Visualization: fuel efficiency vs vehicle weight
-plot(mtcars$wt, mtcars$mpg,
-     xlab = "Weight (1000 lbs)",
-     ylab = "Miles per Gallon",
-     main = "Fuel Efficiency vs Vehicle Weight",
-     pch = 19)
+y = x * 2
+y
 
-# Fitted linear regression line
-trend <- lm(mpg ~ wt, data = mtcars)
-abline(trend, col = "red", lwd = 2)
+# String operations
+name = "Python"
+greeting = f"Hello, {name}!"
+print(greeting)
 
-# Calculate correlation
-cor(mtcars$mpg, mtcars$wt)
+# List comprehension
+squares = [i**2 for i in range(10)]
+squares
 
-# Multiple linear regression model
-model <- lm(mpg ~ wt + hp + cyl, data = mtcars)
-summary(model)`;
+# Sum calculation
+total = sum(squares)
+total`;
 
 function App() {
   const editorRef = useRef<EditorHandles | null>(null);
@@ -42,19 +40,19 @@ function App() {
   const [lineGroupTops, setLineGroupTops] = useState<Map<string, number>>(
     new Map()
   );
-  const [isWebRReady, setIsWebRReady] = useState(false);
+  const [isPyodideReady, setIsPyodideReady] = useState(false);
   const [doc, setDoc] = useState<Text>();
 
-  // Initialize webR on mount
+  // Initialize Pyodide on mount
   useEffect(() => {
     const init = async () => {
       try {
-        console.log("Initializing webR...");
-        await initializeWebR();
-        console.log("webR ready!");
-        setIsWebRReady(true);
+        console.log("Initializing Pyodide...");
+        await initializePyodide();
+        console.log("Pyodide ready!");
+        setIsPyodideReady(true);
       } catch (error) {
-        console.error("Failed to initialize webR:", error);
+        console.error("Failed to initialize Pyodide:", error);
       }
     };
     init();
@@ -96,8 +94,8 @@ function App() {
       script: string,
       options?: { lineRange?: { from: number; to: number } }
     ) => {
-      if (!isWebRReady) {
-        console.warn("webR is not ready yet");
+      if (!isPyodideReady) {
+        console.warn("Pyodide is not ready yet");
         return;
       }
 
@@ -123,7 +121,7 @@ function App() {
         console.error("Execution error:", error);
       }
     },
-    [isWebRReady, addExpressions]
+    [isPyodideReady, addExpressions]
   );
 
   const handleExecuteCurrent = useCallback(
@@ -153,7 +151,7 @@ function App() {
   return (
     <div id="app">
       <TopBar
-        isWebRReady={isWebRReady}
+        isPyodideReady={isPyodideReady}
         onRunAll={handleRunAll}
         onRunCurrent={handleRunCurrent}
       />
