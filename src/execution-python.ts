@@ -1,4 +1,5 @@
 import { getPyodide } from './pyodide-instance';
+import { parseStatements } from './python-parser';
 
 export interface OutputItem {
   type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message';
@@ -21,62 +22,109 @@ export interface ExpressionResult {
 let globalIdCounter = 1;
 
 /**
- * Parse Python code into logical statements with line numbers.
- * Uses Python's AST to get accurate statement boundaries.
+ * Initialize output capture infrastructure in Python.
+ * Sets up StringIO buffers for stdout/stderr redirection.
  */
-async function parseStatements(script: string): Promise<Array<{ code: string; lineStart: number; lineEnd: number }>> {
+async function setupOutputCapture(): Promise<void> {
   const pyodide = getPyodide();
+  await pyodide.runPythonAsync(`
+import sys
+import io
+
+# Create output buffers
+_rdit_stdout = io.StringIO()
+_rdit_stderr = io.StringIO()
+
+# Save original stdout/stderr
+_rdit_original_stdout = sys.stdout
+_rdit_original_stderr = sys.stderr
+`);
+}
+
+/**
+ * Reset output buffers and redirect stdout/stderr.
+ */
+async function resetOutputBuffers(): Promise<void> {
+  const pyodide = getPyodide();
+  await pyodide.runPythonAsync(`
+_rdit_stdout = io.StringIO()
+_rdit_stderr = io.StringIO()
+sys.stdout = _rdit_stdout
+sys.stderr = _rdit_stderr
+`);
+}
+
+/**
+ * Execute a single compiled statement and capture its output.
+ */
+async function executeStatement(nodeIndex: number, script?: string): Promise<OutputItem[]> {
+  const pyodide = getPyodide();
+  const output: OutputItem[] = [];
 
   try {
-    // Use Python's AST to parse and get statement boundaries
-    const result = pyodide.runPython(`
-import ast
-
-script = ${JSON.stringify(script)}
-
-def parse_statements():
-    try:
-        tree = ast.parse(script)
-        statements = []
-
-        for node in tree.body:
-            # Get the line range for this statement
-            line_start = node.lineno
-            line_end = node.end_lineno if hasattr(node, 'end_lineno') and node.end_lineno else node.lineno
-
-            # Extract the code for this statement
-            lines = script.split('\\n')
-            code_lines = lines[line_start - 1:line_end]
-            code = '\\n'.join(code_lines)
-
-            statements.append({
-                'code': code,
-                'lineStart': line_start,
-                'lineEnd': line_end
-            })
-
-        return statements
-    except SyntaxError as e:
-        # If there's a syntax error, treat entire script as one statement
-        return [{
-            'code': script,
-            'lineStart': 1,
-            'lineEnd': len(script.split('\\n'))
-        }]
-
-parse_statements()
+    // Check if we have compiled nodes
+    const hasNodes = await pyodide.runPythonAsync(`
+len(_rdit_compiled_nodes) > ${nodeIndex} if '_rdit_compiled_nodes' in globals() else False
 `);
 
-    return result.toJs({ dict_converter: Object.fromEntries });
-  } catch (error) {
-    // Fallback: treat entire script as one statement
-    const lines = script.split('\n');
-    return [{
-      code: script,
-      lineStart: 1,
-      lineEnd: lines.length,
-    }];
+    if (hasNodes) {
+      // Execute the pre-compiled statement
+      await pyodide.runPythonAsync(`
+node_info = _rdit_compiled_nodes[${nodeIndex}]
+compiled = node_info['compiled']
+is_expr = node_info['is_expr']
+
+if is_expr:
+    # For expressions, eval and print result if not None
+    result = eval(compiled)
+    if result is not None:
+        print(repr(result))
+else:
+    # For statements, just exec
+    exec(compiled)
+`);
+    } else if (script) {
+      // No compiled nodes - this happens with syntax errors
+      // Try to compile and execute the whole script
+      await pyodide.runPythonAsync(`exec(${JSON.stringify(script)})`);
+    }
+  } catch (error: any) {
+    // Capture error message
+    const errorMessage = error.message || String(error);
+    output.push({
+      type: 'error',
+      text: errorMessage,
+    });
   }
+
+  // Restore stdout/stderr and get captured output
+  const stdoutContent = await pyodide.runPythonAsync(`
+sys.stdout = _rdit_original_stdout
+sys.stderr = _rdit_original_stderr
+_rdit_stdout.getvalue()
+`);
+
+  const stderrContent = await pyodide.runPythonAsync(`
+_rdit_stderr.getvalue()
+`);
+
+  // Add stdout output
+  if (stdoutContent && stdoutContent.length > 0) {
+    output.push({
+      type: 'stdout',
+      text: stdoutContent as string,
+    });
+  }
+
+  // Add stderr output
+  if (stderrContent && stderrContent.length > 0) {
+    output.push({
+      type: 'stderr',
+      text: stderrContent as string,
+    });
+  }
+
+  return output;
 }
 
 /**
@@ -94,29 +142,16 @@ export async function* executeScript(
     lineRange?: { from: number; to: number };
   }
 ): AsyncGenerator<Expression, void, unknown> {
-  const pyodide = getPyodide();
-
   try {
     // Parse script into statements
     const statements = await parseStatements(script);
 
     // Set up output capture
-    await pyodide.runPythonAsync(`
-import sys
-import io
-
-# Create output buffers
-_rdit_stdout = io.StringIO()
-_rdit_stderr = io.StringIO()
-
-# Save original stdout/stderr
-_rdit_original_stdout = sys.stdout
-_rdit_original_stderr = sys.stderr
-`);
+    await setupOutputCapture();
 
     // Execute each statement
     for (const stmt of statements) {
-      const { code, lineStart, lineEnd } = stmt;
+      const { nodeIndex, lineStart, lineEnd } = stmt;
 
       // Filter statements by line range if specified
       if (options?.lineRange) {
@@ -128,68 +163,10 @@ _rdit_original_stderr = sys.stderr
       }
 
       // Reset output buffers
-      await pyodide.runPythonAsync(`
-_rdit_stdout = io.StringIO()
-_rdit_stderr = io.StringIO()
-sys.stdout = _rdit_stdout
-sys.stderr = _rdit_stderr
-`);
+      await resetOutputBuffers();
 
-      const output: OutputItem[] = [];
-
-      try {
-        // Execute the statement
-        // Try to eval as expression first (for REPL-like behavior), fall back to exec
-        await pyodide.runPythonAsync(`
-try:
-    # Try to compile as eval (single expression)
-    import ast
-    code = ${JSON.stringify(code)}
-    compiled = compile(code, '<string>', 'eval')
-    result = eval(compiled)
-    # Print result if it's not None (REPL behavior)
-    if result is not None:
-        print(repr(result))
-except SyntaxError:
-    # If eval fails, use exec (statement)
-    code = ${JSON.stringify(code)}
-    exec(code)
-`);
-      } catch (error: any) {
-        // Capture error message
-        const errorMessage = error.message || String(error);
-        output.push({
-          type: 'error',
-          text: errorMessage,
-        });
-      }
-
-      // Restore stdout/stderr and get captured output
-      const stdoutContent = await pyodide.runPythonAsync(`
-sys.stdout = _rdit_original_stdout
-sys.stderr = _rdit_original_stderr
-_rdit_stdout.getvalue()
-`);
-
-      const stderrContent = await pyodide.runPythonAsync(`
-_rdit_stderr.getvalue()
-`);
-
-      // Add stdout output
-      if (stdoutContent && stdoutContent.length > 0) {
-        output.push({
-          type: 'stdout',
-          text: stdoutContent as string,
-        });
-      }
-
-      // Add stderr output
-      if (stderrContent && stderrContent.length > 0) {
-        output.push({
-          type: 'stderr',
-          text: stderrContent as string,
-        });
-      }
+      // Execute statement and capture output
+      const output = await executeStatement(nodeIndex);
 
       // Determine if output is invisible
       // In Python, we consider output invisible if there's no stdout or stderr
