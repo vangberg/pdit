@@ -1,7 +1,7 @@
 import React from "react";
 
 interface TopBarProps {
-  isWebRReady: boolean;
+  isPyodideReady: boolean;
   onRunAll: () => void;
   onRunCurrent?: () => void;
   initMessage?: string;
@@ -81,7 +81,7 @@ function StatusIndicator({ isReady, message }: StatusIndicatorProps) {
   );
 }
 
-export function TopBar({ isWebRReady, onRunAll, onRunCurrent, initMessage }: TopBarProps) {
+export function TopBar({ isPyodideReady, onRunAll, onRunCurrent, initMessage }: TopBarProps) {
   const [hoveredButton, setHoveredButton] = React.useState<string | null>(null);
   const shortcuts = getShortcuts();
 
@@ -91,24 +91,24 @@ export function TopBar({ isWebRReady, onRunAll, onRunCurrent, initMessage }: Top
         <ActionButton
           label="▶ RUN CURRENT"
           onClick={onRunCurrent || (() => {})}
-          disabled={!isWebRReady}
+          disabled={!isPyodideReady}
           onMouseEnter={() => setHoveredButton("current")}
           onMouseLeave={() => setHoveredButton(null)}
           tooltip={shortcuts.current}
-          showTooltip={hoveredButton === "current" && isWebRReady}
+          showTooltip={hoveredButton === "current" && isPyodideReady}
         />
 
         <ActionButton
           label="▶ RUN ALL"
           onClick={onRunAll}
-          disabled={!isWebRReady}
+          disabled={!isPyodideReady}
           onMouseEnter={() => setHoveredButton("all")}
           onMouseLeave={() => setHoveredButton(null)}
           tooltip={shortcuts.all}
-          showTooltip={hoveredButton === "all" && isWebRReady}
+          showTooltip={hoveredButton === "all" && isPyodideReady}
         />
 
-        <StatusIndicator isReady={isWebRReady} message={initMessage} />
+        <StatusIndicator isReady={isPyodideReady} message={initMessage} />
       </div>
     </div>
   );

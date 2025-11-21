@@ -151,7 +151,7 @@ function App() {
   return (
     <div id="app">
       <TopBar
-        isWebRReady={isPyodideReady}
+        isPyodideReady={isPyodideReady}
         onRunAll={handleRunAll}
         onRunCurrent={handleRunCurrent}
       />
