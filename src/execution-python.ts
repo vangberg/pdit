@@ -57,37 +57,24 @@ sys.stderr = _rdit_stderr
 /**
  * Execute a single compiled statement and capture its output.
  */
-async function executeStatement(nodeIndex: number, script?: string): Promise<OutputItem[]> {
+async function executeStatement(nodeIndex: number): Promise<OutputItem[]> {
   const pyodide = getPyodide();
   const output: OutputItem[] = [];
 
   try {
-    // Check if we have compiled nodes
-    const hasNodes = await pyodide.runPythonAsync(`
-len(_rdit_compiled_nodes) > ${nodeIndex} if '_rdit_compiled_nodes' in globals() else False
-`);
-
-    if (hasNodes) {
-      // Execute the pre-compiled statement
-      await pyodide.runPythonAsync(`
+    // Execute the pre-compiled statement
+    await pyodide.runPythonAsync(`
 node_info = _rdit_compiled_nodes[${nodeIndex}]
 compiled = node_info['compiled']
 is_expr = node_info['is_expr']
 
-if is_expr:
-    # For expressions, eval and print result if not None
-    result = eval(compiled)
-    if result is not None:
-        print(repr(result))
-else:
-    # For statements, just exec
-    exec(compiled)
+# Always use eval() since code is compiled
+result = eval(compiled)
+
+# For expressions, print result if not None
+if is_expr and result is not None:
+    print(repr(result))
 `);
-    } else if (script) {
-      // No compiled nodes - this happens with syntax errors
-      // Try to compile and execute the whole script
-      await pyodide.runPythonAsync(`exec(${JSON.stringify(script)})`);
-    }
   } catch (error: any) {
     // Capture error message
     const errorMessage = error.message || String(error);
