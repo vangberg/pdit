@@ -16,39 +16,41 @@
 
 ## Overview
 
-This tutorial guides you through implementing a dual-backend Python execution system for rdit, enabling both browser-based (Pyodide) and local Python execution (FastAPI server). The implementation allows seamless switching between backends based on availability.
+This tutorial guides you through implementing a Python backend server for rdit, enabling local Python execution with full filesystem and package access via a FastAPI server.
 
 **What you'll build:**
 - FastAPI server for local Python code execution
 - Python CLI package installable via pip/uvx
-- TypeScript backend abstraction layer
-- Automatic backend detection and fallback
+- TypeScript client for communicating with the server
+- Shared Python executor module used by the server
 
 **Technologies:**
 - **Backend**: Python 3.10+, FastAPI, uvicorn
 - **Frontend**: TypeScript, Fetch API
-- **Existing**: Pyodide (WebAssembly Python)
+- **Architecture**: Client-server with HTTP API
 
 ---
 
 ## Problem Statement
 
-### Current Limitations
+### Need for Local Execution
 
-rdit currently uses **Pyodide** (Python compiled to WebAssembly) which runs in the browser. While this is convenient, it has limitations:
+For a Python notebook to be truly useful for data science and development work, it needs:
 
-1. **No filesystem access** - Can't read/write local files
-2. **Limited package ecosystem** - Only packages compiled to WebAssembly
-3. **Slower performance** - WebAssembly overhead
-4. **No native extensions** - Can't use packages with C extensions
+1. **Filesystem access** - Read/write local files and datasets
+2. **Full package ecosystem** - Access to all PyPI packages
+3. **Native performance** - No WebAssembly overhead
+4. **Development tools** - Debuggers, profilers, etc.
+
+Browser-based solutions (like Pyodide) can't provide these capabilities.
 
 ### Solution
 
-Add a **local Python backend** that:
+Build a **local Python backend server** that:
 - Runs as a FastAPI server on localhost
 - Has full filesystem and package access
 - Uses native Python for better performance
-- Falls back to Pyodide when server unavailable
+- Maintains execution state (like Jupyter kernels)
 
 ---
 
@@ -58,118 +60,120 @@ Add a **local Python backend** that:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        Browser (React)                       │
+│                     Browser (React App)                      │
 │                                                              │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │           execution-python.ts (Orchestrator)          │  │
+│  │         execution-python.ts (Client)                  │  │
 │  │                                                        │  │
-│  │  ┌──────────────────────────────────────────────┐    │  │
-│  │  │      getBackend() - Auto-detection           │    │  │
-│  │  │  1. Check if Python server available         │    │  │
-│  │  │  2. Use PythonServerBackend if yes           │    │  │
-│  │  │  3. Fall back to PyodideBackend if no        │    │  │
-│  │  └──────────────────────────────────────────────┘    │  │
-│  │                                                        │  │
-│  │  ┌─────────────────┐      ┌──────────────────┐       │  │
-│  │  │ PyodideBackend  │      │PythonServerBackend│      │  │
-│  │  │  (Browser)      │      │    (HTTP)         │      │  │
-│  │  └─────────────────┘      └──────────────────┘       │  │
+│  │  - Creates PythonServerBackend instance               │  │
+│  │  - Sends scripts via HTTP POST to server              │  │
+│  │  - Receives and yields execution results              │  │
 │  └──────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
-                                   │
-                                   │ HTTP (localhost:8888)
-                                   ▼
-                    ┌───────────────────────────┐
-                    │   FastAPI Server (Python) │
-                    │                           │
-                    │  /execute-script          │
-                    │  /execute                 │
-                    │  /reset                   │
-                    │  /health                  │
-                    └───────────────────────────┘
+                              │
+                              │ HTTP (localhost:8888)
+                              ▼
+                ┌───────────────────────────────────────┐
+                │     FastAPI Server (Python)           │
+                │                                       │
+                │  ┌─────────────────────────────────┐ │
+                │  │  server.py (API endpoints)      │ │
+                │  │  - /execute-script              │ │
+                │  │  - /execute                     │ │
+                │  │  - /reset                       │ │
+                │  │  - /health                      │ │
+                │  └─────────────────────────────────┘ │
+                │              ↓                        │
+                │  ┌─────────────────────────────────┐ │
+                │  │  executor.py (Core logic)       │ │
+                │  │  - PythonExecutor class         │ │
+                │  │  - parse_script()               │ │
+                │  │  - execute_statement()          │ │
+                │  │  - Namespace management         │ │
+                │  └─────────────────────────────────┘ │
+                └───────────────────────────────────────┘
 ```
 
 ### Component Responsibilities
 
 **Frontend (TypeScript):**
 - `execution-backend.ts` - Interface defining backend contract
-- `execution-backend-pyodide.ts` - Pyodide implementation
 - `execution-backend-python.ts` - HTTP client for Python server
-- `execution-python.ts` - Orchestrator with auto-detection
+- `execution-python.ts` - Main entry point, orchestrates execution
 
 **Backend (Python):**
-- `server.py` - FastAPI server with execution endpoints
+- `server.py` - FastAPI server with HTTP endpoints
+- `executor.py` - Core Python execution logic (shared module)
 - `cli.py` - Command-line interface to start server
-- `pyproject.toml` - Package configuration
 
 ---
 
 ## Design Decisions
 
-### 1. Backend Abstraction Pattern
+### 1. Client-Server Architecture
 
-**Decision**: Use Strategy Pattern with interface-based backends
-
-**Why:**
-- **Extensibility**: Easy to add more backends (e.g., R, Julia)
-- **Testability**: Can mock backends in tests
-- **Separation of concerns**: Each backend handles its own complexity
-- **Runtime switching**: Can change backends without restarting
-
-**Interface Design:**
-```typescript
-interface ExecutionBackend {
-  executeStatements(statements, options?): AsyncGenerator<Expression>
-  reset(): Promise<void>
-}
-```
-
-This minimal interface captures the essential operations while allowing implementation flexibility.
-
-### 2. Auto-Detection with Graceful Fallback
-
-**Decision**: Check server health on first execution, cache result, fall back to Pyodide
+**Decision**: Use HTTP-based client-server model
 
 **Why:**
-- **User experience**: Works immediately in browser without setup
-- **Progressive enhancement**: Power users get local Python when they want it
-- **No configuration**: Automatically detects availability
-- **Resilient**: Continues working if server stops
+- **Simplicity**: Standard HTTP/REST API
+- **Separation of concerns**: UI and execution decoupled
+- **Process isolation**: Python runs in separate process
+- **Easy debugging**: Can test server independently
+- **Standard tools**: Can use curl, Postman, etc. for testing
+
+**Alternative considered**: WebSockets
+- More complex
+- Overkill for request/response pattern
+- Can add later for streaming if needed
+
+### 2. FastAPI for Server
+
+**Decision**: Use FastAPI framework
+
+**Why:**
+- **Fast development**: Auto-generated docs, validation
+- **Type safety**: Pydantic models ensure data integrity
+- **Async support**: Can handle concurrent requests
+- **Modern**: Best practices built-in (CORS, etc.)
+- **Lightweight**: Minimal overhead
 
 **Implementation:**
-```typescript
-async function getBackend(): Promise<ExecutionBackend> {
-  // Try Python server first
-  const isAvailable = await pythonServer.isAvailable();
-  return isAvailable ? pythonServer : pyodideBackend;
-}
-```
-
-### 3. Server-Side Parsing for Python Backend
-
-**Decision**: Parse Python code on server, not client
-
-**Why:**
-- **Accuracy**: Python's AST module gives perfect parsing
-- **Consistency**: Same parsing logic as execution
-- **Simplicity**: No need to bundle Python parser in browser
-- **Security**: Code validation happens server-side
-
-**Endpoint Design:**
 ```python
-@app.post("/execute-script")
+@app.post("/execute-script", response_model=ExecuteResponse)
 async def execute_script(request: ExecuteScriptRequest):
-    statements = parse_script(request.script)  # Server-side AST
-    return execute_statements_internal(statements)
+    executor = get_executor()
+    results = executor.execute_script(request.script)
+    return ExecuteResponse(results=...)
 ```
 
-### 4. Maintained Global Namespace
+### 3. Shared Executor Module
 
-**Decision**: Preserve Python namespace across requests (like Jupyter)
+**Decision**: Extract execution logic into separate `executor.py`
 
 **Why:**
-- **Statefulness**: Variables persist between executions
-- **User expectation**: Matches Jupyter/IPython behavior
+- **Single responsibility**: Server handles HTTP, executor handles Python
+- **Testability**: Can test execution logic independently
+- **Reusability**: Could be used by other interfaces (CLI, etc.)
+- **Clarity**: Clean separation of concerns
+
+**Structure:**
+```python
+class PythonExecutor:
+    namespace: Dict[str, Any]
+
+    def parse_script(script) -> List[Statement]
+    def execute_statement(code, is_expr) -> List[OutputItem]
+    def execute_script(script, line_range) -> List[ExecutionResult]
+    def reset() -> None
+```
+
+### 4. Stateful Execution (Maintained Namespace)
+
+**Decision**: Preserve Python namespace across requests
+
+**Why:**
+- **Jupyter-like UX**: Variables persist between cells
+- **User expectation**: Matches familiar notebook behavior
 - **Convenience**: Don't need to re-import or re-define
 
 **Implementation:**
@@ -180,22 +184,26 @@ def execute_statement(code: str, is_expr: bool):
     exec(compiled, _execution_namespace)  # Shared namespace
 ```
 
-### 5. Streaming Results with Generators
+**Reset endpoint** allows clearing state when needed.
 
-**Decision**: Use async generators to yield results as they complete
+### 5. Server-Side Parsing
+
+**Decision**: Parse Python code on server using AST module
 
 **Why:**
-- **Responsiveness**: UI updates as code executes
-- **Memory efficiency**: Don't hold all results in memory
-- **Cancelability**: Can stop execution mid-stream
-- **Consistency**: Same API for both backends
+- **Accuracy**: Python's AST gives perfect parsing
+- **Consistency**: Same parsing logic as execution
+- **Simplicity**: No need for client-side Python parser
+- **Security**: Code validation happens server-side
 
-**Interface:**
-```typescript
-async function* executeScript(script: string): AsyncGenerator<Expression> {
-  yield { id, lineStart, lineEnd, result }
-  // ... more results as they complete
-}
+**Implementation:**
+```python
+def parse_script(script: str) -> List[Statement]:
+    tree = ast.parse(script)
+    for node in tree.body:
+        # Extract statement metadata
+        is_expr = isinstance(node, ast.Expr)
+        # Create Statement objects
 ```
 
 ### 6. CLI with Auto-Browser Opening
@@ -214,23 +222,20 @@ def main():
     uvicorn.run("rdit.server:app", ...)
 ```
 
-### 7. Health Check Endpoint
+### 7. URL Configuration
 
-**Decision**: Add `/health` endpoint for availability checking
-
-**Why:**
-- **Reliability**: Can detect if server is running
-- **Fast**: Lightweight check before sending code
-- **Standard**: Common API pattern for microservices
-
-### 8. CORS Enabled
-
-**Decision**: Enable CORS for all origins in development
+**Decision**: Allow server URL override via query parameter
 
 **Why:**
-- **Local development**: Frontend on different port (Vite dev server)
-- **Testing**: Can test from different origins
-- **Note**: Should be restricted in production
+- **Flexibility**: Can connect to different ports
+- **Testing**: Can run multiple instances
+- **Remote**: Could connect to remote server
+
+**Implementation:**
+```typescript
+const serverUrl = new URLSearchParams(window.location.search)
+  .get('python-server') || 'http://127.0.0.1:8888';
+```
 
 ---
 
@@ -243,6 +248,7 @@ def main():
 ```bash
 mkdir -p python/src/rdit
 touch python/src/rdit/__init__.py
+touch python/src/rdit/executor.py
 touch python/src/rdit/server.py
 touch python/src/rdit/cli.py
 ```
@@ -274,124 +280,189 @@ packages = ["src/rdit"]
 ```
 
 **Key decisions:**
-- **hatchling**: Modern, simple build backend (vs setuptools)
+- **hatchling**: Modern, simple build backend
 - **Standard uvicorn**: Includes websockets and HTTP/2 support
 - **Pydantic v2**: Type validation for API requests
 - **Entry point**: `rdit` command → `cli:main()`
 
-#### Step 1.3: Implement FastAPI Server
+#### Step 1.3: Implement Executor Module
 
-**File**: `python/src/rdit/server.py`
+**File**: `python/src/rdit/executor.py`
 
-**Core components:**
+**Core classes:**
 
-1. **Data Models** (Pydantic):
 ```python
-class OutputItem(BaseModel):
-    type: str  # 'stdout' | 'stderr' | 'error'
-    text: str
+class PythonExecutor:
+    """Stateful Python executor with namespace management."""
 
-class Statement(BaseModel):
-    code: str
-    nodeIndex: int
-    lineStart: int
-    lineEnd: int
-    isExpr: bool
-```
+    def __init__(self):
+        self.namespace = {'__builtins__': __builtins__}
 
-**Why Pydantic**: Automatic validation, JSON serialization, type safety
+    def parse_script(self, script: str) -> List[Statement]:
+        """Parse Python script into statements using AST."""
+        tree = ast.parse(script)
+        statements = []
 
-2. **Global Namespace**:
-```python
-_execution_namespace: Dict[str, Any] = {'__builtins__': __builtins__}
-```
+        for i, node in enumerate(tree.body):
+            # Get line range
+            line_start = node.lineno
+            line_end = node.end_lineno or node.lineno
 
-**Why global**: Persist state across requests (like Jupyter kernel)
+            # Extract source code
+            lines = script.split('\n')
+            code = '\n'.join(lines[line_start-1:line_end])
 
-3. **AST Parser**:
-```python
-def parse_script(script: str) -> List[Statement]:
-    tree = ast.parse(script)
-    for node in tree.body:
-        line_start = node.lineno
-        line_end = node.end_lineno
-        is_expr = isinstance(node, ast.Expr)
-        # ... create Statement objects
-```
+            # Determine if expression
+            is_expr = isinstance(node, ast.Expr)
 
-**Why AST**:
-- Accurate statement boundaries
-- Distinguish expressions from statements
-- Handle multi-line statements correctly
+            statements.append(Statement(
+                code=code,
+                node_index=i,
+                line_start=line_start,
+                line_end=line_end,
+                is_expr=is_expr
+            ))
 
-4. **Execution with Output Capture**:
-```python
-def execute_statement(code: str, is_expr: bool) -> List[OutputItem]:
-    stdout_buffer = io.StringIO()
-    stderr_buffer = io.StringIO()
+        return statements
 
-    with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
-        if is_expr:
-            result = eval(compiled, _execution_namespace)
-            if result is not None:
-                print(repr(result))
-        else:
-            exec(compiled, _execution_namespace)
+    def execute_statement(self, code: str, is_expr: bool) -> List[OutputItem]:
+        """Execute single statement with output capture."""
+        output = []
+        stdout_buffer = io.StringIO()
+        stderr_buffer = io.StringIO()
+
+        try:
+            with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+                mode = 'eval' if is_expr else 'exec'
+                compiled = compile(code, '<rdit>', mode)
+
+                if is_expr:
+                    result = eval(compiled, self.namespace)
+                    if result is not None:
+                        print(repr(result))
+                else:
+                    exec(compiled, self.namespace)
+
+        except Exception:
+            error_buffer = io.StringIO()
+            traceback.print_exc(file=error_buffer)
+            output.append(OutputItem(type="error", text=error_buffer.getvalue()))
+
+        # Capture stdout/stderr
+        if stdout_buffer.getvalue():
+            output.append(OutputItem(type="stdout", text=stdout_buffer.getvalue()))
+        if stderr_buffer.getvalue():
+            output.append(OutputItem(type="stderr", text=stderr_buffer.getvalue()))
+
+        return output
 ```
 
 **Why separate eval/exec**:
-- `eval`: Returns value for expressions
-- `exec`: Runs statements without return value
+- `eval`: Returns value for expressions (like `2 + 2`)
+- `exec`: Runs statements without return (like `x = 5`)
 - Matches Python REPL behavior
 
-5. **API Endpoints**:
+#### Step 1.4: Implement FastAPI Server
+
+**File**: `python/src/rdit/server.py`
+
 ```python
-@app.post("/execute-script")  # Parse + execute
-@app.post("/execute")          # Execute pre-parsed
-@app.post("/reset")            # Clear namespace
-@app.get("/health")            # Availability check
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from .executor import get_executor, reset_executor
+
+app = FastAPI(title="rdit Python Backend")
+
+# Enable CORS for browser access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Restrict in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.post("/execute-script")
+async def execute_script(request: ExecuteScriptRequest):
+    """Parse and execute a Python script."""
+    executor = get_executor()
+    results = executor.execute_script(request.script, request.lineRange)
+
+    return ExecuteResponse(results=[
+        ExpressionResult(
+            nodeIndex=r.node_index,
+            lineStart=r.line_start,
+            lineEnd=r.line_end,
+            output=[OutputItem(type=o.type, text=o.text) for o in r.output],
+            isInvisible=r.is_invisible
+        )
+        for r in results
+    ])
+
+@app.post("/reset")
+async def reset():
+    """Reset the execution namespace."""
+    reset_executor()
+    return {"status": "ok"}
+
+@app.get("/health")
+async def health():
+    """Health check endpoint."""
+    return {"status": "ok"}
 ```
 
-**Why multiple endpoints**:
-- `/execute-script`: Convenience for server-side parsing
-- `/execute`: Flexibility for client-side parsing
-- `/reset`: Essential for clearing state
-- `/health`: Backend detection
+**API Endpoints:**
+- `/execute-script`: Parse and execute complete script
+- `/execute`: Execute pre-parsed statements (advanced use)
+- `/reset`: Clear execution namespace
+- `/health`: Server availability check
 
-#### Step 1.4: Implement CLI
+#### Step 1.5: Implement CLI
 
 **File**: `python/src/rdit/cli.py`
 
-**Key features:**
-
-1. **Argument Parsing**:
 ```python
-parser.add_argument("script", nargs="?")
-parser.add_argument("--port", default=8888)
-parser.add_argument("--no-browser", action="store_true")
-```
+import argparse
+import webbrowser
+from threading import Timer
+import uvicorn
 
-2. **Browser Auto-Open**:
-```python
 def open_browser(url: str, delay: float = 1.5):
+    """Open browser after delay to ensure server is ready."""
     Timer(delay, lambda: webbrowser.open(url)).start()
+
+def main():
+    parser = argparse.ArgumentParser(description="rdit - Python notebook")
+    parser.add_argument("script", nargs="?", help="Python script to open")
+    parser.add_argument("--port", type=int, default=8888)
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--no-browser", action="store_true")
+
+    args = parser.parse_args()
+
+    # Validate script path
+    if args.script:
+        script_path = Path(args.script).resolve()
+        if not script_path.exists():
+            print(f"Error: Script '{args.script}' not found")
+            sys.exit(1)
+
+    # Build URL
+    url = f"http://{args.host}:{args.port}"
+    if args.script:
+        url += f"?script={script_path}"
+
+    print(f"Starting rdit server on {args.host}:{args.port}")
+
+    # Open browser
+    if not args.no_browser:
+        open_browser(url)
+
+    # Start server
+    uvicorn.run("rdit.server:app", host=args.host, port=args.port)
 ```
 
-**Why delay**: Give server time to start before opening browser
-
-3. **Server Startup**:
-```python
-uvicorn.run(
-    "rdit.server:app",
-    host=args.host,
-    port=args.port,
-    log_level="info",
-)
-```
-
-**Why module string**: Enables uvicorn's auto-reload in development
-
-### Phase 2: TypeScript Backend Abstraction
+### Phase 2: TypeScript Client
 
 #### Step 2.1: Define Backend Interface
 
@@ -399,8 +470,8 @@ uvicorn.run(
 
 ```typescript
 export interface ExecutionBackend {
-  executeStatements(
-    statements: Statement[],
+  executeScript(
+    script: string,
     options?: { lineRange?: { from: number; to: number } }
   ): AsyncGenerator<Expression, void, unknown>;
 
@@ -408,65 +479,25 @@ export interface ExecutionBackend {
 }
 ```
 
-**Design principles:**
-- **Async generators**: Stream results as available
-- **Minimal interface**: Only essential methods
-- **Options parameter**: Extensible without breaking changes
-- **Type safety**: Full TypeScript typing
-
 **Supporting types:**
 ```typescript
-export interface Statement {
-  nodeIndex: number;
-  lineStart: number;
-  lineEnd: number;
-  code: string;
-  isExpr: boolean;
-}
-
 export interface Expression {
   id: number;
   lineStart: number;
   lineEnd: number;
-  result?: ExpressionResult;
+  result?: {
+    output: OutputItem[];
+    isInvisible?: boolean;
+  };
+}
+
+export interface OutputItem {
+  type: 'stdout' | 'stderr' | 'error';
+  text: string;
 }
 ```
 
-#### Step 2.2: Implement Pyodide Backend
-
-**File**: `src/execution-backend-pyodide.ts`
-
-**Extract existing logic** from `execution-python.ts`:
-
-```typescript
-export class PyodideBackend implements ExecutionBackend {
-  private isInitialized = false;
-
-  async *executeStatements(statements, options?) {
-    if (!this.isInitialized) {
-      await setupOutputCapture();
-      this.isInitialized = true;
-    }
-
-    for (const stmt of statements) {
-      await resetOutputBuffers();
-      const output = await executeStatement(stmt.nodeIndex);
-      yield { id, lineStart, lineEnd, result: { output } };
-    }
-  }
-
-  async reset() {
-    // Clear Pyodide namespace
-  }
-}
-```
-
-**Why class-based**:
-- State management (isInitialized)
-- Encapsulation of Pyodide-specific logic
-- Easy to test and mock
-
-#### Step 2.3: Implement Python Server Backend
+#### Step 2.2: Implement Python Server Client
 
 **File**: `src/execution-backend-python.ts`
 
@@ -485,11 +516,28 @@ export class PythonServerBackend implements ExecutionBackend {
       body: JSON.stringify({ script, lineRange: options?.lineRange }),
     });
 
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
+
     const data = await response.json();
 
+    // Yield results
     for (const result of data.results) {
-      yield { id: globalIdCounter++, ...result };
+      yield {
+        id: globalIdCounter++,
+        lineStart: result.lineStart,
+        lineEnd: result.lineEnd,
+        result: {
+          output: result.output,
+          isInvisible: result.isInvisible,
+        },
+      };
     }
+  }
+
+  async reset(): Promise<void> {
+    await fetch(`${this.baseUrl}/reset`, { method: 'POST' });
   }
 
   async isAvailable(): Promise<boolean> {
@@ -503,199 +551,122 @@ export class PythonServerBackend implements ExecutionBackend {
 }
 ```
 
-**Key methods:**
-
-1. **executeScript()**: Send whole script to server
-   - **Why**: Server parsing more accurate than client-side
-   - **Benefit**: Simpler client code
-
-2. **executeStatements()**: Send pre-parsed statements
-   - **Why**: Flexibility for advanced use cases
-   - **Use case**: When client needs control over parsing
-
-3. **isAvailable()**: Check server health
-   - **Why**: Auto-detection and graceful fallback
-   - **Timeout**: Fetch automatically times out
-
-#### Step 2.4: Orchestrate Backend Selection
+#### Step 2.3: Create Main Execution Interface
 
 **File**: `src/execution-python.ts`
 
-**Singleton pattern for backends:**
 ```typescript
-let pyodideBackend: PyodideBackend | null = null;
+import { PythonServerBackend } from './execution-backend-python';
+
 let pythonServerBackend: PythonServerBackend | null = null;
-let backendCheckPromise: Promise<ExecutionBackend> | null = null;
-```
 
-**Why singletons**:
-- Avoid multiple server health checks
-- Reuse initialized backends
-- Cache detection result
-
-**Auto-detection logic:**
-```typescript
-async function getBackend(): Promise<ExecutionBackend> {
-  if (backendCheckPromise) {
-    return backendCheckPromise;  // Reuse in-flight check
-  }
-
-  backendCheckPromise = (async () => {
-    const serverUrl = new URLSearchParams(window.location.search)
-      .get('python-server') || 'http://127.0.0.1:8888';
-
+function getBackend(): PythonServerBackend {
+  if (!pythonServerBackend) {
+    const params = new URLSearchParams(window.location.search);
+    const serverUrl = params.get('python-server') || 'http://127.0.0.1:8888';
     pythonServerBackend = new PythonServerBackend(serverUrl);
-
-    if (await pythonServerBackend.isAvailable()) {
-      console.log('Using Python server backend');
-      return pythonServerBackend;
-    }
-
-    console.log('Falling back to Pyodide');
-    pyodideBackend = new PyodideBackend();
-    return pyodideBackend;
-  })();
-
-  return backendCheckPromise;
-}
-```
-
-**Why this design**:
-- **URL parameter support**: Override default server URL
-- **Promise caching**: Multiple calls wait for same check
-- **Lazy initialization**: Only create backend when needed
-- **Console logging**: Helps debugging
-
-**Main execution function:**
-```typescript
-export async function* executeScript(script: string, options?) {
-  const backend = await getBackend();
-
-  if (backend instanceof PythonServerBackend) {
-    yield* backend.executeScript(script, options);
-  } else {
-    const statements = await parseStatements(script);
-    yield* backend.executeStatements(statements, options);
   }
+  return pythonServerBackend;
+}
+
+export async function* executeScript(script: string, options?) {
+  const backend = getBackend();
+  yield* backend.executeScript(script, options);
 }
 ```
 
-**Why branch on type**:
-- Python server can parse server-side (more efficient)
-- Pyodide needs client-side parsing (already compiled)
+**Simple and clean** - no complexity!
 
-### Phase 3: Integration and Testing
+### Phase 3: Integration
 
-#### Step 3.1: Create Test Script
+#### Step 3.1: Install Python Package
 
-**File**: `python/test_script.py`
-
-```python
-# Simple expression
-2 + 2
-
-# Variables
-x = 10
-y = 20
-x + y
-
-# Print
-print("Hello!")
-
-# Function
-def greet(name):
-    return f"Hello, {name}!"
-
-greet("rdit")
-
-# Standard library
-import math
-math.pi
-```
-
-**Why comprehensive**: Tests all code paths (expressions, statements, imports, etc.)
-
-#### Step 3.2: Testing Strategy
-
-**Backend Testing:**
-
-1. **Python Server** (pytest):
-```python
-async def test_execute_script():
-    response = await client.post("/execute-script", json={
-        "script": "2 + 2"
-    })
-    assert response.status_code == 200
-    assert response.json()["results"][0]["output"][0]["text"] == "4\n"
-```
-
-2. **TypeScript** (Vitest):
-```typescript
-it('detects Python server', async () => {
-  const backend = await getBackend();
-  expect(backend).toBeInstanceOf(PythonServerBackend);
-});
-```
-
-**Integration Testing:**
-
-1. **Start server**: `cd python && python -m rdit.cli test_script.py`
-2. **Open browser**: Navigate to localhost:8888
-3. **Verify execution**: Check results appear inline
-4. **Test fallback**: Stop server, reload page → should use Pyodide
-
-#### Step 3.3: Error Handling
-
-**Common issues and solutions:**
-
-1. **Server not starting**:
-   - Check port 8888 not in use
-   - Verify dependencies installed: `pip list`
-
-2. **CORS errors**:
-   - Ensure CORS middleware configured
-   - Check browser console for specific error
-
-3. **Import errors**:
-   - Verify package installed in Python environment
-   - Check namespace includes `__builtins__`
-
-4. **Parse errors**:
-   - Server should catch and return as error output
-   - Check AST parsing handles edge cases
-
----
-
-## Testing
-
-### Manual Testing Workflow
-
-1. **Install Python package**:
 ```bash
 cd python
 pip install -e .
 ```
 
-2. **Start server with test script**:
+#### Step 3.2: Start Server
+
 ```bash
-rdit test_script.py
+rdit path/to/script.py
 ```
 
-3. **Verify**:
-   - Browser opens automatically
-   - Script loads in editor
-   - Results appear inline
-   - Console shows "Using Python server backend"
+This will:
+1. Start FastAPI server on port 8888
+2. Open browser to `http://localhost:8888?script=...`
+3. Frontend connects to server and executes code
 
-4. **Test fallback**:
-   - Stop server (Ctrl+C)
-   - Refresh browser
-   - Console should show "Falling back to Pyodide"
-   - Code should still execute
+#### Step 3.3: Verify
+
+1. Browser opens automatically
+2. Script loads in editor
+3. Run code with Cmd+Enter
+4. Results appear inline
+5. Console shows: `[Execution] Using Python server backend`
+
+---
+
+## Testing
+
+### Manual Testing
+
+1. **Basic execution**:
+```bash
+cd python
+echo "print('Hello from rdit')" > test.py
+rdit test.py
+```
+
+2. **Test persistence**:
+```python
+# Cell 1
+x = 10
+
+# Cell 2 (should print 10)
+print(x)
+```
+
+3. **Test filesystem access**:
+```python
+import os
+print(os.listdir('.'))
+```
+
+4. **Test packages**:
+```python
+import pandas as pd
+df = pd.DataFrame({'a': [1, 2, 3]})
+df
+```
 
 ### Automated Testing
 
-**Python tests** (`python/tests/test_server.py`):
+**Python tests** (`python/tests/test_executor.py`):
+
+```python
+from rdit.executor import PythonExecutor
+
+def test_execute_expression():
+    executor = PythonExecutor()
+    output = executor.execute_statement("2 + 2", is_expr=True)
+    assert output[0].text == "4\n"
+
+def test_namespace_persistence():
+    executor = PythonExecutor()
+    executor.execute_statement("x = 10", is_expr=False)
+    output = executor.execute_statement("x", is_expr=True)
+    assert "10" in output[0].text
+
+def test_parse_script():
+    executor = PythonExecutor()
+    statements = executor.parse_script("x = 1\ny = 2\nx + y")
+    assert len(statements) == 3
+    assert statements[2].is_expr == True
+```
+
+**Server tests** (`python/tests/test_server.py`):
+
 ```python
 from fastapi.testclient import TestClient
 from rdit.server import app
@@ -706,37 +677,11 @@ def test_health():
     response = client.get("/health")
     assert response.status_code == 200
 
-def test_execute_expression():
-    response = client.post("/execute-script", json={
-        "script": "2 + 2"
-    })
+def test_execute_script():
+    response = client.post("/execute-script", json={"script": "2 + 2"})
+    assert response.status_code == 200
     data = response.json()
     assert data["results"][0]["output"][0]["text"] == "4\n"
-
-def test_namespace_persistence():
-    client.post("/execute-script", json={"script": "x = 10"})
-    response = client.post("/execute-script", json={"script": "x"})
-    assert "10" in response.json()["results"][0]["output"][0]["text"]
-
-def test_reset():
-    client.post("/execute-script", json={"script": "x = 10"})
-    client.post("/reset")
-    response = client.post("/execute-script", json={"script": "x"})
-    assert response.json()["results"][0]["output"][0]["type"] == "error"
-```
-
-**TypeScript tests** (extend existing):
-```typescript
-import { describe, it, expect } from 'vitest';
-import { PythonServerBackend } from './execution-backend-python';
-
-describe('PythonServerBackend', () => {
-  it('checks server availability', async () => {
-    const backend = new PythonServerBackend();
-    const available = await backend.isAvailable();
-    expect(typeof available).toBe('boolean');
-  });
-});
 ```
 
 ---
@@ -747,50 +692,40 @@ describe('PythonServerBackend', () => {
 
 1. **WebSocket Support**:
    - Stream output in real-time
-   - Enable progress bars, long-running tasks
-   - Better cancellation support
+   - Enable progress bars
+   - Better cancellation
 
-2. **File Upload**:
-   - Allow uploading data files to server
-   - Serve files from script directory
-   - Security: Restrict to safe directories
+2. **File Operations**:
+   - Upload files to server
+   - Download results
+   - Browse filesystem
 
-3. **Package Management UI**:
-   - Show installed packages
-   - Install packages from UI
-   - Virtual environment per project
-
-4. **Multi-file Support**:
-   - Import local modules
-   - Project-based execution
-   - File tree sidebar
+3. **Environment Management**:
+   - Virtual environments per project
+   - Package installation from UI
+   - Environment switching
 
 ### Long-term
 
-1. **Remote Server Support**:
-   - Connect to remote Python kernels
+1. **Remote Execution**:
+   - Connect to remote Python servers
    - SSH tunneling
-   - Authentication/authorization
+   - Authentication
 
-2. **Kernel Management**:
-   - Multiple independent namespaces
-   - Restart kernel without page reload
-   - Show kernel status in UI
-
-3. **Collaboration**:
-   - Share execution sessions
-   - Real-time collaboration (like Jupyter)
-   - Comments and annotations
-
-4. **Debugging**:
+2. **Debugging Support**:
    - Breakpoints
    - Step-through execution
-   - Variable inspector
+   - Variable inspection
 
-5. **Other Languages**:
-   - R backend (similar architecture)
-   - Julia backend
-   - SQL execution
+3. **Collaboration**:
+   - Multi-user editing
+   - Shared execution sessions
+   - Comments and annotations
+
+4. **Performance**:
+   - Parallel execution
+   - Background tasks
+   - Caching
 
 ---
 
@@ -798,74 +733,75 @@ describe('PythonServerBackend', () => {
 
 ### Architectural Principles
 
-1. **Progressive Enhancement**:
-   - Works in browser (Pyodide) without any setup
-   - Enhanced with local server when available
-   - Graceful degradation on errors
+1. **Simplicity First**:
+   - Single execution path (Python server)
+   - No complex auto-detection
+   - Standard HTTP/REST API
 
 2. **Separation of Concerns**:
-   - Backend interface isolates implementation details
-   - Each backend handles its complexity
-   - Orchestrator makes decisions, delegates work
+   - Server handles HTTP
+   - Executor handles Python
+   - Client handles UI
 
-3. **User Experience First**:
-   - Auto-detection reduces configuration
-   - Jupyter-like workflow (familiar to users)
-   - Single command to get started
-
-4. **Type Safety**:
+3. **Type Safety**:
    - Pydantic for Python API
    - TypeScript for frontend
-   - Shared data models (OutputItem, Statement, etc.)
+   - Shared data models
+
+4. **User Experience**:
+   - Single command to start (`rdit script.py`)
+   - Jupyter-like workflow
+   - Familiar notebook behavior
 
 5. **Extensibility**:
-   - Easy to add new backends
-   - Standard interface for all backends
-   - Plugin-like architecture
+   - Clean interfaces
+   - Modular design
+   - Easy to add features
 
-### Common Pitfalls to Avoid
+### Why This Architecture?
 
-1. **Don't hardcode assumptions**:
-   - ❌ Assume server always on port 8888
-   - ✅ Allow configuration via URL params
+**Simple beats complex**:
+- Started with dual-backend (Pyodide + server)
+- Removed Pyodide complexity
+- Result: 639 lines removed, clearer purpose
 
-2. **Don't ignore errors**:
-   - ❌ Silently fail when server unavailable
-   - ✅ Log, fall back, inform user
+**HTTP beats custom protocol**:
+- Standard tooling
+- Easy debugging
+- Well understood
 
-3. **Don't break the contract**:
-   - ❌ Return different types from backends
-   - ✅ Strict adherence to ExecutionBackend interface
+**Server-side parsing beats client-side**:
+- More accurate (using Python's AST)
+- Simpler client
+- Consistent behavior
 
-4. **Don't leak state**:
-   - ❌ Global variables in TypeScript
-   - ✅ Encapsulate in classes/modules
+### Common Pitfalls Avoided
 
-5. **Don't forget CORS**:
-   - ❌ Forget to enable CORS in development
-   - ✅ Configure properly, restrict in production
+1. ✅ **Used server-side parsing** (not client-side regex)
+2. ✅ **Maintained namespace** (Jupyter-like UX)
+3. ✅ **Separated concerns** (server ≠ executor)
+4. ✅ **Enabled CORS** (for local development)
+5. ✅ **Used Pydantic** (type safety + validation)
 
 ---
 
 ## Conclusion
 
-This implementation demonstrates:
+This implementation demonstrates a **clean, simple architecture** for local Python execution:
 
-- **Plugin architecture** with backend abstraction
-- **Graceful degradation** with auto-detection
-- **Type-safe APIs** using Pydantic and TypeScript
-- **Modern Python packaging** with pyproject.toml
-- **FastAPI best practices** for web APIs
-- **Async patterns** with generators and streaming
+- **FastAPI server** handles HTTP and state management
+- **Shared executor module** handles Python execution
+- **TypeScript client** communicates via REST API
+- **CLI tool** provides Jupyter-like user experience
 
-The result is a robust, extensible system that works seamlessly in both browser-only and local execution modes, providing the best of both worlds to users.
+The result is a **maintainable, extensible system** focused on doing one thing well: local Python execution with full filesystem and package access.
 
 ---
 
 ## Additional Resources
 
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [Pyodide Documentation](https://pyodide.org/)
 - [Python AST Module](https://docs.python.org/3/library/ast.html)
 - [TypeScript Async Generators](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-2-3.html#async-iteration)
 - [Pydantic Documentation](https://docs.pydantic.dev/)
+- [uvicorn Documentation](https://www.uvicorn.org/)
