@@ -19,9 +19,6 @@ export default defineConfig({
   server: {
     open: true,
   },
-  optimizeDeps: {
-    exclude: ['pyodide'],
-  },
   test: {
     include: ['src/**/*.test.{ts,tsx}'],
     browser: {

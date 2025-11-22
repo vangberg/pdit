@@ -120,14 +120,3 @@ async def reset():
 async def health():
     """Health check endpoint."""
     return {"status": "ok"}
-
-
-@app.get("/executor.py")
-async def get_executor_module():
-    """
-    Serve the executor module for use in Pyodide.
-    This allows the browser to load the same execution logic.
-    """
-    from pathlib import Path
-    executor_path = Path(__file__).parent / "executor.py"
-    return {"code": executor_path.read_text()}

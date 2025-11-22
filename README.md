@@ -1,14 +1,11 @@
 # rdit
 
-A modern, reactive notebook for Python and R, inspired by Observable.
+A modern, reactive notebook for Python, inspired by Observable.
 
 ## Features
 
-- **Multiple execution backends**:
-  - **Python (Pyodide)** - Run Python in the browser using WebAssembly
-  - **Python (Local)** - Run Python locally with full access to your filesystem and packages
-  - **R (WebR)** - Run R code in the browser using WebAssembly
-- **Interactive editor** - CodeMirror 6-based editor with syntax highlighting
+- **Local Python execution** - Run Python with full access to your filesystem and packages
+- **Interactive editor** - CodeMirror 6-based editor with Python syntax highlighting
 - **Inline results** - Execution results displayed inline next to code
 - **Visualizations** - Support for plots and graphics
 - **Execute with Cmd+Enter** - Quick code execution
@@ -18,10 +15,7 @@ A modern, reactive notebook for Python and R, inspired by Observable.
 
 - React 19
 - CodeMirror 6
-- Python backends:
-  - Pyodide (browser-based)
-  - FastAPI server (local execution)
-- WebR 0.5.6 (R in WebAssembly)
+- Python backend: FastAPI server (local execution)
 - Vite 5
 - TypeScript
 
@@ -140,17 +134,14 @@ src/
   execution.ts                  # Execution orchestration
   execution-python.ts           # Python execution logic
   execution-backend.ts          # Backend interface
-  execution-backend-pyodide.ts  # Pyodide (browser) backend
-  execution-backend-python.ts   # Python server (local) backend
-  python-parser.ts              # Python AST parser for Pyodide
-  pyodide-instance.ts           # Pyodide initialization
+  execution-backend-python.ts   # Python server backend
   compute-line-groups.ts        # Result grouping algorithm
   results.ts                    # Result store management
-  webr-instance.ts              # WebR initialization
 
 python/
   src/rdit/
     __init__.py         # Package initialization
+    executor.py         # Shared Python execution logic
     server.py           # FastAPI server for local Python execution
     cli.py              # CLI entry point
   pyproject.toml        # Python package configuration

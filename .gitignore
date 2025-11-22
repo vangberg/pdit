@@ -1,6 +1,3 @@
 node_modules
 dist
 tests/.cache
-
-# Generated file - copied from python/src/rdit/executor.py
-public/executor.py
