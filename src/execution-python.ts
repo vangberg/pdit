@@ -1,7 +1,6 @@
-import { parseStatements } from './python-parser';
 import { PyodideBackend } from './execution-backend-pyodide';
 import { PythonServerBackend } from './execution-backend-python';
-import type { ExecutionBackend, Statement } from './execution-backend';
+import type { ExecutionBackend } from './execution-backend';
 
 export interface OutputItem {
   type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message';
@@ -81,8 +80,7 @@ export async function checkPythonServer(): Promise<boolean> {
 /**
  * Execute Python code using the selected backend.
  * Uses either Pyodide or Python server based on current backend type.
- * Parses the code into statements and executes them one at a time,
- * capturing output and line numbers for each statement.
+ * Both backends now use the shared executor module for consistent behavior.
  * Yields each result as it completes for streaming execution.
  *
  * @param script - The Python code to execute
@@ -98,23 +96,14 @@ export async function* executeScript(
     const backend = getBackend();
     console.log('[Execution] Using backend:', currentBackendType);
 
-    // For Python server, we can send the script directly
+    // Both backends can now execute scripts directly using the shared executor
     if (backend instanceof PythonServerBackend) {
       yield* backend.executeScript(script, options);
-      return;
+    } else if (backend instanceof PyodideBackend) {
+      yield* backend.executeScript(script, options);
+    } else {
+      throw new Error('Unknown backend type');
     }
-
-    // For Pyodide, we need to parse statements first
-    const statements = await parseStatements(script);
-
-    // Convert to Statement objects with code
-    const statementsWithCode: Statement[] = statements.map(stmt => ({
-      ...stmt,
-      code: '', // Code is already compiled in Pyodide
-      isExpr: false, // Will be determined during execution
-    }));
-
-    yield* backend.executeStatements(statementsWithCode, options);
   } catch (error) {
     console.error('Error in executeScript:', error);
     throw error;
