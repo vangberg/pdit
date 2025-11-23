@@ -192,13 +192,15 @@ def execute_statement(code: str, is_expr: bool):
 
 **Reset endpoint** allows clearing state when needed.
 
-### 5. Server-Side Parsing
+### 5. Server-Side Parsing and Compilation
 
-**Decision**: Parse Python code on server using AST module
+**Decision**: Parse and compile Python code on server using AST module
 
 **Why:**
 - **Accuracy**: Python's AST gives perfect parsing
-- **Consistency**: Same parsing logic as execution
+- **Efficiency**: Compile once during parsing, execute pre-compiled code
+- **No source extraction**: Compile AST nodes directly, no string manipulation
+- **Consistency**: Same approach as Pyodide implementation
 - **Simplicity**: No need for client-side Python parser
 - **Security**: Code validation happens server-side
 
@@ -207,9 +209,16 @@ def execute_statement(code: str, is_expr: bool):
 def parse_script(script: str) -> List[Statement]:
     tree = ast.parse(script)
     for node in tree.body:
-        # Extract statement metadata
         is_expr = isinstance(node, ast.Expr)
-        # Create Statement objects
+
+        # Compile AST node directly (no source extraction!)
+        if is_expr:
+            compiled = compile(ast.Expression(body=node.value), '<rdit>', 'eval')
+        else:
+            compiled = compile(ast.Module(body=[node], type_ignores=[]), '<rdit>', 'exec')
+
+        # Store compiled code object
+        statements.append(Statement(compiled=compiled, ...))
 ```
 
 ### 6. CLI with Auto-Browser Opening
@@ -329,24 +338,38 @@ class PythonExecutor:
         self.namespace = {'__builtins__': __builtins__}
 
     def parse_script(self, script: str) -> List[Statement]:
-        """Parse Python script into statements using AST."""
+        """Parse Python script into statements using AST.
+
+        Compiles each AST node directly - no source extraction needed!
+        This matches the working Pyodide implementation.
+        """
         tree = ast.parse(script)
         statements = []
 
         for i, node in enumerate(tree.body):
-            # Get line range
+            # Get line range for UI display
             line_start = node.lineno
             line_end = node.end_lineno or node.lineno
 
-            # Extract source code
-            lines = script.split('\n')
-            code = '\n'.join(lines[line_start-1:line_end])
-
-            # Determine if expression
+            # Compile AST node directly
             is_expr = isinstance(node, ast.Expr)
+            if is_expr:
+                # Expression: compile for eval()
+                compiled = compile(
+                    ast.Expression(body=node.value),
+                    '<rdit>',
+                    'eval'
+                )
+            else:
+                # Statement: compile for exec()
+                compiled = compile(
+                    ast.Module(body=[node], type_ignores=[]),
+                    '<rdit>',
+                    'exec'
+                )
 
             statements.append(Statement(
-                code=code,
+                compiled=compiled,
                 node_index=i,
                 line_start=line_start,
                 line_end=line_end,
@@ -355,23 +378,20 @@ class PythonExecutor:
 
         return statements
 
-    def execute_statement(self, code: str, is_expr: bool) -> List[OutputItem]:
-        """Execute single statement with output capture."""
+    def execute_statement(self, compiled: CodeType, is_expr: bool) -> List[OutputItem]:
+        """Execute pre-compiled statement with output capture."""
         output = []
         stdout_buffer = io.StringIO()
         stderr_buffer = io.StringIO()
 
         try:
             with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
-                mode = 'eval' if is_expr else 'exec'
-                compiled = compile(code, '<rdit>', mode)
+                # Always use eval() - works for both exec and eval compiled code
+                result = eval(compiled, self.namespace)
 
-                if is_expr:
-                    result = eval(compiled, self.namespace)
-                    if result is not None:
-                        print(repr(result))
-                else:
-                    exec(compiled, self.namespace)
+                # For expressions, print result if not None
+                if is_expr and result is not None:
+                    print(repr(result))
 
         except Exception:
             error_buffer = io.StringIO()
@@ -387,10 +407,13 @@ class PythonExecutor:
         return output
 ```
 
-**Why separate eval/exec**:
-- `eval`: Returns value for expressions (like `2 + 2`)
-- `exec`: Runs statements without return (like `x = 5`)
-- Matches Python REPL behavior
+**Key design points**:
+- **Direct AST compilation**: No source extraction needed - compile AST nodes directly
+- **Pre-compiled code objects**: Statement stores `CodeType`, not source strings
+- **Compile with eval/exec modes**: Expressions use `'eval'` mode, statements use `'exec'` mode
+- **Always execute with eval()**: Even exec-compiled code can be eval'd (returns None)
+- **is_expr flag**: Determines whether to print the result, not how to execute
+- **Efficient**: Compile once during parsing, execute multiple times if needed
 
 #### Step 1.4: Implement FastAPI Server
 
@@ -804,18 +827,21 @@ def test_execute_script():
 - Easy debugging
 - Well understood
 
-**Server-side parsing beats client-side**:
+**Server-side parsing and compilation beats client-side**:
 - More accurate (using Python's AST)
+- Compile AST directly (no source extraction)
 - Simpler client
-- Consistent behavior
+- Consistent with Pyodide implementation
+- Execute pre-compiled code for efficiency
 
 ### Common Pitfalls Avoided
 
-1. ✅ **Used server-side parsing** (not client-side regex)
-2. ✅ **Maintained namespace** (Jupyter-like UX)
-3. ✅ **Separated concerns** (server ≠ executor)
-4. ✅ **Enabled CORS** (for local development)
-5. ✅ **Used Pydantic** (type safety + validation)
+1. ✅ **Compiled AST directly** (not extracting source code strings)
+2. ✅ **Used server-side parsing** (not client-side regex)
+3. ✅ **Maintained namespace** (Jupyter-like UX)
+4. ✅ **Separated concerns** (server ≠ executor)
+5. ✅ **Enabled CORS** (for local development)
+6. ✅ **Used Pydantic** (type safety + validation)
 
 ---
 
