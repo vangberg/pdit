@@ -1,24 +1,59 @@
 # rdit
 
-An interactive R code editor powered by WebR, running entirely in the browser.
+An interactive Python code editor with inline execution results.
+
+This is a monorepo containing:
+- **Python package** (`rdit/`) - Core Python execution infrastructure
+- **Web frontend** (`web/`) - Browser-based editor powered by Pyodide
 
 ## Features
 
-- **Browser-based R execution** - Run R code without server-side infrastructure using WebAssembly
-- **Interactive editor** - CodeMirror 6-based editor with R syntax highlighting
+- **Browser-based Python execution** - Run Python code without server-side infrastructure using WebAssembly
+- **Interactive editor** - CodeMirror 6-based editor with Python syntax highlighting
 - **Inline results** - Execution results displayed inline next to code
-- **Visualizations** - Support for R plots and graphics
 - **Execute with Cmd+Enter** - Quick code execution
 
-## Tech Stack
+## Project Structure
 
-- React 19
-- CodeMirror 6
-- WebR 0.5.6 (R in WebAssembly)
-- Vite 5
-- TypeScript
+```
+rdit/                   # Python package
+  __init__.py
+tests/                  # Python tests
+web/                    # TypeScript/React frontend
+  src/
+    App.tsx
+    Editor.tsx
+    execution-python.ts
+    python-parser.ts
+    ...
+  package.json
+  vite.config.ts
+pyproject.toml          # Python packaging config
+```
 
-## Getting Started
+## Python Package
+
+### Installation
+
+Install from source:
+
+```bash
+pip install -e .
+```
+
+Install with dev dependencies:
+
+```bash
+pip install -e ".[dev]"
+```
+
+### Running Python Tests
+
+```bash
+pytest
+```
+
+## Web Frontend
 
 ### Prerequisites
 
@@ -28,6 +63,7 @@ An interactive R code editor powered by WebR, running entirely in the browser.
 ### Installation
 
 ```bash
+cd web
 npm install
 ```
 
@@ -36,6 +72,7 @@ npm install
 Start the development server:
 
 ```bash
+cd web
 npm run dev
 ```
 
@@ -46,34 +83,36 @@ The app will open automatically in your browser with hot module replacement enab
 Build for production:
 
 ```bash
+cd web
 npm run build
 ```
 
 Preview the production build:
 
 ```bash
+cd web
 npm run preview
 ```
 
-## Testing
+### Testing
 
-The project uses Vitest with browser mode (Chromium) for testing.
+The web frontend uses Vitest with browser mode (Chromium) for testing.
 
-### Running Tests
-
-Run tests in watch mode (interactive):
+Run tests in watch mode:
 
 ```bash
+cd web
 npm test
 ```
 
 Run tests once (CI mode):
 
 ```bash
+cd web
 npm test -- --run
 ```
 
-### Browser Requirements
+#### Browser Requirements
 
 Tests run in a real Chromium browser environment using Playwright. The first time you run tests, Playwright will download the necessary browser binaries automatically. If you need to manually install browsers:
 
@@ -81,29 +120,17 @@ Tests run in a real Chromium browser environment using Playwright. The first tim
 npx playwright install chromium
 ```
 
-### Writing Tests
+## Tech Stack
 
-Tests are located alongside source files with the `.test.ts` or `.test.tsx` extension:
+### Python Package
+- Python 3.8+
 
-```
-src/
-  compute-line-groups.ts
-  compute-line-groups.test.ts  # Test file
-```
-
-Test files are automatically discovered by the pattern `src/**/*.test.{ts,tsx}`.
-
-## Project Structure
-
-```
-src/
-  App.tsx              # Main application component
-  Editor.tsx           # CodeMirror editor component
-  execution.ts         # WebR execution logic
-  compute-line-groups.ts  # Result grouping algorithm
-  results.ts           # Result store management
-  webr-instance.ts     # WebR initialization
-```
+### Web Frontend
+- React 19
+- CodeMirror 6
+- Pyodide 0.26+ (Python in WebAssembly)
+- Vite 5
+- TypeScript
 
 ## License
 
