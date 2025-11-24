@@ -32,7 +32,7 @@ class TestHealthEndpoint:
         if not HAS_FASTAPI:
             return  # Skip if FastAPI not installed
 
-        response = client.get("/health")
+        response = client.get("/api/health")
 
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
@@ -52,16 +52,16 @@ class TestResetEndpoint:
             return  # Skip if FastAPI not installed
 
         # Set a variable first
-        client.post("/execute-script", json={"script": "x = 42"})
+        client.post("/api/execute-script", json={"script": "x = 42"})
 
         # Reset
-        response = client.post("/reset")
+        response = client.post("/api/reset")
 
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
 
         # Try to use the variable - should fail
-        response = client.post("/execute-script", json={
+        response = client.post("/api/execute-script", json={
             "script": "try:\n    x\nexcept NameError:\n    print('cleared')"
         })
 
@@ -86,7 +86,7 @@ class TestExecuteScriptEndpoint:
         if not HAS_FASTAPI:
             return  # Skip if FastAPI not installed
 
-        response = client.post("/execute-script", json={
+        response = client.post("/api/execute-script", json={
             "script": "2 + 2"
         })
 
@@ -109,7 +109,7 @@ class TestExecuteScriptEndpoint:
         if not HAS_FASTAPI:
             return  # Skip if FastAPI not installed
 
-        response = client.post("/execute-script", json={
+        response = client.post("/api/execute-script", json={
             "script": "x = 10"
         })
 
@@ -126,7 +126,7 @@ class TestExecuteScriptEndpoint:
         if not HAS_FASTAPI:
             return  # Skip if FastAPI not installed
 
-        response = client.post("/execute-script", json={
+        response = client.post("/api/execute-script", json={
             "script": "a = 1\nb = 2\na + b"
         })
 
@@ -144,7 +144,7 @@ class TestExecuteScriptEndpoint:
         if not HAS_FASTAPI:
             return  # Skip if FastAPI not installed
 
-        response = client.post("/execute-script", json={
+        response = client.post("/api/execute-script", json={
             "script": "1 / 0"
         })
 
@@ -163,13 +163,13 @@ class TestExecuteScriptEndpoint:
             return  # Skip if FastAPI not installed
 
         # Set a variable
-        response1 = client.post("/execute-script", json={
+        response1 = client.post("/api/execute-script", json={
             "script": "persistent_var = 99"
         })
         assert response1.status_code == 200
 
         # Use it in next request
-        response2 = client.post("/execute-script", json={
+        response2 = client.post("/api/execute-script", json={
             "script": "persistent_var"
         })
 
@@ -182,7 +182,7 @@ class TestExecuteScriptEndpoint:
         if not HAS_FASTAPI:
             return  # Skip if FastAPI not installed
 
-        response = client.post("/execute-script", json={
+        response = client.post("/api/execute-script", json={
             "script": "a = 1\nb = 2\nc = 3",
             "lineRange": {"from": 2, "to": 2}
         })
@@ -199,7 +199,7 @@ class TestExecuteScriptEndpoint:
         if not HAS_FASTAPI:
             return  # Skip if FastAPI not installed
 
-        response = client.post("/execute-script", json={
+        response = client.post("/api/execute-script", json={
             "script": "def invalid syntax"
         })
 
@@ -217,7 +217,7 @@ class TestExecuteScriptEndpoint:
         if not HAS_FASTAPI:
             return  # Skip if FastAPI not installed
 
-        response = client.post("/execute-script", json={
+        response = client.post("/api/execute-script", json={
             "script": 'print("Hello, World!")'
         })
 
@@ -228,6 +228,41 @@ class TestExecuteScriptEndpoint:
         assert len(result["output"]) == 1
         assert result["output"][0]["type"] == "stdout"
         assert "Hello, World!" in result["output"][0]["text"]
+
+
+class TestReadFileEndpoint:
+    """Tests for /read-file endpoint."""
+
+    def setup_method(self):
+        """Reset executor before each test."""
+        if HAS_FASTAPI:
+            reset_executor()
+
+    def test_read_existing_file(self):
+        """Test reading a file that exists."""
+        if not HAS_FASTAPI:
+            return  # Skip if FastAPI not installed
+
+        # Read this test file itself
+        import os
+        test_file = os.path.abspath(__file__)
+
+        response = client.get(f"/api/read-file?path={test_file}")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "content" in data
+        assert "TestReadFileEndpoint" in data["content"]
+
+    def test_read_nonexistent_file(self):
+        """Test reading a file that doesn't exist."""
+        if not HAS_FASTAPI:
+            return  # Skip if FastAPI not installed
+
+        response = client.get("/api/read-file?path=/nonexistent/file.py")
+
+        assert response.status_code == 404
+        assert "File not found" in response.json()["detail"]
 
 
 if __name__ == "__main__":
@@ -249,6 +284,7 @@ if __name__ == "__main__":
             TestHealthEndpoint,
             TestResetEndpoint,
             TestExecuteScriptEndpoint,
+            TestReadFileEndpoint,
         ]
 
         total = 0

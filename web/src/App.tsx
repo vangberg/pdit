@@ -8,8 +8,9 @@ import { LineGroup } from "./compute-line-groups";
 import { initializePyodide } from "./pyodide-instance";
 import { TopBar } from "./TopBar";
 import { useResults } from "./results";
+import { useScriptFile } from "./use-script-file";
 
-const initialCode = `# Python/Pyodide Demo
+const DEFAULT_CODE = `# Python/Pyodide Demo
 # Simple calculations
 x = 5 + 3
 x
@@ -31,6 +32,13 @@ total = sum(squares)
 total`;
 
 function App() {
+  // Load script file from URL query parameter
+  const scriptPath = new URLSearchParams(window.location.search).get("script");
+  const { code: initialCode, isLoading: isLoadingScript } = useScriptFile(
+    scriptPath,
+    DEFAULT_CODE
+  );
+
   const editorRef = useRef<EditorHandles | null>(null);
   const { expressions, lineGroups, setLineGroups, addExpressions } =
     useResults();
@@ -147,6 +155,17 @@ function App() {
     editorRef.current?.executeCurrent();
     editorRef.current?.focus();
   }, []);
+
+  // Show loading state while script is being loaded
+  if (isLoadingScript || !initialCode) {
+    return (
+      <div id="app">
+        <div style={{ padding: "20px", fontFamily: "monospace" }}>
+          Loading script...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="app">

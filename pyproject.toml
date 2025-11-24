@@ -25,7 +25,12 @@ classifiers = [
 dependencies = [
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
+    "click>=8.0.0",
+    "aiofiles>=23.0.0",
 ]
+
+[project.scripts]
+rdit = "rdit.cli:main"
 
 [project.optional-dependencies]
 dev = [

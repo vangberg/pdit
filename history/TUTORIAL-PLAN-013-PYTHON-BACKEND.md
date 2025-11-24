@@ -2,12 +2,14 @@
 
 **Plan 013 Implementation Guide**
 
-> **Status Update (2025-11-24)**: Backend implementation in progress.
+> **Status Update (2025-11-24)**: Backend implementation complete!
 > ✅ **Step 1.1 completed**: Python package structure created at top level
 > ✅ **Step 1.2 completed**: `pyproject.toml` configured with setuptools
 > ✅ **Step 1.3 completed**: Executor module implemented with 32 tests
 > ✅ **Step 1.4 completed**: FastAPI server implemented with 10 tests
-> 📋 **Next**: Implement CLI module (Step 1.5)
+> ✅ **Step 1.5 completed**: CLI module implemented with Click framework
+> ✅ **Bonus**: Added `/api/read-file` endpoint for loading script files
+> 📋 **Next**: Implement TypeScript client (Phase 2)
 
 ## Table of Contents
 
@@ -300,17 +302,19 @@ const serverUrl = new URLSearchParams(window.location.search)
 ```bash
 rdit/                   # Top-level Python package
   __init__.py          ✅ Completed (exports)
-  executor.py          ✅ Completed (210 lines, 32 tests)
-  server.py            ✅ Completed (130 lines, 10 tests)
-  cli.py               ⏳ To be implemented
+  executor.py          ✅ Completed (213 lines, 32 tests)
+  server.py            ✅ Completed (180 lines, 12 tests)
+  cli.py               ✅ Completed (98 lines)
 web/                    # TypeScript frontend
-tests/                  # Python tests (42 passing)
-  test_executor.py     ✅ Completed
-  test_server.py       ✅ Completed
-pyproject.toml          ✅ Completed (with dependencies)
+tests/                  # Python tests (44 passing)
+  test_executor.py     ✅ Completed (32 tests)
+  test_server.py       ✅ Completed (12 tests)
+pyproject.toml          ✅ Completed (with CLI entry point)
 ```
 
 The repository has been restructured for PyPI distribution with the Python package at the top level.
+
+**Phase 1 Complete**: All backend server components implemented and tested.
 
 #### Step 1.2: Package Configuration (pyproject.toml)
 
@@ -601,6 +605,61 @@ def main(script, port, host, no_browser):
 - ✅ **Composable**: Easy to add subcommands later
 - ✅ **User-friendly**: Better error messages and prompts
 - ✅ **Industry standard**: Used by Flask, pip, black, etc.
+
+#### Step 1.6: File Reading Endpoint (Bonus)
+
+**Status**: ✅ Completed
+
+To enable the frontend to load script files passed via the CLI, we added a file reading endpoint.
+
+**File**: `rdit/server.py`
+
+```python
+@app.get("/api/read-file", response_model=ReadFileResponse)
+async def read_file(path: str):
+    """Read a file from the filesystem.
+
+    Args:
+        path: Absolute path to the file to read
+
+    Returns:
+        File contents as text
+
+    Raises:
+        HTTPException: If file not found or cannot be read
+
+    Note:
+        Security consideration: This endpoint allows reading any file
+        the server has access to. Path validation should be added.
+    """
+    try:
+        file_path = Path(path)
+        content = file_path.read_text()
+        return ReadFileResponse(content=content)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"File not found: {path}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
+```
+
+**How it works:**
+
+1. CLI passes script path: `rdit script.py`
+2. Browser opens: `http://127.0.0.1:8888?script=/path/to/script.py`
+3. Frontend calls: `GET /api/read-file?path=/path/to/script.py`
+4. Server reads and returns file contents
+5. Frontend loads contents into editor
+
+**Security consideration:**
+
+Created issue `rdit-mit` to track path validation needs:
+- Restrict to allowed directories
+- Prevent directory traversal attacks
+- Consider using allowlist of paths
+
+**Tests added:**
+- `test_read_existing_file` - Verify reading valid files
+- `test_read_nonexistent_file` - Verify 404 error handling
 
 ### Phase 2: TypeScript Client
 

@@ -3,13 +3,18 @@ FastAPI server for local Python code execution.
 
 Provides HTTP endpoints for:
 - Executing Python scripts
+- Reading files from disk
 - Resetting execution state
 - Health checks
+- Serving static frontend files
 """
 
+from pathlib import Path
 from typing import List, Optional
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from .executor import get_executor, reset_executor
@@ -48,6 +53,11 @@ class ExecuteResponse(BaseModel):
     results: List[ExpressionResult]
 
 
+class ReadFileResponse(BaseModel):
+    """Response from reading a file."""
+    content: str
+
+
 # FastAPI app
 app = FastAPI(
     title="rdit Python Backend",
@@ -65,7 +75,7 @@ app.add_middleware(
 )
 
 
-@app.get("/health")
+@app.get("/api/health")
 async def health():
     """Health check endpoint.
 
@@ -75,7 +85,7 @@ async def health():
     return {"status": "ok"}
 
 
-@app.post("/execute-script", response_model=ExecuteResponse)
+@app.post("/api/execute-script", response_model=ExecuteResponse)
 async def execute_script(request: ExecuteScriptRequest):
     """Parse and execute a Python script.
 
@@ -114,7 +124,7 @@ async def execute_script(request: ExecuteScriptRequest):
     )
 
 
-@app.post("/reset")
+@app.post("/api/reset")
 async def reset():
     """Reset the execution namespace.
 
@@ -125,3 +135,52 @@ async def reset():
     """
     reset_executor()
     return {"status": "ok"}
+
+
+@app.get("/api/read-file", response_model=ReadFileResponse)
+async def read_file(path: str):
+    """Read a file from the filesystem.
+
+    Args:
+        path: Absolute path to the file to read
+
+    Returns:
+        File contents as text
+
+    Raises:
+        HTTPException: If file not found or cannot be read
+
+    Note:
+        Security consideration: This endpoint allows reading any file
+        the server has access to. Path validation should be added.
+    """
+    try:
+        file_path = Path(path)
+        content = file_path.read_text()
+        return ReadFileResponse(content=content)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"File not found: {path}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
+
+
+# Static file serving for frontend
+# Get path to web/dist directory relative to this file
+STATIC_DIR = Path(__file__).parent.parent / "web" / "dist"
+
+if STATIC_DIR.exists():
+    # Mount assets directory for JS/CSS files
+    assets_dir = STATIC_DIR / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+    # Serve index.html for all unmatched routes (SPA routing)
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        """Serve frontend for all non-API routes."""
+        # If path starts with /api, this won't match (API routes take precedence)
+        # Serve index.html for SPA routing
+        index_file = STATIC_DIR / "index.html"
+        if index_file.exists():
+            return FileResponse(index_file)
+        return {"error": "Frontend not found"}
