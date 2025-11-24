@@ -349,7 +349,7 @@ exclude = ["tests*", "web*"]
 dependencies = [
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
-    "pydantic>=2.0.0",
+    "click>=8.0.0",
 ]
 
 [project.scripts]
@@ -359,7 +359,7 @@ rdit = "rdit.cli:main"
 **Key decisions:**
 - **setuptools**: Mature, well-supported build backend
 - **Standard uvicorn**: Includes websockets and HTTP/2 support
-- **Pydantic v2**: Type validation for API requests
+- **Click**: Modern CLI framework (declarative, better UX than argparse)
 - **Entry point**: `rdit` command → `cli:main()`
 
 #### Step 1.3: Implement Executor Module
@@ -513,13 +513,13 @@ async def health():
 **File**: `rdit/cli.py`
 
 ```python
-import argparse
 import contextlib
 import sys
 import time
 import threading
 import webbrowser
 from pathlib import Path
+import click
 import uvicorn
 
 
@@ -546,34 +546,35 @@ class Server(uvicorn.Server):
             thread.join()
 
 
-def main():
-    parser = argparse.ArgumentParser(description="rdit - Python notebook")
-    parser.add_argument("script", nargs="?", help="Python script to open")
-    parser.add_argument("--port", type=int, default=8888)
-    parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--no-browser", action="store_true")
+@click.command()
+@click.argument("script", required=False, type=click.Path(exists=True))
+@click.option("--port", default=8888, help="Port to run server on")
+@click.option("--host", default="127.0.0.1", help="Host to bind to")
+@click.option("--no-browser", is_flag=True, help="Don't open browser automatically")
+def main(script, port, host, no_browser):
+    """rdit - Interactive Python notebook.
 
-    args = parser.parse_args()
+    Starts a local Python execution server and opens the web interface.
 
-    # Validate script path
-    if args.script:
-        script_path = Path(args.script).resolve()
-        if not script_path.exists():
-            print(f"Error: Script '{args.script}' not found")
-            sys.exit(1)
+    SCRIPT: Optional Python script file to open
+    """
+    # Convert script to absolute path if provided
+    script_path = None
+    if script:
+        script_path = Path(script).resolve()
 
     # Build URL
-    url = f"http://{args.host}:{args.port}"
-    if args.script:
+    url = f"http://{host}:{port}"
+    if script_path:
         url += f"?script={script_path}"
 
-    print(f"Starting rdit server on {args.host}:{args.port}")
+    click.echo(f"Starting rdit server on {host}:{port}")
 
     # Configure and create server
     config = uvicorn.Config(
         "rdit.server:app",
-        host=args.host,
-        port=args.port,
+        host=host,
+        port=port,
         log_level="info"
     )
     server = Server(config=config)
@@ -581,17 +582,25 @@ def main():
     # Run server in thread, open browser when ready
     with server.run_in_thread():
         # Server is guaranteed to be ready here
-        if not args.no_browser:
+        if not no_browser:
             webbrowser.open(url)
-            print(f"Opening browser to {url}")
+            click.echo(f"Opening browser to {url}")
 
         # Keep server running
         try:
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:
-            print("\nShutting down...")
+            click.echo("\nShutting down...")
 ```
+
+**Why Click over argparse?**
+- ✅ **Declarative**: Uses decorators instead of imperative parser setup
+- ✅ **Better help**: Automatically formatted, colored help text
+- ✅ **Type validation**: `click.Path(exists=True)` validates files automatically
+- ✅ **Composable**: Easy to add subcommands later
+- ✅ **User-friendly**: Better error messages and prompts
+- ✅ **Industry standard**: Used by Flask, pip, black, etc.
 
 ### Phase 2: TypeScript Client
 
