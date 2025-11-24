@@ -153,13 +153,25 @@ class PythonExecutor:
             line_range: Optional (from, to) line range (1-based, inclusive)
 
         Returns:
-            List of execution results for each statement
-
-        Raises:
-            SyntaxError: If the script has syntax errors
+            List of execution results for each statement.
+            If there's a syntax error, returns a single result with the error.
         """
         # Parse script into statements
-        statements = self.parse_script(script)
+        try:
+            statements = self.parse_script(script)
+        except SyntaxError as e:
+            # Return syntax error as an execution result
+            error_line = e.lineno or 1
+            error_buffer = io.StringIO()
+            traceback.print_exc(file=error_buffer)
+
+            return [ExecutionResult(
+                node_index=0,
+                line_start=error_line,
+                line_end=error_line,
+                output=[OutputItem(type="error", text=error_buffer.getvalue())],
+                is_invisible=False
+            )]
 
         # Unpack line range once if specified
         from_line = to_line = None

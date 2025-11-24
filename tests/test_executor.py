@@ -90,16 +90,14 @@ x + y
         assert "NameError" in results[0].output[0].text
 
     def test_syntax_error(self):
-        """Test that syntax errors are raised."""
-        if pytest is not None:
-            with pytest.raises(SyntaxError):
-                self.executor.execute_script("def invalid syntax")
-        else:
-            try:
-                self.executor.execute_script("def invalid syntax")
-                assert False, "Should have raised SyntaxError"
-            except SyntaxError:
-                pass  # Expected
+        """Test that syntax errors are captured in results."""
+        results = self.executor.execute_script("def invalid syntax")
+
+        # Should return one result with error
+        assert len(results) == 1
+        assert results[0].output[0].type == "error"
+        assert "SyntaxError" in results[0].output[0].text
+        assert results[0].is_invisible is False
 
     def test_reset_clears_namespace(self):
         """Test that reset() clears all variables."""

@@ -223,19 +223,53 @@ def parse_script(script: str) -> List[Statement]:
 
 ### 6. CLI with Auto-Browser Opening
 
-**Decision**: CLI opens browser automatically after starting server
+**Decision**: CLI opens browser automatically after starting server, using threading to wait for server readiness
 
 **Why:**
 - **Jupyter-like UX**: Familiar to data scientists
 - **Single command**: `rdit script.py` does everything
 - **Convenience**: No manual navigation needed
+- **Reliable**: No race conditions from fixed delays
 
-**Implementation:**
+**Implementation (threading with server.started flag):**
 ```python
+class Server(uvicorn.Server):
+    def install_signal_handlers(self):
+        pass  # Disable signal handlers for threading
+
+    @contextlib.contextmanager
+    def run_in_thread(self):
+        thread = threading.Thread(target=self.run)
+        thread.start()
+        try:
+            while not self.started:
+                time.sleep(1e-3)
+            yield
+        finally:
+            self.should_exit = True
+            thread.join()
+
 def main():
-    open_browser(url, delay=1.5)  # Wait for server startup
-    uvicorn.run("rdit.server:app", ...)
+    config = uvicorn.Config("rdit.server:app", host=host, port=port)
+    server = Server(config=config)
+
+    with server.run_in_thread():
+        # Server is guaranteed to be ready
+        if not args.no_browser:
+            webbrowser.open(url)
+
+        # Keep server running
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            pass
 ```
+
+**Why not fixed delays?**
+- Too short = race condition (browser opens before server ready)
+- Too long = user waits unnecessarily
+- Threading with `server.started` = 100% reliable, no waiting
 
 ### 7. URL Configuration
 
@@ -476,13 +510,37 @@ async def health():
 
 ```python
 import argparse
+import contextlib
+import sys
+import time
+import threading
 import webbrowser
-from threading import Timer
+from pathlib import Path
 import uvicorn
 
-def open_browser(url: str, delay: float = 1.5):
-    """Open browser after delay to ensure server is ready."""
-    Timer(delay, lambda: webbrowser.open(url)).start()
+
+class Server(uvicorn.Server):
+    """Custom Server class that can run in a background thread."""
+
+    def install_signal_handlers(self):
+        """Disable signal handlers for threading compatibility."""
+        pass
+
+    @contextlib.contextmanager
+    def run_in_thread(self):
+        """Run server in background thread, wait for startup."""
+        thread = threading.Thread(target=self.run)
+        thread.start()
+        try:
+            # Wait for server to be ready
+            while not self.started:
+                time.sleep(1e-3)
+            yield
+        finally:
+            # Clean shutdown
+            self.should_exit = True
+            thread.join()
+
 
 def main():
     parser = argparse.ArgumentParser(description="rdit - Python notebook")
@@ -507,12 +565,28 @@ def main():
 
     print(f"Starting rdit server on {args.host}:{args.port}")
 
-    # Open browser
-    if not args.no_browser:
-        open_browser(url)
+    # Configure and create server
+    config = uvicorn.Config(
+        "rdit.server:app",
+        host=args.host,
+        port=args.port,
+        log_level="info"
+    )
+    server = Server(config=config)
 
-    # Start server
-    uvicorn.run("rdit.server:app", host=args.host, port=args.port)
+    # Run server in thread, open browser when ready
+    with server.run_in_thread():
+        # Server is guaranteed to be ready here
+        if not args.no_browser:
+            webbrowser.open(url)
+            print(f"Opening browser to {url}")
+
+        # Keep server running
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("\nShutting down...")
 ```
 
 ### Phase 2: TypeScript Client
