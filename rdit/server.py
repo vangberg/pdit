@@ -11,10 +11,11 @@ Provides HTTP endpoints for:
 
 from pathlib import Path
 from typing import List, Optional
+import json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from .executor import get_executor, reset_executor
@@ -85,42 +86,73 @@ async def health():
     return {"status": "ok"}
 
 
-@app.post("/api/execute-script", response_model=ExecuteResponse)
+@app.post("/api/execute-script")
 async def execute_script(request: ExecuteScriptRequest):
-    """Parse and execute a Python script.
+    """Stream execution results as Server-Sent Events.
+
+    Each statement result is sent as a separate SSE event as it completes,
+    providing real-time feedback instead of waiting for entire script.
 
     Args:
         request: Script to execute with optional line range
 
     Returns:
-        Execution results for each statement.
-        Syntax errors are returned as execution results with error output.
+        StreamingResponse with text/event-stream media type
+
+    SSE Format: data: <JSON>\n\n
     """
-    executor = get_executor()
+    async def generate_events():
+        import asyncio
 
-    # Convert line range if provided
-    line_range = None
-    if request.lineRange:
-        line_range = (request.lineRange.from_, request.lineRange.to)
+        executor = get_executor()
 
-    # Execute script (syntax errors are captured in results)
-    results = executor.execute_script(request.script, line_range)
+        # Convert line range if provided
+        line_range = None
+        if request.lineRange:
+            line_range = (request.lineRange.from_, request.lineRange.to)
 
-    # Convert to API response format
-    return ExecuteResponse(
-        results=[
-            ExpressionResult(
-                nodeIndex=r.node_index,
-                lineStart=r.line_start,
-                lineEnd=r.line_end,
-                output=[
-                    OutputItem(type=o.type, text=o.text)
-                    for o in r.output
-                ],
-                isInvisible=r.is_invisible
-            )
-            for r in results
-        ]
+        try:
+            # Execute script (returns generator of results)
+            results = executor.execute_script(request.script, line_range)
+
+            # Stream each result as SSE event
+            for result in results:
+                # Convert to API response format
+                expr_result = ExpressionResult(
+                    nodeIndex=result.node_index,
+                    lineStart=result.line_start,
+                    lineEnd=result.line_end,
+                    output=[
+                        OutputItem(type=o.type, text=o.text)
+                        for o in result.output
+                    ],
+                    isInvisible=result.is_invisible
+                )
+
+                # SSE format: "data: <json>\n\n"
+                yield f"data: {expr_result.model_dump_json()}\n\n"
+
+                # Force async yield to flush immediately
+                await asyncio.sleep(0)
+
+            # Send completion event
+            yield 'data: {"type": "complete"}\n\n'
+
+        except Exception as e:
+            # Send error event
+            error_data = {
+                "type": "error",
+                "message": str(e)
+            }
+            yield f"data: {json.dumps(error_data)}\n\n"
+
+    return StreamingResponse(
+        generate_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        }
     )
 
 

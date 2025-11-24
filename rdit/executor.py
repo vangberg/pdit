@@ -13,7 +13,7 @@ import traceback
 from contextlib import redirect_stdout, redirect_stderr
 from dataclasses import dataclass
 from types import CodeType
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Generator, List, Optional
 
 
 @dataclass
@@ -145,40 +145,39 @@ class PythonExecutor:
         self,
         script: str,
         line_range: Optional[tuple[int, int]] = None
-    ) -> List[ExecutionResult]:
-        """Execute Python script, optionally filtered by line range.
+    ) -> Generator[ExecutionResult, None, None]:
+        """Execute Python script, yielding results as each statement completes.
 
         Args:
             script: Python source code to execute
             line_range: Optional (from, to) line range (1-based, inclusive)
 
-        Returns:
-            List of execution results for each statement.
-            If there's a syntax error, returns a single result with the error.
+        Yields:
+            ExecutionResult for each statement as it completes.
+            If there's a syntax error, yields a single result with the error.
         """
         # Parse script into statements
         try:
             statements = self.parse_script(script)
         except SyntaxError as e:
-            # Return syntax error as an execution result
+            # Yield syntax error as an execution result
             error_line = e.lineno or 1
             error_buffer = io.StringIO()
             traceback.print_exc(file=error_buffer)
 
-            return [ExecutionResult(
+            yield ExecutionResult(
                 node_index=0,
                 line_start=error_line,
                 line_end=error_line,
                 output=[OutputItem(type="error", text=error_buffer.getvalue())],
                 is_invisible=False
-            )]
+            )
+            return
 
         # Unpack line range once if specified
         from_line = to_line = None
         if line_range:
             from_line, to_line = line_range
-
-        results = []
 
         for stmt in statements:
             # Filter by line range if specified
@@ -193,15 +192,14 @@ class PythonExecutor:
             # Determine if output is invisible (no stdout/stderr/errors)
             is_invisible = len(output) == 0
 
-            results.append(ExecutionResult(
+            # Yield result immediately after execution
+            yield ExecutionResult(
                 node_index=stmt.node_index,
                 line_start=stmt.line_start,
                 line_end=stmt.line_end,
                 output=output,
                 is_invisible=is_invisible
-            ))
-
-        return results
+            )
 
     def reset(self) -> None:
         """Reset the execution namespace (clear all variables)."""
