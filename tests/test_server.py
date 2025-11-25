@@ -298,6 +298,60 @@ class TestReadFileEndpoint:
         assert "File not found" in response.json()["detail"]
 
 
+class TestSaveFileEndpoint:
+    """Tests for /save-file endpoint."""
+
+    def setup_method(self):
+        """Reset executor before each test."""
+        if HAS_FASTAPI:
+            reset_executor()
+
+    def test_save_file(self):
+        """Test saving a file."""
+        if not HAS_FASTAPI:
+            return  # Skip if FastAPI not installed
+
+        import tempfile
+        import os
+
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            test_file = f.name
+            f.write("# original content")
+
+        try:
+            # Save new content
+            new_content = "# updated content\nprint('hello')"
+            response = client.post("/api/save-file", json={
+                "path": test_file,
+                "content": new_content
+            })
+
+            assert response.status_code == 200
+            assert response.json() == {"status": "ok"}
+
+            # Verify content was written
+            with open(test_file, 'r') as f:
+                saved_content = f.read()
+            assert saved_content == new_content
+
+        finally:
+            os.unlink(test_file)
+
+    def test_save_file_invalid_path(self):
+        """Test saving to an invalid path."""
+        if not HAS_FASTAPI:
+            return  # Skip if FastAPI not installed
+
+        response = client.post("/api/save-file", json={
+            "path": "/nonexistent/directory/file.py",
+            "content": "test content"
+        })
+
+        assert response.status_code == 500
+        assert "Error saving file" in response.json()["detail"]
+
+
 if __name__ == "__main__":
     """Run tests without pytest for development."""
     import sys
