@@ -23,7 +23,7 @@ class TestPythonExecutor:
 
     def test_basic_expression(self):
         """Test executing a simple expression."""
-        results = self.executor.execute_script("2 + 2")
+        results = list(self.executor.execute_script("2 + 2"))
 
         assert len(results) == 1
         assert results[0].line_start == 1
@@ -35,7 +35,7 @@ class TestPythonExecutor:
 
     def test_basic_statement(self):
         """Test executing a simple statement."""
-        results = self.executor.execute_script("x = 10")
+        results = list(self.executor.execute_script("x = 10"))
 
         assert len(results) == 1
         assert results[0].is_invisible is True
@@ -44,10 +44,10 @@ class TestPythonExecutor:
     def test_namespace_persistence(self):
         """Test that variables persist across executions."""
         # Set a variable
-        self.executor.execute_script("x = 10")
+        list(self.executor.execute_script("x = 10"))
 
         # Use it in next execution
-        results = self.executor.execute_script("x + 5")
+        results = list(self.executor.execute_script("x + 5"))
 
         assert results[0].output[0].text.strip() == "15"
 
@@ -58,7 +58,7 @@ x = 10
 y = 20
 x + y
 """
-        results = self.executor.execute_script(script)
+        results = list(self.executor.execute_script(script))
 
         assert len(results) == 3
         assert results[0].is_invisible is True  # x = 10
@@ -68,7 +68,7 @@ x + y
 
     def test_print_statement(self):
         """Test that print() output is captured."""
-        results = self.executor.execute_script('print("Hello, World!")')
+        results = list(self.executor.execute_script('print("Hello, World!")'))
 
         assert len(results[0].output) == 1
         assert results[0].output[0].type == "stdout"
@@ -76,7 +76,7 @@ x + y
 
     def test_error_handling(self):
         """Test that errors are captured properly."""
-        results = self.executor.execute_script("1 / 0")
+        results = list(self.executor.execute_script("1 / 0"))
 
         assert len(results[0].output) == 1
         assert results[0].output[0].type == "error"
@@ -84,14 +84,14 @@ x + y
 
     def test_undefined_variable_error(self):
         """Test error when using undefined variable."""
-        results = self.executor.execute_script("undefined_var")
+        results = list(self.executor.execute_script("undefined_var"))
 
         assert results[0].output[0].type == "error"
         assert "NameError" in results[0].output[0].text
 
     def test_syntax_error(self):
         """Test that syntax errors are captured in results."""
-        results = self.executor.execute_script("def invalid syntax")
+        results = list(self.executor.execute_script("def invalid syntax"))
 
         # Should return one result with error
         assert len(results) == 1
@@ -102,20 +102,20 @@ x + y
     def test_reset_clears_namespace(self):
         """Test that reset() clears all variables."""
         # Set a variable
-        self.executor.execute_script("x = 42")
+        list(self.executor.execute_script("x = 42"))
 
         # Reset
         self.executor.reset()
 
         # Try to use the variable
-        results = self.executor.execute_script("try:\n    x\nexcept NameError:\n    print('cleared')")
+        results = list(self.executor.execute_script("try:\n    x\nexcept NameError:\n    print('cleared')"))
 
         assert "cleared" in results[0].output[0].text
 
     def test_line_range_single_line(self):
         """Test filtering by line range - single line."""
         script = "a = 1\nb = 2\nc = 3"
-        results = self.executor.execute_script(script, line_range=(2, 2))
+        results = list(self.executor.execute_script(script, line_range=(2, 2)))
 
         assert len(results) == 1
         assert results[0].line_start == 2
@@ -124,7 +124,7 @@ x + y
     def test_line_range_multiple_lines(self):
         """Test filtering by line range - multiple lines."""
         script = "a = 1\nb = 2\nc = 3\nd = 4"
-        results = self.executor.execute_script(script, line_range=(2, 3))
+        results = list(self.executor.execute_script(script, line_range=(2, 3)))
 
         assert len(results) == 2
         assert results[0].line_start == 2
@@ -133,13 +133,13 @@ x + y
     def test_line_range_outside_script(self):
         """Test line range that doesn't match any statements."""
         script = "a = 1\nb = 2"
-        results = self.executor.execute_script(script, line_range=(10, 20))
+        results = list(self.executor.execute_script(script, line_range=(10, 20)))
 
         assert len(results) == 0
 
     def test_expression_returns_none(self):
         """Test that expressions returning None don't produce output."""
-        results = self.executor.execute_script("None")
+        results = list(self.executor.execute_script("None"))
 
         assert results[0].is_invisible is True
 
@@ -151,7 +151,7 @@ def add(a, b):
 
 add(5, 3)
 """
-        results = self.executor.execute_script(script)
+        results = list(self.executor.execute_script(script))
 
         assert len(results) == 2
         assert results[0].line_start == 2
@@ -160,14 +160,14 @@ add(5, 3)
 
     def test_import_statement(self):
         """Test importing standard library modules."""
-        results = self.executor.execute_script("import math\nmath.pi")
+        results = list(self.executor.execute_script("import math\nmath.pi"))
 
         assert len(results) == 2
         assert "3.14" in results[1].output[0].text
 
     def test_list_comprehension(self):
         """Test list comprehension execution."""
-        results = self.executor.execute_script("[x * 2 for x in range(5)]")
+        results = list(self.executor.execute_script("[x * 2 for x in range(5)]"))
 
         assert results[0].output[0].text.strip() == "[0, 2, 4, 6, 8]"
 
@@ -177,7 +177,7 @@ add(5, 3)
 import sys
 print("error", file=sys.stderr)
 """
-        results = self.executor.execute_script(script)
+        results = list(self.executor.execute_script(script))
 
         # Find stderr output
         stderr_outputs = [o for o in results[-1].output if o.type == "stderr"]
@@ -190,7 +190,7 @@ print("error", file=sys.stderr)
 import sys
 sys.stdout.write("out\\n"); sys.stderr.write("err\\n")
 """
-        results = self.executor.execute_script(script)
+        results = list(self.executor.execute_script(script))
 
         # Last statement should have both stdout and stderr
         assert len(results[-1].output) == 2
@@ -212,20 +212,20 @@ class TestSingletonFunctions:
     def test_reset_executor_clears_state(self):
         """Test that reset_executor clears the global executor state."""
         executor = get_executor()
-        executor.execute_script("global_var = 100")
+        list(executor.execute_script("global_var = 100"))
 
         reset_executor()
 
-        results = executor.execute_script("try:\n    global_var\nexcept NameError:\n    print('cleared')")
+        results = list(executor.execute_script("try:\n    global_var\nexcept NameError:\n    print('cleared')"))
         assert "cleared" in results[0].output[0].text
 
     def test_namespace_persists_across_calls(self):
         """Test that namespace persists when using singleton."""
         executor1 = get_executor()
-        executor1.execute_script("persistent = 42")
+        list(executor1.execute_script("persistent = 42"))
 
         executor2 = get_executor()
-        results = executor2.execute_script("persistent")
+        results = list(executor2.execute_script("persistent"))
 
         assert results[0].output[0].text.strip() == "42"
 
@@ -265,26 +265,26 @@ class TestEdgeCases:
 
     def test_empty_script(self):
         """Test executing an empty script."""
-        results = self.executor.execute_script("")
+        results = list(self.executor.execute_script(""))
 
         assert len(results) == 0
 
     def test_whitespace_only_script(self):
         """Test executing script with only whitespace."""
-        results = self.executor.execute_script("   \n\n   ")
+        results = list(self.executor.execute_script("   \n\n   "))
 
         assert len(results) == 0
 
     def test_comment_only_script(self):
         """Test executing script with only comments."""
-        results = self.executor.execute_script("# This is a comment")
+        results = list(self.executor.execute_script("# This is a comment"))
 
         assert len(results) == 0
 
     def test_long_output(self):
         """Test that long output is captured completely."""
         script = "print('x' * 10000)"
-        results = self.executor.execute_script(script)
+        results = list(self.executor.execute_script(script))
 
         assert len(results[0].output[0].text) > 10000
 
@@ -298,7 +298,7 @@ def factorial(n):
 
 factorial(5)
 """
-        results = self.executor.execute_script(script)
+        results = list(self.executor.execute_script(script))
 
         assert results[-1].output[0].text.strip() == "120"
 
@@ -309,7 +309,7 @@ a = 1
 1 / 0
 b = 2
 """
-        results = self.executor.execute_script(script)
+        results = list(self.executor.execute_script(script))
 
         # First statement succeeds
         assert results[0].is_invisible is True
@@ -320,20 +320,20 @@ b = 2
 
     def test_builtin_functions_available(self):
         """Test that builtin functions are available."""
-        results = self.executor.execute_script("len([1, 2, 3])")
+        results = list(self.executor.execute_script("len([1, 2, 3])"))
 
         assert results[0].output[0].text.strip() == "3"
 
     def test_lambda_expression(self):
         """Test lambda expressions."""
-        results = self.executor.execute_script("(lambda x: x * 2)(5)")
+        results = list(self.executor.execute_script("(lambda x: x * 2)(5)"))
 
         assert results[0].output[0].text.strip() == "10"
 
     def test_multiple_print_statements(self):
         """Test multiple print statements in one line."""
         script = "print('a'); print('b'); print('c')"
-        results = self.executor.execute_script(script)
+        results = list(self.executor.execute_script(script))
 
         # Should be treated as multiple statements
         assert len(results) == 3

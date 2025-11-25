@@ -1,5 +1,7 @@
 """Tests for the FastAPI server."""
 
+import json
+
 try:
     import pytest
 except ImportError:
@@ -46,6 +48,22 @@ class TestResetEndpoint:
         if HAS_FASTAPI:
             reset_executor()
 
+    def _parse_sse_response(self, response):
+        """Parse SSE response into list of results."""
+        results = []
+        lines = response.text.split('\n')
+        for line in lines:
+            if line.startswith('data: '):
+                data_str = line[6:]  # Remove 'data: ' prefix
+                if data_str.strip():
+                    try:
+                        data = json.loads(data_str)
+                        if 'type' not in data or data.get('type') != 'complete':
+                            results.append(data)
+                    except json.JSONDecodeError:
+                        pass
+        return results
+
     def test_reset_endpoint(self):
         """Test that reset endpoint works."""
         if not HAS_FASTAPI:
@@ -66,10 +84,10 @@ class TestResetEndpoint:
         })
 
         assert response.status_code == 200
-        results = response.json()["results"]
+        results = self._parse_sse_response(response)
         assert len(results) > 0
         # Should have error or print output indicating variable is cleared
-        has_cleared = any("cleared" in str(out) for r in results for out in r["output"])
+        has_cleared = any("cleared" in str(out) for r in results for out in r.get("output", []))
         assert has_cleared
 
 
@@ -81,6 +99,22 @@ class TestExecuteScriptEndpoint:
         if HAS_FASTAPI:
             reset_executor()
 
+    def _parse_sse_response(self, response):
+        """Parse SSE response into list of results."""
+        results = []
+        lines = response.text.split('\n')
+        for line in lines:
+            if line.startswith('data: '):
+                data_str = line[6:]  # Remove 'data: ' prefix
+                if data_str.strip():
+                    try:
+                        data = json.loads(data_str)
+                        if 'type' not in data or data.get('type') != 'complete':
+                            results.append(data)
+                    except json.JSONDecodeError:
+                        pass
+        return results
+
     def test_execute_simple_expression(self):
         """Test executing a simple expression."""
         if not HAS_FASTAPI:
@@ -91,12 +125,11 @@ class TestExecuteScriptEndpoint:
         })
 
         assert response.status_code == 200
-        data = response.json()
+        results = self._parse_sse_response(response)
 
-        assert "results" in data
-        assert len(data["results"]) == 1
+        assert len(results) == 1
 
-        result = data["results"][0]
+        result = results[0]
         assert result["lineStart"] == 1
         assert result["lineEnd"] == 1
         assert result["isInvisible"] is False
@@ -114,10 +147,10 @@ class TestExecuteScriptEndpoint:
         })
 
         assert response.status_code == 200
-        data = response.json()
+        results = self._parse_sse_response(response)
 
-        assert len(data["results"]) == 1
-        result = data["results"][0]
+        assert len(results) == 1
+        result = results[0]
         assert result["isInvisible"] is True
         assert len(result["output"]) == 0
 
@@ -131,13 +164,13 @@ class TestExecuteScriptEndpoint:
         })
 
         assert response.status_code == 200
-        data = response.json()
+        results = self._parse_sse_response(response)
 
-        assert len(data["results"]) == 3
-        assert data["results"][0]["isInvisible"] is True
-        assert data["results"][1]["isInvisible"] is True
-        assert data["results"][2]["isInvisible"] is False
-        assert "3" in data["results"][2]["output"][0]["text"]
+        assert len(results) == 3
+        assert results[0]["isInvisible"] is True
+        assert results[1]["isInvisible"] is True
+        assert results[2]["isInvisible"] is False
+        assert "3" in results[2]["output"][0]["text"]
 
     def test_execute_with_error(self):
         """Test that errors are captured."""
@@ -149,10 +182,10 @@ class TestExecuteScriptEndpoint:
         })
 
         assert response.status_code == 200
-        data = response.json()
+        results = self._parse_sse_response(response)
 
-        assert len(data["results"]) == 1
-        result = data["results"][0]
+        assert len(results) == 1
+        result = results[0]
         assert len(result["output"]) == 1
         assert result["output"][0]["type"] == "error"
         assert "ZeroDivisionError" in result["output"][0]["text"]
@@ -174,8 +207,8 @@ class TestExecuteScriptEndpoint:
         })
 
         assert response2.status_code == 200
-        data = response2.json()
-        assert "99" in data["results"][0]["output"][0]["text"]
+        results = self._parse_sse_response(response2)
+        assert "99" in results[0]["output"][0]["text"]
 
     def test_line_range_filtering(self):
         """Test executing with line range filter."""
@@ -188,11 +221,11 @@ class TestExecuteScriptEndpoint:
         })
 
         assert response.status_code == 200
-        data = response.json()
+        results = self._parse_sse_response(response)
 
         # Should only execute line 2
-        assert len(data["results"]) == 1
-        assert data["results"][0]["lineStart"] == 2
+        assert len(results) == 1
+        assert results[0]["lineStart"] == 2
 
     def test_invalid_syntax(self):
         """Test that syntax errors are returned as execution results."""
@@ -205,9 +238,9 @@ class TestExecuteScriptEndpoint:
 
         # Should return 200 with syntax error in results
         assert response.status_code == 200
-        data = response.json()
-        assert len(data["results"]) == 1
-        result = data["results"][0]
+        results = self._parse_sse_response(response)
+        assert len(results) == 1
+        result = results[0]
         assert len(result["output"]) == 1
         assert result["output"][0]["type"] == "error"
         assert "SyntaxError" in result["output"][0]["text"]
@@ -222,9 +255,9 @@ class TestExecuteScriptEndpoint:
         })
 
         assert response.status_code == 200
-        data = response.json()
+        results = self._parse_sse_response(response)
 
-        result = data["results"][0]
+        result = results[0]
         assert len(result["output"]) == 1
         assert result["output"][0]["type"] == "stdout"
         assert "Hello, World!" in result["output"][0]["text"]
