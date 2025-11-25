@@ -1,7 +1,7 @@
 12322
 import time
 
-# Python/Pyodide Demo
+# Python Demo
 # Simple calculations
 x = 2 + 2
 x

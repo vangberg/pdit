@@ -54,7 +54,6 @@ class PythonExecutor:
         """Parse Python script into statements using AST.
 
         Compiles each AST node directly - no source extraction needed!
-        This matches the working Pyodide implementation.
 
         Args:
             script: Python source code to parse
