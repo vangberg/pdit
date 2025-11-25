@@ -44,7 +44,10 @@ Server runs on `127.0.0.1:8888`, browser opens automatically.
 - Focus on data exploration: load, inspect, transform, visualize
 
 ```python
-# Good - exploratory, each line shows a result
+# /// script
+# dependencies = ["pandas"]
+# ///
+
 import pandas as pd
 
 df = pd.read_csv("data.csv")
@@ -53,11 +56,6 @@ df.shape
 df.describe()
 df["price"].mean()
 df[df["price"] > 100]
-
-# Avoid - over-engineered for exploration
-def load_and_analyze(path):
-    df = pd.read_csv(path)
-    return df.describe()
 ```
 
 ## Execution Model
@@ -107,14 +105,18 @@ GET  /api/health          - Health check
 
 ## Dependencies
 
-rdit runs in its own isolated uvx environment. If the script needs packages beyond the standard library, include them with `--with` when starting rdit:
+Use PEP 723 inline script metadata at the top of the script. `uv run` auto-installs them - no server restart needed:
 
-```bash
-# Single dependency
-uvx --from git+ssh://git@github.com/vangberg/rdit@file-watcher --with pandas rdit script.py
+```python
+# /// script
+# dependencies = ["pandas", "google-cloud-bigquery"]
+# ///
 
-# Multiple dependencies
-uvx --from git+ssh://git@github.com/vangberg/rdit@file-watcher --with pandas --with google-cloud-bigquery rdit script.py
+import pandas as pd
+from google.cloud import bigquery
+
+df = pd.read_csv("data.csv")
+df.head()
 ```
 
-If you see `ModuleNotFoundError` in rdit, restart it with the missing package added via `--with`.
+When validating with `uv run script.py`, dependencies install automatically.
