@@ -6,6 +6,7 @@
 - Prefer simple code over defensive code
 - Test with Chrome MCP
 - NEVER COMMIT CODE UNLESS ASKED TO
+- Use GitHub CLI for pull requests
 
 ## Issue Tracking with bd (beads)
 

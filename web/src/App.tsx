@@ -14,10 +14,11 @@ const DEFAULT_CODE = ``;
 function App() {
   // Load script file from URL query parameter
   const scriptPath = new URLSearchParams(window.location.search).get("script");
-  const { code: initialCode, isLoading: isLoadingScript, error: scriptError } = useScriptFile(
-    scriptPath,
-    DEFAULT_CODE
-  );
+  const {
+    code: initialCode,
+    isLoading: isLoadingScript,
+    error: scriptError,
+  } = useScriptFile(scriptPath, DEFAULT_CODE);
 
   const editorRef = useRef<EditorHandles | null>(null);
   const { expressions, lineGroups, setLineGroups, addExpressions } =
@@ -41,6 +42,10 @@ function App() {
     },
     []
   );
+
+  const handleInitialDocumentLoad = useCallback((doc: Text) => {
+    setDoc(doc);
+  }, []);
 
   const handleDocumentChange = useCallback((doc: Text) => {
     setDoc(doc);
@@ -189,13 +194,14 @@ function App() {
         onRunCurrent={handleRunCurrent}
         onSave={handleSave}
         hasUnsavedChanges={hasUnsavedChanges}
-        scriptName={scriptPath ? scriptPath.split('/').pop() : undefined}
+        scriptName={scriptPath ? scriptPath.split("/").pop() : undefined}
       />
       <div className="split-container">
         <div className="editor-half">
           <Editor
             ref={editorRef}
             initialCode={initialCode}
+            onInitialDocumentLoad={handleInitialDocumentLoad}
             onExecuteCurrent={handleExecuteCurrent}
             onExecuteAll={handleExecuteAll}
             onDocumentChange={handleDocumentChange}
