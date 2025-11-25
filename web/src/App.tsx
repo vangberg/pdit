@@ -8,29 +8,60 @@ import { LineGroup } from "./compute-line-groups";
 import { TopBar } from "./TopBar";
 import { useResults } from "./results";
 import { useScriptFile } from "./use-script-file";
+import { ConflictBanner } from "./ConflictBanner";
 
 const DEFAULT_CODE = ``;
 
 function App() {
   // Load script file from URL query parameter
   const scriptPath = new URLSearchParams(window.location.search).get("script");
-  const {
-    code: initialCode,
-    isLoading: isLoadingScript,
-    error: scriptError,
-  } = useScriptFile(scriptPath, DEFAULT_CODE);
 
   const editorRef = useRef<EditorHandles | null>(null);
-  const { expressions, lineGroups, setLineGroups, addExpressions } =
+  const [doc, setDoc] = useState<Text>();
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [hasConflict, setHasConflict] = useState(false);
+
+  // Initialize results management first
+  const { expressions, lineGroups, setLineGroups, addExpressions, clearResults } =
     useResults();
+
+  // Handle file changes from watcher
+  const handleFileChange = useCallback(
+    (newContent: string) => {
+      if (hasUnsavedChanges) {
+        // User has local edits → conflict
+        setHasConflict(true);
+      } else {
+        // No local edits → safe to auto-reload
+        // Clear all execution results and update editor
+        clearResults();
+        editorRef.current?.applyExecutionUpdate({
+          doc: newContent,
+          lineGroups: [],
+          lastExecutedResultIds: [],
+        });
+        // Reset unsaved changes flag after programmatic update
+        setHasUnsavedChanges(false);
+      }
+    },
+    [hasUnsavedChanges, clearResults]
+  );
+
+  const {
+    code: initialCode,
+    diskContent,
+    isLoading: isLoadingScript,
+    error: scriptError,
+  } = useScriptFile(scriptPath, DEFAULT_CODE, {
+    watchForChanges: !!scriptPath,
+    onFileChange: handleFileChange,
+  });
   const [lineGroupHeights, setLineGroupHeights] = useState<Map<string, number>>(
     new Map()
   );
   const [lineGroupTops, setLineGroupTops] = useState<Map<string, number>>(
     new Map()
   );
-  const [doc, setDoc] = useState<Text>();
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const handleLineGroupHeightChange = useCallback(
     (heights: Map<string, number>) => {
@@ -142,6 +173,7 @@ function App() {
 
       if (response.ok) {
         setHasUnsavedChanges(false);
+        setHasConflict(false); // Saving resolves conflict
       } else {
         console.error("Failed to save file:", await response.text());
       }
@@ -149,6 +181,28 @@ function App() {
       console.error("Error saving file:", error);
     }
   }, [scriptPath, doc]);
+
+  const handleReloadFromDisk = useCallback(() => {
+    if (diskContent) {
+      // Clear all execution results
+      clearResults();
+
+      // Update editor with disk content and empty line groups
+      editorRef.current?.applyExecutionUpdate({
+        doc: diskContent,
+        lineGroups: [],
+        lastExecutedResultIds: [],
+      });
+
+      setHasUnsavedChanges(false);
+      setHasConflict(false);
+    }
+  }, [diskContent, clearResults]);
+
+  const handleKeepChanges = useCallback(() => {
+    // Just dismiss the banner, conflict persists until save
+    setHasConflict(false);
+  }, []);
 
   // Handle Cmd+S / Ctrl+S keyboard shortcut
   useEffect(() => {
@@ -196,6 +250,12 @@ function App() {
         hasUnsavedChanges={hasUnsavedChanges}
         scriptName={scriptPath ? scriptPath.split("/").pop() : undefined}
       />
+      {hasConflict && (
+        <ConflictBanner
+          onReload={handleReloadFromDisk}
+          onKeep={handleKeepChanges}
+        />
+      )}
       <div className="split-container">
         <div className="editor-half">
           <Editor

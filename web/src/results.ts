@@ -105,10 +105,16 @@ export function useResults() {
     [expressions, lineGroups]
   );
 
+  const clearResults = useCallback(() => {
+    setExpressions(new Map());
+    setLineGroups([]);
+  }, []);
+
   return {
     expressions,
     lineGroups,
     setLineGroups,
     addExpressions,
+    clearResults,
   };
 }

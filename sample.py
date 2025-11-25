@@ -1,4 +1,3 @@
-12322
 import time
 
 # Python Demo

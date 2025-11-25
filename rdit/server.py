@@ -12,6 +12,7 @@ Provides HTTP endpoints for:
 from pathlib import Path
 from typing import List, Optional
 import json
+import time
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -19,6 +20,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from .executor import get_executor, reset_executor
+from .file_watcher import FileWatcher
 
 
 # Pydantic models for API
@@ -225,6 +227,97 @@ async def save_file(request: SaveFileRequest):
         return {"status": "ok"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error saving file: {str(e)}")
+
+
+@app.get("/api/watch-file")
+async def watch_file(path: str):
+    """Watch a file for changes and stream events via SSE.
+
+    Opens a long-lived Server-Sent Events connection that streams file change
+    events as they occur. Connection stays open until client disconnects or
+    file is deleted.
+
+    Args:
+        path: Absolute path to the file to watch
+
+    Returns:
+        StreamingResponse with text/event-stream media type
+
+    SSE Events:
+        - fileChanged: File was modified (includes new content)
+        - fileDeleted: File was deleted (closes connection)
+        - error: Error occurred (closes connection)
+    """
+    async def generate_events():
+        watcher = None
+        try:
+            # Create and start file watcher
+            watcher = FileWatcher(path)
+            watcher.start()
+
+            # Stream events as they occur
+            async for event in watcher.get_events():
+                if event["type"] == "modified":
+                    # Read new file content
+                    try:
+                        file_path = Path(path)
+                        content = file_path.read_text()
+                        timestamp = int(time.time())
+
+                        data = {
+                            "type": "fileChanged",
+                            "path": path,
+                            "content": content,
+                            "timestamp": timestamp
+                        }
+                        yield f"data: {json.dumps(data)}\n\n"
+
+                    except Exception as e:
+                        # Error reading file
+                        error_data = {
+                            "type": "error",
+                            "message": f"Error reading file: {str(e)}"
+                        }
+                        yield f"data: {json.dumps(error_data)}\n\n"
+                        break
+
+                elif event["type"] == "deleted":
+                    # File was deleted
+                    data = {
+                        "type": "fileDeleted",
+                        "path": path
+                    }
+                    yield f"data: {json.dumps(data)}\n\n"
+                    break
+
+        except FileNotFoundError:
+            error_data = {
+                "type": "error",
+                "message": f"File not found: {path}"
+            }
+            yield f"data: {json.dumps(error_data)}\n\n"
+
+        except Exception as e:
+            error_data = {
+                "type": "error",
+                "message": str(e)
+            }
+            yield f"data: {json.dumps(error_data)}\n\n"
+
+        finally:
+            # Clean up watcher
+            if watcher:
+                watcher.stop()
+
+    return StreamingResponse(
+        generate_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable buffering in nginx
+        }
+    )
 
 
 # Static file serving for frontend
