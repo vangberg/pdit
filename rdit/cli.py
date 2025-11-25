@@ -50,11 +50,11 @@ def main(script, port, host, no_browser):
     SCRIPT: Optional Python script file to open
     """
     # Check if frontend is built
-    static_dir = Path(__file__).parent.parent / "web" / "dist"
+    static_dir = Path(__file__).parent / "_static"
     if not static_dir.exists() or not (static_dir / "index.html").exists():
-        click.echo("Warning: Frontend build not found at web/dist/", err=True)
+        click.echo("Warning: Frontend build not found at rdit/_static/", err=True)
         click.echo("The server will start but the web interface won't be available.", err=True)
-        click.echo("Run 'npm run build' in the web/ directory to build the frontend.", err=True)
+        click.echo("Run './scripts/build-frontend.sh' to build and copy the frontend.", err=True)
         click.echo()
 
     # Use script path as-is (relative to current directory)

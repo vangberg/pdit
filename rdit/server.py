@@ -197,8 +197,8 @@ async def read_file(path: str):
 
 
 # Static file serving for frontend
-# Get path to web/dist directory relative to this file
-STATIC_DIR = Path(__file__).parent.parent / "web" / "dist"
+# Get path to _static directory inside the package
+STATIC_DIR = Path(__file__).parent / "_static"
 
 if STATIC_DIR.exists():
     # Mount assets directory for JS/CSS files

@@ -46,10 +46,16 @@ Homepage = "https://github.com/vangberg/rdit"
 Repository = "https://github.com/vangberg/rdit"
 Issues = "https://github.com/vangberg/rdit/issues"
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["rdit*"]
-exclude = ["tests*", "web*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.html", "*.js", "*.css"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

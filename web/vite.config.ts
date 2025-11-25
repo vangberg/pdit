@@ -16,6 +16,10 @@ export default defineConfig({
       },
     },
   ],
+  build: {
+    outDir: '../rdit/_static',
+    emptyOutDir: true,
+  },
   server: {
     open: true,
     proxy: {
