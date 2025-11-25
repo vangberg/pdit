@@ -20,7 +20,7 @@ rdit tests/test_executor.py
 
 ## Python Backend Setup
 
-### Using uv (recommended)
+**Requirement**: You must have [uv](https://github.com/astral-sh/uv) installed.
 
 Install the package in editable mode:
 
@@ -36,20 +36,12 @@ This installs:
 
 And creates the `rdit` command that runs `rdit.cli:main`.
 
-### Using pip
-
-```bash
-pip install -e .
-```
-
 ### Install with dev dependencies
 
 For testing and development tools:
 
 ```bash
 uv pip install -e ".[dev]"
-# or
-pip install -e ".[dev]"
 ```
 
 Dev dependencies include:
@@ -146,8 +138,8 @@ If you don't want to install the package:
 # Install dependencies only
 uv pip install fastapi uvicorn click aiofiles
 
-# Run directly
-python -m rdit.cli script.py
+# Run directly with uv
+uv run python -m rdit.cli script.py
 ```
 
 ## Testing
