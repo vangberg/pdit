@@ -1,6 +1,5 @@
 # Node.js / Web frontend
 node_modules
-web/dist
 
 # Python
 __pycache__/
