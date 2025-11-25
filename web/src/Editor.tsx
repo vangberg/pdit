@@ -62,6 +62,7 @@ interface EditorProps {
   onExecuteCurrent?: (script: string, lineRange: { from: number; to: number }) => void;
   onExecuteAll?: (script: string) => void;
   onDocumentChange?: (doc: Text) => void;
+  onInitialDocumentLoad?: (doc: Text) => void;
   onLineGroupsChange?: (groups: LineGroup[]) => void;
   onLineGroupTopChange?: (tops: Map<string, number>) => void;
   lineGroupHeights?: Map<string, number>;
@@ -73,6 +74,7 @@ export function Editor({
   onExecuteCurrent,
   onExecuteAll,
   onDocumentChange,
+  onInitialDocumentLoad,
   onLineGroupsChange,
   onLineGroupTopChange,
   lineGroupHeights,
@@ -83,6 +85,7 @@ export function Editor({
 
   const onExecuteCurrentRef = useRef(onExecuteCurrent);
   const onExecuteAllRef = useRef(onExecuteAll);
+  const onInitialDocumentLoadRef = useRef(onInitialDocumentLoad);
   const onDocumentChangeRef = useRef(onDocumentChange);
   const onLineGroupsChangeRef = useRef(onLineGroupsChange);
   const lineGroupTopCallbackCompartment = useMemo(() => new Compartment(), []);
@@ -95,6 +98,10 @@ export function Editor({
   useEffect(() => {
     onExecuteAllRef.current = onExecuteAll;
   }, [onExecuteAll]);
+
+  useEffect(() => {
+    onInitialDocumentLoadRef.current = onInitialDocumentLoad;
+  }, [onInitialDocumentLoad]);
 
   useEffect(() => {
     onDocumentChangeRef.current = onDocumentChange;
@@ -211,7 +218,7 @@ export function Editor({
 
     viewRef.current = view;
 
-    onDocumentChangeRef.current?.(view.state.doc);
+    onInitialDocumentLoadRef.current?.(view.state.doc);
     if (onLineGroupsChangeRef.current) {
       onLineGroupsChangeRef.current(view.state.field(lineGroupsField));
     }

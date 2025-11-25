@@ -59,6 +59,12 @@ class ReadFileResponse(BaseModel):
     content: str
 
 
+class SaveFileRequest(BaseModel):
+    """Request to save a file."""
+    path: str
+    content: str
+
+
 # FastAPI app
 app = FastAPI(
     title="rdit Python Backend",
@@ -194,6 +200,31 @@ async def read_file(path: str):
         raise HTTPException(status_code=404, detail=f"File not found: {path}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
+
+
+@app.post("/api/save-file")
+async def save_file(request: SaveFileRequest):
+    """Save a file to the filesystem.
+
+    Args:
+        request: File path and content to save
+
+    Returns:
+        Status OK if successful
+
+    Raises:
+        HTTPException: If file cannot be written
+
+    Note:
+        Security consideration: This endpoint allows writing to any path
+        the server has access to. Path validation should be added.
+    """
+    try:
+        file_path = Path(request.path)
+        file_path.write_text(request.content)
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error saving file: {str(e)}")
 
 
 # Static file serving for frontend

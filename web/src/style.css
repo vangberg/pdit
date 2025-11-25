@@ -30,10 +30,9 @@ body {
 
 .top-bar {
   background: #374151;
-  padding: 0.4rem 1rem;
+  padding: 0.5rem 1rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   flex-shrink: 0;
   font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   border-bottom: 1px solid #4b5563;
@@ -43,6 +42,7 @@ body {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  width: 100%;
 }
 
 .top-bar-button-wrapper {
