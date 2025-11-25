@@ -81,6 +81,14 @@ npm run build
 
 This creates `web/dist/` with the production build.
 
+**IMPORTANT**: Built assets are committed to git so users can run `uv run rdit` without Node.js. Before committing frontend changes, always rebuild:
+
+```bash
+cd web && npm run build && cd ..
+git add web/ web/dist/
+git commit -m "Update web UI"
+```
+
 ### Development mode
 
 For frontend development with hot reloading:
