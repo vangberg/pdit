@@ -5,7 +5,6 @@ import { executeScript, Expression } from "./execution-python";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { LineGroup } from "./compute-line-groups";
-import { initializePyodide } from "./pyodide-instance";
 import { TopBar } from "./TopBar";
 import { useResults } from "./results";
 import { useScriptFile } from "./use-script-file";
@@ -29,24 +28,8 @@ function App() {
   const [lineGroupTops, setLineGroupTops] = useState<Map<string, number>>(
     new Map()
   );
-  const [isPyodideReady, setIsPyodideReady] = useState(false);
   const [doc, setDoc] = useState<Text>();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
-  // Initialize Pyodide on mount
-  useEffect(() => {
-    const init = async () => {
-      try {
-        console.log("Initializing Pyodide...");
-        await initializePyodide();
-        console.log("Pyodide ready!");
-        setIsPyodideReady(true);
-      } catch (error) {
-        console.error("Failed to initialize Pyodide:", error);
-      }
-    };
-  init();
-  }, []);
 
   const handleLineGroupHeightChange = useCallback(
     (heights: Map<string, number>) => {
@@ -58,10 +41,6 @@ function App() {
     },
     []
   );
-
-  const handleInitialDocumentLoad = useCallback((doc: Text) => {
-    setDoc(doc);
-  }, []);
 
   const handleDocumentChange = useCallback((doc: Text) => {
     setDoc(doc);
@@ -89,11 +68,6 @@ function App() {
       script: string,
       options?: { lineRange?: { from: number; to: number } }
     ) => {
-      if (!isPyodideReady) {
-        console.warn("Pyodide is not ready yet");
-        return;
-      }
-
       try {
         const allExpressions: Expression[] = [];
 
@@ -116,7 +90,7 @@ function App() {
         console.error("Execution error:", error);
       }
     },
-    [isPyodideReady, addExpressions]
+    [addExpressions]
   );
 
   const handleExecuteCurrent = useCallback(
@@ -211,7 +185,6 @@ function App() {
   return (
     <div id="app">
       <TopBar
-        isPyodideReady={isPyodideReady}
         onRunAll={handleRunAll}
         onRunCurrent={handleRunCurrent}
         onSave={handleSave}

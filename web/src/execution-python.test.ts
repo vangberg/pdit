@@ -1,12 +1,7 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { executeScript, Expression } from './execution-python';
-import { initializePyodide } from './pyodide-instance';
 
 describe('executeScript', () => {
-  beforeAll(async () => {
-    // Initialize Pyodide before running tests
-    await initializePyodide();
-  }, 60000); // 60 second timeout for Pyodide initialization
 
   it('executes a simple expression and returns result', async () => {
     const script = '2 + 2';

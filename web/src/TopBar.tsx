@@ -1,13 +1,11 @@
 import React from "react";
 
 interface TopBarProps {
-  isPyodideReady: boolean;
   onRunAll: () => void;
   onRunCurrent?: () => void;
   onSave?: () => void;
   hasUnsavedChanges?: boolean;
   scriptName?: string;
-  initMessage?: string;
 }
 
 function detectMacOS(): boolean {
@@ -84,7 +82,7 @@ function StatusIndicator({ isReady, message }: StatusIndicatorProps) {
   );
 }
 
-export function TopBar({ isPyodideReady, onRunAll, onRunCurrent, onSave, hasUnsavedChanges, scriptName, initMessage }: TopBarProps) {
+export function TopBar({ onRunAll, onRunCurrent, onSave, hasUnsavedChanges, scriptName }: TopBarProps) {
   const [hoveredButton, setHoveredButton] = React.useState<string | null>(null);
   const shortcuts = getShortcuts();
   const isMac = detectMacOS();
@@ -96,21 +94,21 @@ export function TopBar({ isPyodideReady, onRunAll, onRunCurrent, onSave, hasUnsa
         <ActionButton
           label="▶ RUN CURRENT"
           onClick={onRunCurrent || (() => {})}
-          disabled={!isPyodideReady}
+          disabled={false}
           onMouseEnter={() => setHoveredButton("current")}
           onMouseLeave={() => setHoveredButton(null)}
           tooltip={shortcuts.current}
-          showTooltip={hoveredButton === "current" && isPyodideReady}
+          showTooltip={hoveredButton === "current"}
         />
 
         <ActionButton
           label="▶ RUN ALL"
           onClick={onRunAll}
-          disabled={!isPyodideReady}
+          disabled={false}
           onMouseEnter={() => setHoveredButton("all")}
           onMouseLeave={() => setHoveredButton(null)}
           tooltip={shortcuts.all}
-          showTooltip={hoveredButton === "all" && isPyodideReady}
+          showTooltip={hoveredButton === "all"}
         />
 
         {scriptName && (
@@ -131,7 +129,7 @@ export function TopBar({ isPyodideReady, onRunAll, onRunCurrent, onSave, hasUnsa
           </span>
         )}
 
-        <StatusIndicator isReady={isPyodideReady} message={initMessage} />
+        <StatusIndicator isReady={true} />
       </div>
     </div>
   );
