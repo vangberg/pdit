@@ -16,8 +16,18 @@ export default defineConfig({
       },
     },
   ],
+  build: {
+    outDir: '../rdit/_static',
+    emptyOutDir: true,
+  },
   server: {
     open: true,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8888',
+        changeOrigin: true,
+      },
+    },
   },
   optimizeDeps: {
     exclude: ['pyodide'],

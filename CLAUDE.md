@@ -21,3 +21,4 @@ UI STYLE: Terminal/Newslist
 - Minimal hover states (hover:bg-gray-100)
 - Information-dense, compact layouts
 - Access CodeMirror debug information with Cmd+Shift+D in focused editor.
+- NEVER COMMIT CODE UNLESS ASKED TO
