@@ -104,3 +104,17 @@ GET  /api/health          - Health check
 - Write intermediate expressions to see values: `df.shape` instead of `print(df.shape)`
 - Long-running code streams results as each statement completes
 - User has full filesystem and package access (local Python execution)
+
+## Dependencies
+
+rdit runs in its own isolated uvx environment. If the script needs packages beyond the standard library, include them with `--with` when starting rdit:
+
+```bash
+# Single dependency
+uvx --from git+ssh://git@github.com/vangberg/rdit@file-watcher --with pandas rdit script.py
+
+# Multiple dependencies
+uvx --from git+ssh://git@github.com/vangberg/rdit@file-watcher --with pandas --with google-cloud-bigquery rdit script.py
+```
+
+If you see `ModuleNotFoundError` in rdit, restart it with the missing package added via `--with`.
