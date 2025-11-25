@@ -57,10 +57,10 @@ def main(script, port, host, no_browser):
         click.echo("Run 'npm run build' in the web/ directory to build the frontend.", err=True)
         click.echo()
 
-    # Convert script to absolute path if provided
+    # Use script path as-is (relative to current directory)
     script_path = None
     if script:
-        script_path = Path(script).resolve()
+        script_path = script
 
     # Build URL
     url = f"http://{host}:{port}"

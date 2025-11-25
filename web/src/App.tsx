@@ -10,31 +10,12 @@ import { TopBar } from "./TopBar";
 import { useResults } from "./results";
 import { useScriptFile } from "./use-script-file";
 
-const DEFAULT_CODE = `# Python/Pyodide Demo
-# Simple calculations
-x = 5 + 3
-x
-
-y = x * 2
-y
-
-# String operations
-name = "Python"
-greeting = f"Hello, {name}!"
-print(greeting)
-
-# List comprehension
-squares = [i**2 for i in range(10)]
-squares
-
-# Sum calculation
-total = sum(squares)
-total`;
+const DEFAULT_CODE = ``;
 
 function App() {
   // Load script file from URL query parameter
   const scriptPath = new URLSearchParams(window.location.search).get("script");
-  const { code: initialCode, isLoading: isLoadingScript } = useScriptFile(
+  const { code: initialCode, isLoading: isLoadingScript, error: scriptError } = useScriptFile(
     scriptPath,
     DEFAULT_CODE
   );
@@ -156,8 +137,19 @@ function App() {
     editorRef.current?.focus();
   }, []);
 
+  // Show error if script failed to load
+  if (scriptError) {
+    return (
+      <div id="app">
+        <div style={{ padding: "20px", fontFamily: "monospace" }}>
+          Error: {scriptError.message}
+        </div>
+      </div>
+    );
+  }
+
   // Show loading state while script is being loaded
-  if (isLoadingScript || !initialCode) {
+  if (isLoadingScript || initialCode === null) {
     return (
       <div id="app">
         <div style={{ padding: "20px", fontFamily: "monospace" }}>

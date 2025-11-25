@@ -215,4 +215,4 @@ if STATIC_DIR.exists():
         index_file = STATIC_DIR / "index.html"
         if index_file.exists():
             return FileResponse(index_file)
-        return {"error": "Frontend not found"}
+        return ""

@@ -39,9 +39,7 @@ export function useScriptFile(
         );
 
         if (!response.ok) {
-          throw new Error(
-            `Failed to load script: ${response.status} ${response.statusText}`
-          );
+          throw new Error(`File not found: ${scriptPath}`);
         }
 
         const data = await response.json();
@@ -50,8 +48,6 @@ export function useScriptFile(
         console.error("Error loading script:", err);
         const error = err instanceof Error ? err : new Error(String(err));
         setError(error);
-        // Fall back to default code on error
-        setCode(defaultCode);
       } finally {
         setIsLoading(false);
       }
