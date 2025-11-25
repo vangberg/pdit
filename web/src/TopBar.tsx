@@ -4,6 +4,9 @@ interface TopBarProps {
   isPyodideReady: boolean;
   onRunAll: () => void;
   onRunCurrent?: () => void;
+  onSave?: () => void;
+  hasUnsavedChanges?: boolean;
+  scriptName?: string;
   initMessage?: string;
 }
 
@@ -81,9 +84,11 @@ function StatusIndicator({ isReady, message }: StatusIndicatorProps) {
   );
 }
 
-export function TopBar({ isPyodideReady, onRunAll, onRunCurrent, initMessage }: TopBarProps) {
+export function TopBar({ isPyodideReady, onRunAll, onRunCurrent, onSave, hasUnsavedChanges, scriptName, initMessage }: TopBarProps) {
   const [hoveredButton, setHoveredButton] = React.useState<string | null>(null);
   const shortcuts = getShortcuts();
+  const isMac = detectMacOS();
+  const saveShortcut = isMac ? "Command + S" : "Ctrl + S";
 
   return (
     <div className="top-bar">
@@ -107,6 +112,24 @@ export function TopBar({ isPyodideReady, onRunAll, onRunCurrent, initMessage }: 
           tooltip={shortcuts.all}
           showTooltip={hoveredButton === "all" && isPyodideReady}
         />
+
+        {scriptName && (
+          <ActionButton
+            label="SAVE"
+            onClick={onSave || (() => {})}
+            disabled={!(hasUnsavedChanges ?? false)}
+            onMouseEnter={() => setHoveredButton("save")}
+            onMouseLeave={() => setHoveredButton(null)}
+            tooltip={saveShortcut}
+            showTooltip={hoveredButton === "save" && (hasUnsavedChanges ?? false)}
+          />
+        )}
+
+        {scriptName && (
+          <span style={{ fontSize: "12px", color: "#ccc", marginLeft: "8px" }}>
+            {scriptName}
+          </span>
+        )}
 
         <StatusIndicator isReady={isPyodideReady} message={initMessage} />
       </div>

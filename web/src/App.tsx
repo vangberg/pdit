@@ -31,6 +31,7 @@ function App() {
   );
   const [isPyodideReady, setIsPyodideReady] = useState(false);
   const [doc, setDoc] = useState<Text>();
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Initialize Pyodide on mount
   useEffect(() => {
@@ -44,7 +45,7 @@ function App() {
         console.error("Failed to initialize Pyodide:", error);
       }
     };
-    init();
+  init();
   }, []);
 
   const handleLineGroupHeightChange = useCallback(
@@ -58,8 +59,13 @@ function App() {
     []
   );
 
+  const handleInitialDocumentLoad = useCallback((doc: Text) => {
+    setDoc(doc);
+  }, []);
+
   const handleDocumentChange = useCallback((doc: Text) => {
     setDoc(doc);
+    setHasUnsavedChanges(true);
   }, []);
 
   const handleLineGroupsChange = useCallback(
@@ -137,6 +143,49 @@ function App() {
     editorRef.current?.focus();
   }, []);
 
+  const handleSave = useCallback(async () => {
+    if (!scriptPath || !doc) {
+      console.warn("Cannot save: no script path or document");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/save-file", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          path: scriptPath,
+          content: doc.toString(),
+        }),
+      });
+
+      if (response.ok) {
+        setHasUnsavedChanges(false);
+      } else {
+        console.error("Failed to save file:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error saving file:", error);
+    }
+  }, [scriptPath, doc]);
+
+  // Handle Cmd+S / Ctrl+S keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        if (hasUnsavedChanges) {
+          handleSave();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [hasUnsavedChanges, handleSave]);
+
   // Show error if script failed to load
   if (scriptError) {
     return (
@@ -165,6 +214,9 @@ function App() {
         isPyodideReady={isPyodideReady}
         onRunAll={handleRunAll}
         onRunCurrent={handleRunCurrent}
+        onSave={handleSave}
+        hasUnsavedChanges={hasUnsavedChanges}
+        scriptName={scriptPath ? scriptPath.split('/').pop() : undefined}
       />
       <div className="split-container">
         <div className="editor-half">
