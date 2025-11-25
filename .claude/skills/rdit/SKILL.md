@@ -72,10 +72,16 @@ def load_and_analyze(path):
 **File watching enabled** (`file-watcher` branch): When you edit the Python file, changes appear
 in the user's editor automatically.
 
+**Validate before the user sees it:**
+- Run the script yourself with `uv run script.py` before presenting to user
+- Fix any errors or warnings so output is clean
+- User should see working code, not debug your mistakes
+
 **Recommended workflow:**
-1. Edit the `.py` file directly - user sees changes immediately
-2. User runs code with Cmd+Enter to test
-3. Iterate based on results user describes
+1. Write/edit the `.py` file
+2. Run `uv run script.py` to validate - fix any errors
+3. User sees clean code and runs with Cmd+Enter
+4. Iterate based on results user describes
 
 **When user shares output:**
 - Results show stdout, stderr, and expression values
