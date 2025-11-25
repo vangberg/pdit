@@ -1,10 +1,6 @@
 ---
 name: rdit
-description: |
-  Collaborate with users running rdit - an interactive Python editor with inline execution results.
-  Use when: (1) User mentions rdit or is running `rdit` command, (2) User is editing Python with
-  inline/streaming results visible, (3) Collaborative Python development where user sees live
-  execution output, (4) User mentions "uvx rdit" or similar commands.
+description: Collaborate with users running rdit, an interactive Python editor with inline execution results. Use when user mentions rdit, runs uvx rdit, or is doing collaborative Python development where they see live execution output in a browser.
 ---
 
 # rdit Collaboration
