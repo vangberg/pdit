@@ -34,7 +34,7 @@ export function useScriptFile(
   const [isWatching, setIsWatching] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   // Load initial file content
   useEffect(() => {
@@ -82,86 +82,55 @@ export function useScriptFile(
       return;
     }
 
-    const watchFile = async () => {
-      // Create abort controller for this watch session
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
+    try {
+      setIsWatching(true);
 
-      try {
-        setIsWatching(true);
+      // Create EventSource for SSE
+      const eventSource = new EventSource(
+        `/api/watch-file?path=${encodeURIComponent(scriptPath)}`
+      );
 
-        const response = await fetch(
-          `/api/watch-file?path=${encodeURIComponent(scriptPath)}`,
-          {
-            signal: abortController.signal,
+      eventSourceRef.current = eventSource;
+
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "fileChanged") {
+          setDiskContent(data.content);
+          if (onFileChange) {
+            onFileChange(data.content);
           }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Failed to watch file: ${response.statusText}`);
+        } else if (data.type === "fileDeleted") {
+          setError(new Error("File was deleted"));
+          eventSource.close();
+        } else if (data.type === "error") {
+          setError(new Error(data.message));
+          eventSource.close();
         }
+      };
 
-        const reader = response.body?.getReader();
-        if (!reader) {
-          throw new Error("No response body");
-        }
-
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-
-          if (done) {
-            break;
-          }
-
-          // Decode chunk and add to buffer
-          buffer += decoder.decode(value, { stream: true });
-
-          // Process complete SSE messages
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || ""; // Keep incomplete line in buffer
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const data = JSON.parse(line.slice(6));
-
-              if (data.type === "fileChanged") {
-                setDiskContent(data.content);
-                if (onFileChange) {
-                  onFileChange(data.content);
-                }
-              } else if (data.type === "fileDeleted") {
-                setError(new Error("File was deleted"));
-                break;
-              } else if (data.type === "error") {
-                setError(new Error(data.message));
-                break;
-              }
-            }
-          }
-        }
-      } catch (err) {
-        if (err instanceof Error && err.name === "AbortError") {
-          // Expected when component unmounts
-          return;
-        }
-        console.error("Error watching file:", err);
-        const error = err instanceof Error ? err : new Error(String(err));
-        setError(error);
-      } finally {
+      eventSource.onerror = (err) => {
+        console.error("EventSource error:", err);
+        setError(new Error("Connection to file watcher lost"));
         setIsWatching(false);
-      }
-    };
+      };
 
-    watchFile();
+      eventSource.onopen = () => {
+        setIsWatching(true);
+      };
+    } catch (err) {
+      console.error("Error watching file:", err);
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
+      setIsWatching(false);
+    }
 
-    // Cleanup: abort the fetch on unmount or path change
+    // Cleanup: close EventSource on unmount or path change
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+        setIsWatching(false);
       }
     };
   }, [watchForChanges, scriptPath, isLoading, onFileChange]);
