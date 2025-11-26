@@ -55,7 +55,6 @@ export interface EditorHandles {
   }) => void;
   executeCurrent: () => void;
   focus: () => void;
-  setContent: (content: string) => void;
 }
 
 interface EditorProps {
@@ -279,19 +278,6 @@ export function Editor({
           return;
         }
         view.focus();
-      },
-      setContent: (content: string) => {
-        const view = viewRef.current;
-        if (!view) {
-          return;
-        }
-        view.dispatch({
-          changes: {
-            from: 0,
-            to: view.state.doc.length,
-            insert: content,
-          },
-        });
       },
     }),
     [executeCurrentSelection]
