@@ -1,8 +1,8 @@
 import time
-
+  
 # Python Demo
-# Simple calculations
-x = 2 + 2
+# Simple calculations 
+x = 2 + 2 
 x
   
 y = x * 2
@@ -22,3 +22,20 @@ squares
 # Sum calculation
 total = sum(squares)
 total
+456
+
+456
+
+456
+
+456
+
+456
+
+123
+
+123
+\123
+\123
+\123
+\123

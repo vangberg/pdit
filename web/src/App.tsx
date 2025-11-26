@@ -8,7 +8,6 @@ import { LineGroup } from "./compute-line-groups";
 import { TopBar } from "./TopBar";
 import { useResults } from "./results";
 import { useScriptFile } from "./use-script-file";
-import { ConflictBanner } from "./ConflictBanner";
 
 const DEFAULT_CODE = ``;
 
@@ -245,13 +244,10 @@ function App() {
         onSave={handleSave}
         hasUnsavedChanges={hasUnsavedChanges}
         scriptName={scriptPath ? scriptPath.split("/").pop() : undefined}
+        hasConflict={hasConflict}
+        onReloadFromDisk={handleReloadFromDisk}
+        onKeepChanges={handleKeepChanges}
       />
-      {hasConflict && (
-        <ConflictBanner
-          onReload={handleReloadFromDisk}
-          onKeep={handleKeepChanges}
-        />
-      )}
       <div className="split-container">
         <div className="editor-half">
           <Editor

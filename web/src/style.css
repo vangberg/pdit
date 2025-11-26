@@ -36,6 +36,7 @@ body {
   flex-shrink: 0;
   font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   border-bottom: 1px solid #4b5563;
+  min-height: 2.5rem;
 }
 
 .top-bar-content {
@@ -459,4 +460,59 @@ h1 {
   50% {
     opacity: 0.5;
   }
+}
+
+/* Conflict Banner Styles */
+.top-bar-conflict-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  padding: 0.25rem 0.375rem;
+  font-size: 0.7rem;
+  margin-left: auto;
+}
+
+.top-bar-conflict-compact-message {
+  color: #92400e;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+.top-bar-conflict-button-primary {
+  position: relative;
+  background: #0066cc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.7rem;
+  cursor: pointer;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  transition: background 0.2s;
+}
+
+.top-bar-conflict-button-primary:hover {
+  background: #0052a3;
+}
+
+.top-bar-conflict-button-secondary {
+  position: relative;
+  background: white;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.7rem;
+  cursor: pointer;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  transition: all 0.2s;
+}
+
+.top-bar-conflict-button-secondary:hover {
+  background: #f5f5f5;
+  border-color: #999;
 }
