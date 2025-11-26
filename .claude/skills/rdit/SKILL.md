@@ -12,11 +12,22 @@ split-pane interface: code editor (left) and streaming execution results (right)
 
 **Starting rdit:**
 
-Run as a background job so you can continue editing the file:
+rdit runs from the local uv environment so dependencies work seamlessly.
+
+If pyproject.toml exists, just add rdit and run:
 ```bash
-uvx --from git+https://github.com/vangberg/rdit@file-watcher rdit script.py
+uv add git+https://github.com/vangberg/rdit@file-watcher
+uv run rdit script.py
 ```
-Use `run_in_background: true` in the Bash tool.
+
+If starting fresh:
+```bash
+uv init
+uv add git+https://github.com/vangberg/rdit@file-watcher
+uv run rdit script.py
+```
+
+Run with `run_in_background: true` in the Bash tool so you can continue editing.
 
 Options: `--port 9000` (different port), `--no-browser` (don't auto-open browser)
 
@@ -44,10 +55,6 @@ Server runs on `127.0.0.1:8888`, browser opens automatically.
 - Focus on data exploration: load, inspect, transform, visualize
 
 ```python
-# /// script
-# dependencies = ["pandas"]
-# ///
-
 import pandas as pd
 
 df = pd.read_csv("data.csv")
@@ -105,18 +112,10 @@ GET  /api/health          - Health check
 
 ## Dependencies
 
-Use PEP 723 inline script metadata at the top of the script. `uv run` auto-installs them - no server restart needed:
+Since rdit runs from the local uv environment, add packages with `uv add`:
 
-```python
-# /// script
-# dependencies = ["pandas", "google-cloud-bigquery"]
-# ///
-
-import pandas as pd
-from google.cloud import bigquery
-
-df = pd.read_csv("data.csv")
-df.head()
+```bash
+uv add pandas matplotlib
 ```
 
-When validating with `uv run script.py`, dependencies install automatically.
+No server restart needed - packages are available immediately in both rdit and `uv run` validation.
