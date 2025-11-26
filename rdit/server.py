@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import List, Optional
 import json
 import time
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
@@ -229,95 +229,121 @@ async def save_file(request: SaveFileRequest):
         raise HTTPException(status_code=500, detail=f"Error saving file: {str(e)}")
 
 
-@app.get("/api/watch-file")
-async def watch_file(path: str):
-    """Watch a file for changes and stream events via SSE.
+@app.websocket("/api/watch-file")
+async def watch_file(websocket: WebSocket):
+    """Watch a file for changes and stream events via WebSocket.
 
-    Opens a long-lived Server-Sent Events connection that streams file change
-    events as they occur. Connection stays open until client disconnects or
-    file is deleted.
+    Opens a long-lived WebSocket connection that streams file change events
+    as they occur. Connection stays open until client disconnects or file is deleted.
 
-    Args:
-        path: Absolute path to the file to watch
+    WebSocket Messages:
+        Client sends:
+        - {"type": "watch", "path": "<absolute-path>"} to start watching
 
-    Returns:
-        StreamingResponse with text/event-stream media type
-
-    SSE Events:
-        - fileChanged: File was modified (includes new content)
-        - fileDeleted: File was deleted (closes connection)
-        - error: Error occurred (closes connection)
+        Server sends:
+        - {"type": "fileChanged", "path": "...", "content": "...", "timestamp": ...}
+        - {"type": "fileDeleted", "path": "..."}
+        - {"type": "error", "message": "..."}
     """
-    async def generate_events():
-        watcher = None
+    await websocket.accept()
+    watcher = None
+
+    try:
+        # Wait for initial watch request
+        message = await websocket.receive_json()
+
+        if message.get("type") != "watch":
+            await websocket.send_json({
+                "type": "error",
+                "message": "Expected 'watch' message"
+            })
+            await websocket.close()
+            return
+
+        path = message.get("path")
+        if not path:
+            await websocket.send_json({
+                "type": "error",
+                "message": "Missing 'path' in watch request"
+            })
+            await websocket.close()
+            return
+
+        # Create and start file watcher
         try:
-            # Create and start file watcher
             watcher = FileWatcher(path)
             watcher.start()
-
-            # Stream events as they occur
-            async for event in watcher.get_events():
-                if event["type"] == "modified":
-                    # Read new file content
-                    try:
-                        file_path = Path(path)
-                        content = file_path.read_text()
-                        timestamp = int(time.time())
-
-                        data = {
-                            "type": "fileChanged",
-                            "path": path,
-                            "content": content,
-                            "timestamp": timestamp
-                        }
-                        yield f"data: {json.dumps(data)}\n\n"
-
-                    except Exception as e:
-                        # Error reading file
-                        error_data = {
-                            "type": "error",
-                            "message": f"Error reading file: {str(e)}"
-                        }
-                        yield f"data: {json.dumps(error_data)}\n\n"
-                        break
-
-                elif event["type"] == "deleted":
-                    # File was deleted
-                    data = {
-                        "type": "fileDeleted",
-                        "path": path
-                    }
-                    yield f"data: {json.dumps(data)}\n\n"
-                    break
-
         except FileNotFoundError:
-            error_data = {
+            await websocket.send_json({
                 "type": "error",
                 "message": f"File not found: {path}"
-            }
-            yield f"data: {json.dumps(error_data)}\n\n"
-
+            })
+            await websocket.close()
+            return
         except Exception as e:
+            await websocket.send_json({
+                "type": "error",
+                "message": str(e)
+            })
+            await websocket.close()
+            return
+
+        # Stream events as they occur
+        async for event in watcher.get_events():
+            if event["type"] == "modified":
+                # Read new file content
+                try:
+                    file_path = Path(path)
+                    content = file_path.read_text()
+                    timestamp = int(time.time())
+
+                    data = {
+                        "type": "fileChanged",
+                        "path": path,
+                        "content": content,
+                        "timestamp": timestamp
+                    }
+                    await websocket.send_json(data)
+
+                except Exception as e:
+                    # Error reading file
+                    error_data = {
+                        "type": "error",
+                        "message": f"Error reading file: {str(e)}"
+                    }
+                    await websocket.send_json(error_data)
+                    break
+
+            elif event["type"] == "deleted":
+                # File was deleted
+                data = {
+                    "type": "fileDeleted",
+                    "path": path
+                }
+                await websocket.send_json(data)
+                break
+
+    except WebSocketDisconnect:
+        # Client disconnected
+        pass
+    except Exception as e:
+        # Send error if websocket still open
+        try:
             error_data = {
                 "type": "error",
                 "message": str(e)
             }
-            yield f"data: {json.dumps(error_data)}\n\n"
-
-        finally:
-            # Clean up watcher
-            if watcher:
-                watcher.stop()
-
-    return StreamingResponse(
-        generate_events(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",  # Disable buffering in nginx
-        }
-    )
+            await websocket.send_json(error_data)
+        except:
+            pass
+    finally:
+        # Clean up watcher
+        if watcher:
+            watcher.stop()
+        try:
+            await websocket.close()
+        except:
+            pass
 
 
 # Static file serving for frontend

@@ -82,82 +82,67 @@ export function useScriptFile(
       return;
     }
 
-    const watchFile = async () => {
-      // Create abort controller for this watch session
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
-
+    const watchFile = () => {
       try {
         setIsWatching(true);
 
-        const response = await fetch(
-          `/api/watch-file?path=${encodeURIComponent(scriptPath)}`,
-          {
-            signal: abortController.signal,
-          }
-        );
+        // Create WebSocket connection
+        // Use ws:// for http and wss:// for https
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const ws = new WebSocket(`${protocol}//${window.location.host}/api/watch-file`);
 
-        if (!response.ok) {
-          throw new Error(`Failed to watch file: ${response.statusText}`);
-        }
+        // Store WebSocket in ref so we can close it on cleanup
+        const currentWs = ws;
 
-        const reader = response.body?.getReader();
-        if (!reader) {
-          throw new Error("No response body");
-        }
+        ws.onopen = () => {
+          // Send watch request with file path
+          ws.send(
+            JSON.stringify({
+              type: "watch",
+              path: scriptPath,
+            })
+          );
+        };
 
-        const decoder = new TextDecoder();
-        let buffer = "";
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
 
-        while (true) {
-          const { done, value } = await reader.read();
-
-          if (done) {
-            break;
-          }
-
-          // Decode chunk and add to buffer
-          buffer += decoder.decode(value, { stream: true });
-
-          // Process complete SSE messages
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || ""; // Keep incomplete line in buffer
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const data = JSON.parse(line.slice(6));
-
-              if (data.type === "fileChanged") {
-                setDiskContent(data.content);
-                if (onFileChange) {
-                  onFileChange(data.content);
-                }
-              } else if (data.type === "fileDeleted") {
-                setError(new Error("File was deleted"));
-                break;
-              } else if (data.type === "error") {
-                setError(new Error(data.message));
-                break;
-              }
+          if (data.type === "fileChanged") {
+            setDiskContent(data.content);
+            if (onFileChange) {
+              onFileChange(data.content);
             }
+          } else if (data.type === "fileDeleted") {
+            setError(new Error("File was deleted"));
+            ws.close();
+          } else if (data.type === "error") {
+            setError(new Error(data.message));
+            ws.close();
           }
-        }
+        };
+
+        ws.onerror = (event) => {
+          console.error("WebSocket error:", event);
+          setError(new Error("WebSocket connection error"));
+        };
+
+        ws.onclose = () => {
+          setIsWatching(false);
+        };
+
+        // Store WebSocket for cleanup
+        abortControllerRef.current = { abort: () => currentWs.close() } as any;
       } catch (err) {
-        if (err instanceof Error && err.name === "AbortError") {
-          // Expected when component unmounts
-          return;
-        }
         console.error("Error watching file:", err);
         const error = err instanceof Error ? err : new Error(String(err));
         setError(error);
-      } finally {
         setIsWatching(false);
       }
     };
 
     watchFile();
 
-    // Cleanup: abort the fetch on unmount or path change
+    // Cleanup: close WebSocket on unmount or path change
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
