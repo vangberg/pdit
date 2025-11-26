@@ -22,7 +22,7 @@ function App() {
   const [hasConflict, setHasConflict] = useState(false);
 
   // Initialize results management first
-  const { expressions, lineGroups, setLineGroups, addExpressions, clearResults } =
+  const { expressions, lineGroups, setLineGroups, addExpressions } =
     useResults();
 
   // Handle file changes from watcher
@@ -33,8 +33,7 @@ function App() {
         setHasConflict(true);
       } else {
         // No local edits → safe to auto-reload
-        // Clear all execution results and update editor
-        clearResults();
+        // Update editor with empty line groups (clears execution results)
         editorRef.current?.applyExecutionUpdate({
           doc: newContent,
           lineGroups: [],
@@ -44,7 +43,7 @@ function App() {
         setHasUnsavedChanges(false);
       }
     },
-    [hasUnsavedChanges, clearResults]
+    [hasUnsavedChanges]
   );
 
   const {
@@ -184,10 +183,7 @@ function App() {
 
   const handleReloadFromDisk = useCallback(() => {
     if (diskContent) {
-      // Clear all execution results
-      clearResults();
-
-      // Update editor with disk content and empty line groups
+      // Update editor with disk content and empty line groups (clears execution results)
       editorRef.current?.applyExecutionUpdate({
         doc: diskContent,
         lineGroups: [],
@@ -197,7 +193,7 @@ function App() {
       setHasUnsavedChanges(false);
       setHasConflict(false);
     }
-  }, [diskContent, clearResults]);
+  }, [diskContent]);
 
   const handleKeepChanges = useCallback(() => {
     // Just dismiss the banner, conflict persists until save
