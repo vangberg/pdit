@@ -16,14 +16,14 @@ rdit runs from the local uv environment so dependencies work seamlessly.
 
 If pyproject.toml exists, just add rdit and run:
 ```bash
-uv add git+https://github.com/vangberg/rdit@file-watcher
+uv add git+ssh://git@github.com/vangberg/rdit@file-watcher
 uv run rdit script.py
 ```
 
 If starting fresh:
 ```bash
 uv init
-uv add git+https://github.com/vangberg/rdit@file-watcher
+uv add git+ssh://git@github.com/vangberg/rdit@file-watcher
 uv run rdit script.py
 ```
 
