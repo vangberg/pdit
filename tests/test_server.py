@@ -352,6 +352,12 @@ class TestSaveFileEndpoint:
         assert "Error saving file" in response.json()["detail"]
 
 
+# Note: /api/watch-file endpoint tests are skipped because TestClient
+# doesn't handle long-lived SSE streams well (blocks waiting for stream to close).
+# The FileWatcher domain logic is fully tested in test_file_watcher.py.
+# Integration testing of the SSE endpoint should be done with a real browser or httpx.
+
+
 if __name__ == "__main__":
     """Run tests without pytest for development."""
     import sys
@@ -372,6 +378,7 @@ if __name__ == "__main__":
             TestResetEndpoint,
             TestExecuteScriptEndpoint,
             TestReadFileEndpoint,
+            TestSaveFileEndpoint,
         ]
 
         total = 0

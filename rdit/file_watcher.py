@@ -5,9 +5,57 @@ Provides a FileWatcher class that monitors a single file for changes
 and streams events through an async queue.
 """
 
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict
+from typing import AsyncGenerator, Union
 from watchfiles import awatch
+import time
+
+
+@dataclass
+class FileEvent:
+    """Base class for file watcher events."""
+    type: str
+    path: str
+    timestamp: int
+
+
+@dataclass
+class InitialFileEvent(FileEvent):
+    """Initial file content event."""
+    content: str
+
+    def __init__(self, path: str, content: str, timestamp: int):
+        super().__init__(type="initial", path=path, timestamp=timestamp)
+        self.content = content
+
+
+@dataclass
+class FileChangedEvent(FileEvent):
+    """File modification event."""
+    content: str
+
+    def __init__(self, path: str, content: str, timestamp: int):
+        super().__init__(type="fileChanged", path=path, timestamp=timestamp)
+        self.content = content
+
+
+@dataclass
+class FileDeletedEvent(FileEvent):
+    """File deletion event."""
+
+    def __init__(self, path: str, timestamp: int):
+        super().__init__(type="fileDeleted", path=path, timestamp=timestamp)
+
+
+@dataclass
+class FileErrorEvent(FileEvent):
+    """File error event."""
+    message: str
+
+    def __init__(self, path: str, message: str, timestamp: int):
+        super().__init__(type="error", path=path, timestamp=timestamp)
+        self.message = message
 
 
 class FileWatcher:
@@ -18,10 +66,13 @@ class FileWatcher:
     Usage:
         watcher = FileWatcher("/path/to/file.py")
 
-        async for event in watcher.watch():
-            if event["type"] == "modified":
-                content = Path(event["path"]).read_text()
-                print(f"File changed: {content}")
+        async for event in watcher.watch_with_initial():
+            if isinstance(event, InitialFileEvent):
+                print(f"Initial: {event.content}")
+            elif isinstance(event, FileChangedEvent):
+                print(f"Changed: {event.content}")
+            elif isinstance(event, FileDeletedEvent):
+                print("Deleted")
     """
 
     def __init__(self, file_path: str):
@@ -32,84 +83,86 @@ class FileWatcher:
         """
         self.file_path = Path(file_path).resolve()
 
-    async def watch(self):
-        """Watch for file changes and yield events.
+    async def watch_with_initial(
+        self
+    ) -> AsyncGenerator[Union[InitialFileEvent, FileChangedEvent, FileDeletedEvent, FileErrorEvent], None]:
+        """Watch file with initial content event.
+
+        Encapsulates all domain logic: file validation, reading, timestamps, error handling.
 
         Yields:
-            Dict with event type and path
-            - {"type": "modified", "path": "/path/to/file"}
-            - {"type": "deleted", "path": "/path/to/file"}
-        """
-        if not self.file_path.exists():
-            raise FileNotFoundError(f"File not found: {self.file_path}")
+            FileEvent subclasses with all domain data
 
-        # Watch the parent directory to detect deletion
+        Example:
+            watcher = FileWatcher("/path/to/file.py")
+            async for event in watcher.watch_with_initial():
+                if isinstance(event, InitialFileEvent):
+                    print(f"Initial: {event.content}")
+                elif isinstance(event, FileChangedEvent):
+                    print(f"Changed: {event.content}")
+        """
+        # Validate file exists
+        if not self.file_path.exists():
+            yield FileErrorEvent(
+                path=str(self.file_path),
+                message=f"File not found: {self.file_path}",
+                timestamp=int(time.time())
+            )
+            return
+
+        # Read and yield initial content
+        try:
+            content = self.file_path.read_text()
+            timestamp = int(time.time())
+
+            yield InitialFileEvent(
+                path=str(self.file_path),
+                content=content,
+                timestamp=timestamp
+            )
+        except Exception as e:
+            yield FileErrorEvent(
+                path=str(self.file_path),
+                message=f"Error reading file: {str(e)}",
+                timestamp=int(time.time())
+            )
+            return
+
+        # Watch for changes in parent directory to detect deletion
         watch_path = self.file_path.parent
 
         async for changes in awatch(watch_path):
-            # changes is a set of (Change, path) tuples
             for change_type, changed_path in changes:
                 changed_path = Path(changed_path).resolve()
 
-                # Only yield events for our specific file
-                if changed_path == self.file_path:
-                    # Map watchfiles change types to our event types
-                    # Change.added -> modified (editor recreate pattern)
-                    # Change.modified -> modified
-                    # Change.deleted -> deleted
-                    from watchfiles import Change
+                # Skip events for other files
+                if changed_path != self.file_path:
+                    continue
 
-                    if change_type in (Change.added, Change.modified):
-                        yield {"type": "modified", "path": str(self.file_path)}
-                    elif change_type == Change.deleted:
-                        yield {"type": "deleted", "path": str(self.file_path)}
-                        break  # Stop watching after deletion
+                from watchfiles import Change
 
+                # Handle file deletion
+                if change_type == Change.deleted:
+                    yield FileDeletedEvent(
+                        path=str(self.file_path),
+                        timestamp=int(time.time())
+                    )
+                    return
 
-def create_file_changed_event(path: str, content: str, timestamp: int) -> Dict[str, Any]:
-    """Create fileChanged event data.
+                # Handle file modification (Change.added or Change.modified)
+                try:
+                    content = self.file_path.read_text()
+                    timestamp = int(time.time())
 
-    Args:
-        path: File path that changed
-        content: New file content
-        timestamp: Unix timestamp of change
-
-    Returns:
-        Event data dict
-    """
-    return {
-        "type": "fileChanged",
-        "path": path,
-        "content": content,
-        "timestamp": timestamp
-    }
-
-
-def create_file_deleted_event(path: str) -> Dict[str, Any]:
-    """Create fileDeleted event data.
-
-    Args:
-        path: File path that was deleted
-
-    Returns:
-        Event data dict
-    """
-    return {
-        "type": "fileDeleted",
-        "path": path
-    }
-
-
-def create_error_event(message: str) -> Dict[str, Any]:
-    """Create error event data.
-
-    Args:
-        message: Error message
-
-    Returns:
-        Event data dict
-    """
-    return {
-        "type": "error",
-        "message": message
-    }
+                    yield FileChangedEvent(
+                        path=str(self.file_path),
+                        content=content,
+                        timestamp=timestamp
+                    )
+                except Exception as e:
+                    yield FileErrorEvent(
+                        path=str(self.file_path),
+                        message=f"Error reading file: {str(e)}",
+                        timestamp=int(time.time())
+                    )
+                    return

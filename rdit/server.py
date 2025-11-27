@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 
 from .executor import get_executor, reset_executor
 from .sse import format_sse
+from .file_watcher import FileWatcher
 
 
 # Pydantic models for API
@@ -63,6 +64,37 @@ class SaveFileRequest(BaseModel):
     """Request to save a file."""
     path: str
     content: str
+
+
+# File watcher SSE event models
+class FileEventBase(BaseModel):
+    """Base file event for SSE streaming."""
+    type: str
+    path: str
+    timestamp: int
+
+
+class InitialFileEvent(FileEventBase):
+    """Initial file content event."""
+    type: str = "initial"
+    content: str
+
+
+class FileChangedEvent(FileEventBase):
+    """File changed event."""
+    type: str = "fileChanged"
+    content: str
+
+
+class FileDeletedEvent(FileEventBase):
+    """File deleted event."""
+    type: str = "fileDeleted"
+
+
+class FileErrorEvent(FileEventBase):
+    """File error event."""
+    type: str = "error"
+    message: str
 
 
 # FastAPI app
@@ -172,6 +204,75 @@ async def reset():
     """
     reset_executor()
     return {"status": "ok"}
+
+
+@app.get("/api/watch-file")
+async def watch_file(path: str):
+    """Watch a file and stream initial content + changes via SSE.
+
+    This unified endpoint eliminates the need for separate /api/read-file.
+    It sends an initial event with file content, then streams change events.
+
+    Args:
+        path: Absolute path to the file to watch
+
+    Returns:
+        StreamingResponse with text/event-stream media type
+
+    SSE Events:
+        - initial: Initial file content (sent first)
+        - fileChanged: File was modified (includes new content)
+        - fileDeleted: File was deleted (closes connection)
+        - error: Error occurred (closes connection)
+    """
+    async def generate_events():
+        watcher = FileWatcher(path)
+
+        async for event in watcher.watch_with_initial():
+            # Convert domain event to API model
+            if event.type == "initial":
+                model = InitialFileEvent(
+                    path=event.path,
+                    content=event.content,
+                    timestamp=event.timestamp
+                )
+            elif event.type == "fileChanged":
+                model = FileChangedEvent(
+                    path=event.path,
+                    content=event.content,
+                    timestamp=event.timestamp
+                )
+            elif event.type == "fileDeleted":
+                model = FileDeletedEvent(
+                    path=event.path,
+                    timestamp=event.timestamp
+                )
+            elif event.type == "error":
+                model = FileErrorEvent(
+                    path=event.path,
+                    message=event.message,
+                    timestamp=event.timestamp
+                )
+            else:
+                # Unknown event type - skip
+                continue
+
+            # Format as SSE
+            yield format_sse(model.model_dump())
+
+            # Stop after terminal events
+            if event.type in ("fileDeleted", "error"):
+                break
+
+    return StreamingResponse(
+        generate_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 
 @app.get("/api/read-file", response_model=ReadFileResponse)
