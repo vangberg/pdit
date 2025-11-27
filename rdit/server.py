@@ -11,7 +11,6 @@ Provides HTTP endpoints for:
 
 from pathlib import Path
 from typing import List, Optional
-import json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -19,6 +18,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from .executor import get_executor, reset_executor
+from .sse import format_sse
 
 
 # Pydantic models for API
@@ -136,21 +136,20 @@ async def execute_script(request: ExecuteScriptRequest):
                 )
 
                 # SSE format: "data: <json>\n\n"
-                yield f"data: {expr_result.model_dump_json()}\n\n"
+                yield format_sse(expr_result.model_dump())
 
                 # Force async yield to flush immediately
                 await asyncio.sleep(0)
 
             # Send completion event
-            yield 'data: {"type": "complete"}\n\n'
+            yield format_sse({"type": "complete"})
 
         except Exception as e:
             # Send error event
-            error_data = {
+            yield format_sse({
                 "type": "error",
                 "message": str(e)
-            }
-            yield f"data: {json.dumps(error_data)}\n\n"
+            })
 
     return StreamingResponse(
         generate_events(),
