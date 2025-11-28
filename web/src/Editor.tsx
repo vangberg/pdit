@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+} from "react";
 import {
   EditorView,
   keymap,
@@ -59,7 +65,10 @@ export interface EditorHandles {
 
 interface EditorProps {
   initialCode: string;
-  onExecuteCurrent?: (script: string, lineRange: { from: number; to: number }) => void;
+  onExecuteCurrent?: (
+    script: string,
+    lineRange: { from: number; to: number }
+  ) => void;
   onExecuteAll?: (script: string) => void;
   onDocumentChange?: (doc: Text) => void;
   onInitialDocumentLoad?: (doc: Text) => void;

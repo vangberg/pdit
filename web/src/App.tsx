@@ -14,13 +14,38 @@ const DEFAULT_CODE = ``;
 function App() {
   // Load script file from URL query parameter
   const scriptPath = new URLSearchParams(window.location.search).get("script");
-  const {
-    code: initialCode,
-    isLoading: isLoadingScript,
-    error: scriptError,
-  } = useScriptFile(scriptPath, DEFAULT_CODE);
+  const [hasConflict, setHasConflict] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const isProgrammaticUpdate = useRef(false);
 
   const editorRef = useRef<EditorHandles | null>(null);
+
+  const handleFileChange = useCallback(
+    (newContent: string) => {
+      if (hasUnsavedChanges) {
+        // User has local edits → show conflict banner
+        setHasConflict(true);
+      } else {
+        // No local edits → safe to auto-reload
+        isProgrammaticUpdate.current = true;
+        editorRef.current?.applyExecutionUpdate({
+          doc: newContent,
+          lineGroups: [],
+        });
+        isProgrammaticUpdate.current = false;
+      }
+    },
+    [hasUnsavedChanges]
+  );
+
+  const {
+    code: initialCode,
+    diskContent,
+    isLoading: isLoadingScript,
+    error: scriptError,
+  } = useScriptFile(scriptPath, DEFAULT_CODE, {
+    onFileChange: handleFileChange,
+  });
   const { expressions, lineGroups, setLineGroups, addExpressions } =
     useResults();
   const [lineGroupHeights, setLineGroupHeights] = useState<Map<string, number>>(
@@ -30,7 +55,6 @@ function App() {
     new Map()
   );
   const [doc, setDoc] = useState<Text>();
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const handleLineGroupHeightChange = useCallback(
     (heights: Map<string, number>) => {
@@ -49,7 +73,9 @@ function App() {
 
   const handleDocumentChange = useCallback((doc: Text) => {
     setDoc(doc);
-    setHasUnsavedChanges(true);
+    if (!isProgrammaticUpdate.current) {
+      setHasUnsavedChanges(true);
+    }
   }, []);
 
   const handleLineGroupsChange = useCallback(
@@ -122,6 +148,23 @@ function App() {
     editorRef.current?.focus();
   }, []);
 
+  const handleReloadFromDisk = useCallback(() => {
+    if (diskContent) {
+      isProgrammaticUpdate.current = true;
+      editorRef.current?.applyExecutionUpdate({
+        doc: diskContent,
+        lineGroups: [],
+      });
+      isProgrammaticUpdate.current = false;
+      setHasUnsavedChanges(false);
+      setHasConflict(false);
+    }
+  }, [diskContent]);
+
+  const handleKeepLocalChanges = useCallback(() => {
+    setHasConflict(false);
+  }, []);
+
   const handleSave = useCallback(async () => {
     if (!scriptPath || !doc) {
       console.warn("Cannot save: no script path or document");
@@ -142,6 +185,7 @@ function App() {
 
       if (response.ok) {
         setHasUnsavedChanges(false);
+        setHasConflict(false);
       } else {
         console.error("Failed to save file:", await response.text());
       }
@@ -195,6 +239,9 @@ function App() {
         onSave={handleSave}
         hasUnsavedChanges={hasUnsavedChanges}
         scriptName={scriptPath ? scriptPath.split("/").pop() : undefined}
+        hasConflict={hasConflict}
+        onReloadFromDisk={handleReloadFromDisk}
+        onKeepChanges={handleKeepLocalChanges}
       />
       <div className="split-container">
         <div className="editor-half">

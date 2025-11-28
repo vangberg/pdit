@@ -6,6 +6,9 @@ interface TopBarProps {
   onSave?: () => void;
   hasUnsavedChanges?: boolean;
   scriptName?: string;
+  hasConflict?: boolean;
+  onReloadFromDisk?: () => void;
+  onKeepChanges?: () => void;
 }
 
 function detectMacOS(): boolean {
@@ -82,7 +85,16 @@ function StatusIndicator({ isReady, message }: StatusIndicatorProps) {
   );
 }
 
-export function TopBar({ onRunAll, onRunCurrent, onSave, hasUnsavedChanges, scriptName }: TopBarProps) {
+export function TopBar({
+  onRunAll,
+  onRunCurrent,
+  onSave,
+  hasUnsavedChanges,
+  scriptName,
+  hasConflict,
+  onReloadFromDisk,
+  onKeepChanges
+}: TopBarProps) {
   const [hoveredButton, setHoveredButton] = React.useState<string | null>(null);
   const shortcuts = getShortcuts();
   const isMac = detectMacOS();
@@ -130,6 +142,39 @@ export function TopBar({ onRunAll, onRunCurrent, onSave, hasUnsavedChanges, scri
         )}
 
         <StatusIndicator isReady={true} />
+
+        {hasConflict && (
+          <div className="top-bar-conflict-compact">
+            <div
+              className="top-bar-button-wrapper"
+              onMouseEnter={() => setHoveredButton("conflict")}
+              onMouseLeave={() => setHoveredButton(null)}
+            >
+              <span className="top-bar-conflict-compact-message">⚠️ File changed</span>
+              {hoveredButton === "conflict" && (
+                <Tooltip text="The file was modified on disk. Reload to see changes or keep your edits." />
+              )}
+            </div>
+            <button
+              className="top-bar-conflict-button-primary"
+              onClick={onReloadFromDisk}
+              onMouseEnter={() => setHoveredButton("reload")}
+              onMouseLeave={() => setHoveredButton(null)}
+            >
+              Reload
+              {hoveredButton === "reload" && <Tooltip text="Discard your changes and reload from disk" />}
+            </button>
+            <button
+              className="top-bar-conflict-button-secondary"
+              onClick={onKeepChanges}
+              onMouseEnter={() => setHoveredButton("keep")}
+              onMouseLeave={() => setHoveredButton(null)}
+            >
+              Keep
+              {hoveredButton === "keep" && <Tooltip text="Keep your changes and dismiss this warning" />}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
