@@ -422,7 +422,7 @@ const groupTheme = EditorView.theme({
     borderLeft: "3px solid #7dd3fc",
   },
   ".cm-line-group-top": {
-    borderTop: "1px solid rgba(96, 165, 250, 0.4)",
+    borderTop: "1px solid rgba(125, 211, 252, 0.4)",
   },
   ".cm-line-group-recent": {
     borderLeft: "3px solid #0284c7",

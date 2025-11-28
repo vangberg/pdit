@@ -10,6 +10,7 @@ interface OutputPaneProps {
   lineGroups: LineGroup[];
   lineGroupTops?: Map<string, number>;
   lineGroupHeights?: Map<string, number>;
+  lineGroupNaturalHeights?: Map<string, number>;
 }
 
 export const OutputPane: React.FC<OutputPaneProps> = ({
@@ -18,6 +19,7 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
   lineGroups,
   lineGroupTops,
   lineGroupHeights,
+  lineGroupNaturalHeights,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const lineGroupRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -89,7 +91,20 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
       >
         {lineGroups.map((group) => {
           const topValue = lineGroupTops?.get(group.id);
+          const naturalHeight = lineGroupNaturalHeights?.get(group.id);
           const groupClassName = group.allInvisible ? "output-group output-group-invisible" : "output-group";
+
+          const style: CSSProperties = {};
+          if (topValue !== undefined && Number.isFinite(topValue)) {
+            style.position = "absolute";
+            style.top = topValue;
+            style.left = 0;
+            style.right = 0;
+          }
+          if (naturalHeight !== undefined && Number.isFinite(naturalHeight)) {
+            style.minHeight = `${naturalHeight}px`;
+          }
+
           return (
             <div
               className={groupClassName}
@@ -101,16 +116,7 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
                   lineGroupRefs.current.delete(group.id);
                 }
               }}
-              style={
-                topValue !== undefined && Number.isFinite(topValue)
-                  ? ({
-                      position: "absolute",
-                      top: topValue,
-                      left: 0,
-                      right: 0,
-                    } as CSSProperties)
-                  : undefined
-              }
+              style={Object.keys(style).length > 0 ? style : undefined}
             >
               {group.resultIds.map((resultId) => {
                 const index = expressions.findIndex((expr) => expr.id === resultId);

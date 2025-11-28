@@ -193,9 +193,12 @@ body {
 }
 
 .editor-half {
+  height: 100%;
 }
 
 .output-half {
+  background: #f3f4f6;
+  height: 100%;
 }
 
 h1 {
@@ -217,7 +220,7 @@ h1 {
 
 #editor {
   width: 100%;
-  flex: 1;
+  height: 100%;
 }
 
 #editor-preview {
@@ -229,6 +232,7 @@ h1 {
 
 .cm-editor {
   font-size: 14px;
+  height: 100%;
 }
 
 .cm-focused {
@@ -248,19 +252,15 @@ h1 {
 }
 
 .output-group {
-  background: transparent;
+  border-right: 3px solid #9ca3af;
   border-top: 1px solid rgba(156, 163, 175, 0.4);
-}
-
-.output-group-invisible {
-  border-top: none;
 }
 
 .output-container {
   padding: 0.5rem;
   padding-left: 0.75rem;
-  background: #f3f4f6;
-  border-left: 2px solid #9ca3af;
+  background: transparent;
+  border-left: none;
 }
 
 .output-container-invisible {

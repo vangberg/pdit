@@ -54,6 +54,9 @@ function App() {
   const [lineGroupTops, setLineGroupTops] = useState<Map<string, number>>(
     new Map()
   );
+  const [lineGroupNaturalHeights, setLineGroupNaturalHeights] = useState<Map<string, number>>(
+    new Map()
+  );
   const [doc, setDoc] = useState<Text>();
 
   const handleLineGroupHeightChange = useCallback(
@@ -92,6 +95,14 @@ function App() {
       Array.from(tops.entries()).slice(0, 5)
     );
     setLineGroupTops(tops);
+  }, []);
+
+  const handleLineGroupNaturalHeightChange = useCallback((heights: Map<string, number>) => {
+    console.log(
+      "App received line group natural heights:",
+      Array.from(heights.entries()).slice(0, 5)
+    );
+    setLineGroupNaturalHeights(heights);
   }, []);
 
   const handleExecute = useCallback(
@@ -254,6 +265,7 @@ function App() {
             onDocumentChange={handleDocumentChange}
             onLineGroupsChange={handleLineGroupsChange}
             onLineGroupTopChange={handleLineGroupTopChange}
+            onLineGroupNaturalHeightChange={handleLineGroupNaturalHeightChange}
             lineGroupHeights={lineGroupHeights}
           />
         </div>
@@ -264,6 +276,7 @@ function App() {
             lineGroups={lineGroups}
             lineGroupTops={lineGroupTops}
             lineGroupHeights={lineGroupHeights}
+            lineGroupNaturalHeights={lineGroupNaturalHeights}
           />
         </div>
       </div>

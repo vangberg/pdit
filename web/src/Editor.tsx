@@ -47,6 +47,7 @@ import {
   lineGroupLayoutExtension,
   setLineGroupHeights,
   lineGroupTopChangeFacet,
+  lineGroupNaturalHeightChangeFacet,
 } from "./line-group-layout";
 import {
   debugPanelExtension,
@@ -74,6 +75,7 @@ interface EditorProps {
   onInitialDocumentLoad?: (doc: Text) => void;
   onLineGroupsChange?: (groups: LineGroup[]) => void;
   onLineGroupTopChange?: (tops: Map<string, number>) => void;
+  onLineGroupNaturalHeightChange?: (heights: Map<string, number>) => void;
   lineGroupHeights?: Map<string, number>;
   ref?: React.Ref<EditorHandles>;
 }
@@ -86,6 +88,7 @@ export function Editor({
   onInitialDocumentLoad,
   onLineGroupsChange,
   onLineGroupTopChange,
+  onLineGroupNaturalHeightChange,
   lineGroupHeights,
   ref: externalRef,
 }: EditorProps) {
@@ -98,6 +101,7 @@ export function Editor({
   const onDocumentChangeRef = useRef(onDocumentChange);
   const onLineGroupsChangeRef = useRef(onLineGroupsChange);
   const lineGroupTopCallbackCompartment = useMemo(() => new Compartment(), []);
+  const lineGroupNaturalHeightCallbackCompartment = useMemo(() => new Compartment(), []);
 
   // Mirror the latest callbacks so long-lived view listeners stay up to date
   useEffect(() => {
@@ -188,6 +192,9 @@ export function Editor({
         debugPanelExtension(),
         lineGroupTopCallbackCompartment.of(
           lineGroupTopChangeFacet.of(onLineGroupTopChange ?? null)
+        ),
+        lineGroupNaturalHeightCallbackCompartment.of(
+          lineGroupNaturalHeightChangeFacet.of(onLineGroupNaturalHeightChange ?? null)
         ),
         EditorView.updateListener.of((update: ViewUpdate) => {
           if (update.docChanged) {
@@ -322,6 +329,19 @@ export function Editor({
       ),
     });
   }, [onLineGroupTopChange, lineGroupTopCallbackCompartment]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) {
+      return;
+    }
+
+    view.dispatch({
+      effects: lineGroupNaturalHeightCallbackCompartment.reconfigure(
+        lineGroupNaturalHeightChangeFacet.of(onLineGroupNaturalHeightChange ?? null)
+      ),
+    });
+  }, [onLineGroupNaturalHeightChange, lineGroupNaturalHeightCallbackCompartment]);
 
   return <div id="editor" ref={editorRef} />;
 }

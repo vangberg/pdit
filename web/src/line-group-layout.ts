@@ -84,6 +84,17 @@ export const lineGroupTopChangeFacet = Facet.define<
   },
 });
 
+export type LineGroupNaturalHeightChange = (heights: Map<string, number>) => void;
+
+export const lineGroupNaturalHeightChangeFacet = Facet.define<
+  LineGroupNaturalHeightChange | null,
+  LineGroupNaturalHeightChange | null
+>({
+  combine(values) {
+    return values.length > 0 ? values[values.length - 1] : null;
+  },
+});
+
 // ============================================================================
 // Core Logic (like merge's updateSpacers)
 // ============================================================================
@@ -130,6 +141,9 @@ function updateSpacers(view: EditorView) {
   // Get the set of last executed result IDs
   const lastExecutedIds = view.state.field(lastExecutedIdsField)
 
+  // Track natural heights for reporting
+  const naturalHeights = new Map<string, number>()
+
   for (let groupIndex = 0; groupIndex < groups.length; groupIndex++) {
     const group = groups[groupIndex]
     const targetHeight = targetHeights.get(group.id)
@@ -153,6 +167,9 @@ function updateSpacers(view: EditorView) {
       naturalHeight -= previousSpacerHeight
     }
 
+    // Store natural height for reporting
+    naturalHeights.set(group.id, naturalHeight)
+
     const diff = targetHeight - naturalHeight
     if (diff > 0.01) {
       const isRecent = group.resultIds.some(id => lastExecutedIds.has(id))
@@ -167,6 +184,12 @@ function updateSpacers(view: EditorView) {
   const newSpacers = builder.finish()
   if (!compareSpacers(newSpacers, currentSpacers)) {
     view.dispatch({ effects: [adjustSpacers.of(newSpacers)] })
+  }
+
+  // Report natural heights to callback
+  const naturalHeightCallback = view.state.facet(lineGroupNaturalHeightChangeFacet)
+  if (naturalHeightCallback && naturalHeights.size > 0) {
+    naturalHeightCallback(naturalHeights)
   }
 }
 
@@ -213,6 +236,7 @@ export const lineGroupLayoutExtension = [
   spacersField,
   lineGroupTargetHeightsField,
   lineGroupTopChangeFacet.of(null),
+  lineGroupNaturalHeightChangeFacet.of(null),
   // Like merge: updateListener that measures and dispatches synchronously
   EditorView.updateListener.of(update => {
     const hasSpacerEffect = update.transactions.some(tr =>
