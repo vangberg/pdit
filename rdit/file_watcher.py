@@ -5,7 +5,7 @@ Provides a FileWatcher class that monitors a single file for changes
 and streams events through an async queue.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import AsyncGenerator, Union
 from watchfiles import awatch
@@ -15,47 +15,36 @@ import time
 @dataclass
 class FileEvent:
     """Base class for file watcher events."""
-    type: str
     path: str
     timestamp: int
+    type: str = field(init=False)
 
 
 @dataclass
 class InitialFileEvent(FileEvent):
     """Initial file content event."""
     content: str
-
-    def __init__(self, path: str, content: str, timestamp: int):
-        super().__init__(type="initial", path=path, timestamp=timestamp)
-        self.content = content
+    type: str = field(default="initial", init=False)
 
 
 @dataclass
 class FileChangedEvent(FileEvent):
     """File modification event."""
     content: str
-
-    def __init__(self, path: str, content: str, timestamp: int):
-        super().__init__(type="fileChanged", path=path, timestamp=timestamp)
-        self.content = content
+    type: str = field(default="fileChanged", init=False)
 
 
 @dataclass
 class FileDeletedEvent(FileEvent):
     """File deletion event."""
-
-    def __init__(self, path: str, timestamp: int):
-        super().__init__(type="fileDeleted", path=path, timestamp=timestamp)
+    type: str = field(default="fileDeleted", init=False)
 
 
 @dataclass
 class FileErrorEvent(FileEvent):
     """File error event."""
     message: str
-
-    def __init__(self, path: str, message: str, timestamp: int):
-        super().__init__(type="error", path=path, timestamp=timestamp)
-        self.message = message
+    type: str = field(default="error", init=False)
 
 
 class FileWatcher:

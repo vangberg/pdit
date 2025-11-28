@@ -9,6 +9,7 @@ Provides HTTP endpoints for:
 - Serving static frontend files
 """
 
+from dataclasses import asdict
 from pathlib import Path
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException
@@ -64,37 +65,6 @@ class SaveFileRequest(BaseModel):
     """Request to save a file."""
     path: str
     content: str
-
-
-# File watcher SSE event models
-class FileEventBase(BaseModel):
-    """Base file event for SSE streaming."""
-    type: str
-    path: str
-    timestamp: int
-
-
-class InitialFileEvent(FileEventBase):
-    """Initial file content event."""
-    type: str = "initial"
-    content: str
-
-
-class FileChangedEvent(FileEventBase):
-    """File changed event."""
-    type: str = "fileChanged"
-    content: str
-
-
-class FileDeletedEvent(FileEventBase):
-    """File deleted event."""
-    type: str = "fileDeleted"
-
-
-class FileErrorEvent(FileEventBase):
-    """File error event."""
-    type: str = "error"
-    message: str
 
 
 # FastAPI app
@@ -229,36 +199,8 @@ async def watch_file(path: str):
         watcher = FileWatcher(path)
 
         async for event in watcher.watch_with_initial():
-            # Convert domain event to API model
-            if event.type == "initial":
-                model = InitialFileEvent(
-                    path=event.path,
-                    content=event.content,
-                    timestamp=event.timestamp
-                )
-            elif event.type == "fileChanged":
-                model = FileChangedEvent(
-                    path=event.path,
-                    content=event.content,
-                    timestamp=event.timestamp
-                )
-            elif event.type == "fileDeleted":
-                model = FileDeletedEvent(
-                    path=event.path,
-                    timestamp=event.timestamp
-                )
-            elif event.type == "error":
-                model = FileErrorEvent(
-                    path=event.path,
-                    message=event.message,
-                    timestamp=event.timestamp
-                )
-            else:
-                # Unknown event type - skip
-                continue
-
-            # Format as SSE
-            yield format_sse(model.model_dump())
+            # Direct serialization using asdict()
+            yield format_sse(asdict(event))
 
             # Stop after terminal events
             if event.type in ("fileDeleted", "error"):
