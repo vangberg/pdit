@@ -9,9 +9,9 @@ Provides HTTP endpoints for:
 - Serving static frontend files
 """
 
+from dataclasses import asdict
 from pathlib import Path
 from typing import List, Optional
-import json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -19,6 +19,8 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from .executor import get_executor, reset_executor
+from .sse import format_sse
+from .file_watcher import FileWatcher
 
 
 # Pydantic models for API
@@ -136,21 +138,20 @@ async def execute_script(request: ExecuteScriptRequest):
                 )
 
                 # SSE format: "data: <json>\n\n"
-                yield f"data: {expr_result.model_dump_json()}\n\n"
+                yield format_sse(expr_result.model_dump())
 
                 # Force async yield to flush immediately
                 await asyncio.sleep(0)
 
             # Send completion event
-            yield 'data: {"type": "complete"}\n\n'
+            yield format_sse({"type": "complete"})
 
         except Exception as e:
             # Send error event
-            error_data = {
+            yield format_sse({
                 "type": "error",
                 "message": str(e)
-            }
-            yield f"data: {json.dumps(error_data)}\n\n"
+            })
 
     return StreamingResponse(
         generate_events(),
@@ -173,6 +174,47 @@ async def reset():
     """
     reset_executor()
     return {"status": "ok"}
+
+
+@app.get("/api/watch-file")
+async def watch_file(path: str):
+    """Watch a file and stream initial content + changes via SSE.
+
+    This unified endpoint eliminates the need for separate /api/read-file.
+    It sends an initial event with file content, then streams change events.
+
+    Args:
+        path: Absolute path to the file to watch
+
+    Returns:
+        StreamingResponse with text/event-stream media type
+
+    SSE Events:
+        - initial: Initial file content (sent first)
+        - fileChanged: File was modified (includes new content)
+        - fileDeleted: File was deleted (closes connection)
+        - error: Error occurred (closes connection)
+    """
+    async def generate_events():
+        watcher = FileWatcher(path)
+
+        async for event in watcher.watch_with_initial():
+            # Direct serialization using asdict()
+            yield format_sse(asdict(event))
+
+            # Stop after terminal events
+            if event.type in ("fileDeleted", "error"):
+                break
+
+    return StreamingResponse(
+        generate_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 
 @app.get("/api/read-file", response_model=ReadFileResponse)

@@ -27,6 +27,7 @@ dependencies = [
     "uvicorn[standard]>=0.24.0",
     "click>=8.0.0",
     "aiofiles>=23.0.0",
+    "watchfiles>=0.20.0",
 ]
 
 [project.scripts]
