@@ -89,10 +89,14 @@ def _serialize_widget(widget: Any) -> Dict[str, Any]:
     css = getattr(widget, '_css', None) or ''
 
     # Extract model state from traitlets
+    # Include traits tagged with sync=True (even if private)
     model = {}
     for trait_name in widget.trait_names():
-        # Skip private traits
-        if trait_name.startswith('_'):
+        # Check if trait is tagged for sync
+        is_synced = widget.trait_metadata(trait_name, 'sync')
+
+        # Skip traits that aren't synced (unless they're public non-private traits)
+        if not is_synced and trait_name.startswith('_'):
             continue
 
         try:
