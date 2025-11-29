@@ -9,18 +9,27 @@ This module provides the PythonExecutor class which handles:
 
 import ast
 import io
+import json
 import traceback
 from contextlib import redirect_stdout, redirect_stderr
 from dataclasses import dataclass
 from types import CodeType
 from typing import Any, Dict, Generator, List, Optional
 
+try:
+    import anywidget
+    import pandas as pd
+    WIDGET_SUPPORT = True
+except ImportError:
+    WIDGET_SUPPORT = False
+
 
 @dataclass
 class OutputItem:
-    """Single output item (stdout, stderr, or error)."""
-    type: str  # 'stdout', 'stderr', or 'error'
+    """Single output item (stdout, stderr, error, or widget)."""
+    type: str  # 'stdout', 'stderr', 'error', or 'widget'
     text: str
+    widget_data: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -41,6 +50,64 @@ class ExecutionResult:
     line_end: int
     output: List[OutputItem]
     is_invisible: bool
+
+
+def _serialize_value(value: Any) -> Any:
+    """Serialize a value for JSON transmission."""
+    if not WIDGET_SUPPORT:
+        return value
+
+    # Handle pandas DataFrames
+    if isinstance(value, pd.DataFrame):
+        return {
+            '_type': 'dataframe',
+            'data': value.to_dict('split')
+        }
+
+    # Handle lists and dicts recursively
+    if isinstance(value, list):
+        return [_serialize_value(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _serialize_value(v) for k, v in value.items()}
+
+    # Try to JSON serialize - if it works, return as-is
+    try:
+        json.dumps(value)
+        return value
+    except (TypeError, ValueError):
+        # Fallback to string representation
+        return str(value)
+
+
+def _serialize_widget(widget: Any) -> Dict[str, Any]:
+    """Serialize an anywidget instance for frontend rendering."""
+    if not WIDGET_SUPPORT or not isinstance(widget, anywidget.AnyWidget):
+        return {}
+
+    # Extract ESM and CSS
+    esm = widget._esm
+    css = getattr(widget, '_css', None) or ''
+
+    # Extract model state from traitlets
+    model = {}
+    for trait_name in widget.trait_names():
+        # Skip private traits
+        if trait_name.startswith('_'):
+            continue
+
+        try:
+            value = getattr(widget, trait_name)
+            # Serialize the value (handles DataFrames, etc.)
+            model[trait_name] = _serialize_value(value)
+        except Exception:
+            # Skip traits that can't be accessed or serialized
+            continue
+
+    return {
+        'esm': esm,
+        'css': css,
+        'model': model
+    }
 
 
 class PythonExecutor:
@@ -107,7 +174,7 @@ class PythonExecutor:
             is_expr: Whether this is an expression (for result printing)
 
         Returns:
-            List of output items (stdout, stderr, errors)
+            List of output items (stdout, stderr, errors, widgets)
         """
         output = []
         stdout_buffer = io.StringIO()
@@ -118,9 +185,19 @@ class PythonExecutor:
                 # Always use eval() - works for both exec and eval compiled code
                 result = eval(compiled, self.namespace)
 
-                # For expressions, print result if not None
+                # For expressions, check if result is a widget
                 if is_expr and result is not None:
-                    print(repr(result))
+                    if WIDGET_SUPPORT and isinstance(result, anywidget.AnyWidget):
+                        # Serialize and capture widget
+                        widget_data = _serialize_widget(result)
+                        output.append(OutputItem(
+                            type="widget",
+                            text="",
+                            widget_data=widget_data
+                        ))
+                    else:
+                        # Regular result - print repr
+                        print(repr(result))
 
         except Exception:
             # Capture full traceback

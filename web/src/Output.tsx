@@ -1,5 +1,6 @@
 import React, { useImperativeHandle, useRef, useEffect } from "react";
 import { Expression } from "./execution";
+import { WidgetRenderer } from "./WidgetRenderer";
 
 interface OutputProps {
   expression: Expression;
@@ -48,7 +49,11 @@ export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible })
             key={i}
             className={`output-item output-${item.type}`}
           >
-            <pre>{item.text}</pre>
+            {item.type === 'widget' && item.widget_data ? (
+              <WidgetRenderer widgetData={item.widget_data} />
+            ) : (
+              <pre>{item.text}</pre>
+            )}
           </div>
         ))}
         {expression.result?.images && expression.result.images.length > 0 && (

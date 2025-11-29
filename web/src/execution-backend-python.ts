@@ -3,9 +3,16 @@
  * Connects to local Python server for code execution with real-time results.
  */
 
+export interface WidgetData {
+  esm: string;
+  css: string;
+  model: Record<string, unknown>;
+}
+
 export interface OutputItem {
-  type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message';
+  type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message' | 'widget';
   text: string;
+  widget_data?: WidgetData;
 }
 
 export interface Expression {
