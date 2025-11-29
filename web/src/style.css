@@ -308,6 +308,116 @@ h1 {
   color: #4b5563;
 }
 
+.output-item.output-markdown {
+  color: #374151;
+  line-height: 1.6;
+}
+
+.output-item.output-markdown h1,
+.output-item.output-markdown h2,
+.output-item.output-markdown h3,
+.output-item.output-markdown h4,
+.output-item.output-markdown h5,
+.output-item.output-markdown h6 {
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.output-item.output-markdown h1 {
+  font-size: 1.5em;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.3em;
+}
+
+.output-item.output-markdown h2 {
+  font-size: 1.25em;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.3em;
+}
+
+.output-item.output-markdown h3 {
+  font-size: 1.1em;
+}
+
+.output-item.output-markdown p {
+  margin-top: 0;
+  margin-bottom: 1em;
+}
+
+.output-item.output-markdown code {
+  background-color: #f3f4f6;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.output-item.output-markdown pre {
+  background-color: #f3f4f6;
+  padding: 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+
+.output-item.output-markdown pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.output-item.output-markdown ul,
+.output-item.output-markdown ol {
+  margin-top: 0;
+  margin-bottom: 1em;
+  padding-left: 2em;
+}
+
+.output-item.output-markdown li {
+  margin-top: 0.25em;
+}
+
+.output-item.output-markdown blockquote {
+  margin: 0;
+  padding-left: 1em;
+  border-left: 4px solid #e5e7eb;
+  color: #6b7280;
+}
+
+.output-item.output-markdown a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.output-item.output-markdown a:hover {
+  text-decoration: underline;
+}
+
+.output-item.output-markdown table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.output-item.output-markdown th,
+.output-item.output-markdown td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5em;
+  text-align: left;
+}
+
+.output-item.output-markdown th {
+  background-color: #f9fafb;
+  font-weight: 600;
+}
+
+.output-item.output-markdown hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 1.5em 0;
+}
+
 .output-item.output-plot {
   margin-top: 0.25rem;
 }

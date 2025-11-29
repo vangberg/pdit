@@ -31,6 +31,7 @@ class Statement:
     line_start: int
     line_end: int
     is_expr: bool
+    node: ast.AST  # Original AST node for type checking
 
 
 @dataclass
@@ -94,17 +95,19 @@ class PythonExecutor:
                 node_index=i,
                 line_start=line_start,
                 line_end=line_end,
-                is_expr=is_expr
+                is_expr=is_expr,
+                node=node
             ))
 
         return statements
 
-    def execute_statement(self, compiled: CodeType, is_expr: bool) -> List[OutputItem]:
+    def execute_statement(self, compiled: CodeType, is_expr: bool, node: Optional[ast.AST] = None) -> List[OutputItem]:
         """Execute pre-compiled statement with output capture.
 
         Args:
             compiled: Pre-compiled code object
             is_expr: Whether this is an expression (for result printing)
+            node: Original AST node (for detecting string constants)
 
         Returns:
             List of output items (stdout, stderr, errors)
@@ -118,9 +121,22 @@ class PythonExecutor:
                 # Always use eval() - works for both exec and eval compiled code
                 result = eval(compiled, self.namespace)
 
-                # For expressions, print result if not None
+                # For expressions, check if it's a top-level string for markdown rendering
                 if is_expr and result is not None:
-                    print(repr(result))
+                    # Check if this is a string constant expression
+                    is_string_constant = (
+                        node is not None and
+                        isinstance(node, ast.Expr) and
+                        isinstance(node.value, ast.Constant) and
+                        isinstance(node.value.value, str)
+                    )
+
+                    if is_string_constant:
+                        # Render as markdown
+                        output.append(OutputItem(type="markdown", text=result))
+                    else:
+                        # Regular expression - print repr
+                        print(repr(result))
 
         except Exception:
             # Capture full traceback
@@ -186,7 +202,7 @@ class PythonExecutor:
                     continue
 
             # Execute statement
-            output = self.execute_statement(stmt.compiled, stmt.is_expr)
+            output = self.execute_statement(stmt.compiled, stmt.is_expr, stmt.node)
 
             # Determine if output is invisible (no stdout/stderr/errors)
             is_invisible = len(output) == 0
