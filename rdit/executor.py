@@ -8,6 +8,7 @@ This module provides the PythonExecutor class which handles:
 """
 
 import ast
+import base64
 import io
 import re
 import sys
@@ -186,6 +187,7 @@ class ExecutionResult:
     line_end: int
     output: List[OutputItem]
     is_invisible: bool
+    images: Optional[List[str]] = None  # base64-encoded PNG images
 
 
 class PythonExecutor:
@@ -283,6 +285,49 @@ class PythonExecutor:
 
         return False
 
+    def capture_matplotlib_figures(self) -> List[str]:
+        """Capture any active matplotlib figures as base64-encoded PNG images.
+
+        Returns:
+            List of base64-encoded PNG image strings (data URLs)
+        """
+        images = []
+
+        try:
+            import matplotlib.pyplot as plt
+
+            # Get all figure numbers
+            fig_nums = plt.get_fignums()
+
+            for fig_num in fig_nums:
+                fig = plt.figure(fig_num)
+
+                # Check if figure has any axes with content
+                if fig.get_axes():
+                    # Save figure to bytes buffer
+                    buf = io.BytesIO()
+                    fig.savefig(buf, format='png', bbox_inches='tight')
+                    buf.seek(0)
+
+                    # Encode as base64 data URL
+                    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+                    img_data_url = f"data:image/png;base64,{img_base64}"
+                    images.append(img_data_url)
+
+                    buf.close()
+
+                # Close the figure to free memory
+                plt.close(fig)
+
+        except ImportError:
+            # matplotlib not installed, no images to capture
+            pass
+        except Exception:
+            # Silently ignore matplotlib capture errors
+            pass
+
+        return images
+
     def execute_statement(
         self,
         compiled: CodeType,
@@ -291,7 +336,7 @@ class PythonExecutor:
         line_start: int,
         line_end: int,
         is_markdown_cell: bool = False
-    ) -> List[OutputItem]:
+    ) -> tuple[List[OutputItem], List[str]]:
         """Execute pre-compiled statement with output capture.
 
         Args:
@@ -303,7 +348,7 @@ class PythonExecutor:
             is_markdown_cell: Whether this is a markdown cell (output as markdown, not repr)
 
         Returns:
-            List of output items (stdout, stderr, errors, markdown)
+            Tuple of (output items, base64-encoded images)
         """
         # Print statement info in verbose mode
         if _verbose_mode:
@@ -362,7 +407,10 @@ class PythonExecutor:
             if _verbose_mode:
                 print(stderr_content, file=sys.stderr, end='')
 
-        return output
+        # Capture any matplotlib figures
+        images = self.capture_matplotlib_figures()
+
+        return output, images
 
     def execute_script(
         self,
@@ -414,7 +462,7 @@ class PythonExecutor:
                     continue
 
             # Execute statement
-            output = self.execute_statement(
+            output, images = self.execute_statement(
                 stmt.compiled,
                 stmt.is_expr,
                 stmt.source,
@@ -423,8 +471,8 @@ class PythonExecutor:
                 stmt.is_markdown_cell
             )
 
-            # Determine if output is invisible (no stdout/stderr/errors)
-            is_invisible = len(output) == 0
+            # Determine if output is invisible (no stdout/stderr/errors and no images)
+            is_invisible = len(output) == 0 and len(images) == 0
 
             # Yield result immediately after execution
             yield ExecutionResult(
@@ -432,7 +480,8 @@ class PythonExecutor:
                 line_start=stmt.line_start,
                 line_end=stmt.line_end,
                 output=output,
-                is_invisible=is_invisible
+                is_invisible=is_invisible,
+                images=images if images else None
             )
 
     def reset(self) -> None:

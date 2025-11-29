@@ -101,6 +101,20 @@ export class PythonServerBackend {
           }
 
           // Handle result event (statement execution result)
+          // Convert base64 image data URLs to ImageBitmap objects
+          let images: ImageBitmap[] | undefined;
+          if (data.images && data.images.length > 0) {
+            images = await Promise.all(
+              data.images.map(async (dataUrl: string) => {
+                // Convert data URL to Blob
+                const response = await fetch(dataUrl);
+                const blob = await response.blob();
+                // Convert Blob to ImageBitmap
+                return await createImageBitmap(blob);
+              })
+            );
+          }
+
           yield {
             id: globalIdCounter++,
             lineStart: data.lineStart,
@@ -108,6 +122,7 @@ export class PythonServerBackend {
             result: {
               output: data.output,
               isInvisible: data.isInvisible,
+              images,
             },
           };
         }
