@@ -68,27 +68,16 @@ export const spacersField = StateField.define<DecorationSet>({
 // Types and Callback
 // ============================================================================
 
-export interface LineGroupHeight {
-  line: number;
-  height: number;
+export interface LineGroupLayout {
+  top: number;
+  naturalHeight: number;
 }
 
-export type LineGroupTopChange = (tops: Map<string, number>) => void;
+export type LineGroupLayoutChange = (layouts: Map<string, LineGroupLayout>) => void;
 
-export const lineGroupTopChangeFacet = Facet.define<
-  LineGroupTopChange | null,
-  LineGroupTopChange | null
->({
-  combine(values) {
-    return values.length > 0 ? values[values.length - 1] : null;
-  },
-});
-
-export type LineGroupNaturalHeightChange = (heights: Map<string, number>) => void;
-
-export const lineGroupNaturalHeightChangeFacet = Facet.define<
-  LineGroupNaturalHeightChange | null,
-  LineGroupNaturalHeightChange | null
+export const lineGroupLayoutChangeFacet = Facet.define<
+  LineGroupLayoutChange | null,
+  LineGroupLayoutChange | null
 >({
   combine(values) {
     return values.length > 0 ? values[values.length - 1] : null;
@@ -114,22 +103,30 @@ function compareSpacers(a: DecorationSet, b: DecorationSet): boolean {
   return true
 }
 
-function updateSpacers(view: EditorView) {
+function updateSpacersAndReportLayout(view: EditorView) {
   const groups = view.state.field(lineGroupsField)
   const targetHeights = view.state.field(lineGroupTargetHeightsField)
   const currentSpacers = view.state.field(spacersField)
+  const doc = view.state.doc
+  const layoutCallback = view.state.facet(lineGroupLayoutChangeFacet)
 
-  if (targetHeights.size === 0 || groups.length === 0) {
-    // Clear spacers when there are no groups or target heights
+  // Get the cm-content padding to account for offset
+  const contentEl = view.contentDOM
+  const contentPadding = contentEl ? parseInt(getComputedStyle(contentEl).paddingTop) || 0 : 0
+
+  if (groups.length === 0) {
     if (currentSpacers.size > 0) {
       view.dispatch({ effects: [adjustSpacers.of(Decoration.none)] })
+    }
+    if (layoutCallback) {
+      layoutCallback(new Map())
     }
     return
   }
 
-  const doc = view.state.doc
   const builder = new RangeSetBuilder<Decoration>()
   const existingSpacers = new Map<number, number>()
+  const layouts = new Map<string, LineGroupLayout>()
 
   for (let iter = currentSpacers.iter(); iter.value; iter.next()) {
     const widget = iter.value.spec.widget
@@ -138,18 +135,15 @@ function updateSpacers(view: EditorView) {
     }
   }
 
-  // Get the set of last executed result IDs
   const lastExecutedIds = view.state.field(lastExecutedIdsField)
 
-  // Track natural heights for reporting
-  const naturalHeights = new Map<string, number>()
-
-  for (let groupIndex = 0; groupIndex < groups.length; groupIndex++) {
-    const group = groups[groupIndex]
+  for (const group of groups) {
     const targetHeight = targetHeights.get(group.id)
 
-    // Skip if no target height set for this group
-    if (targetHeight === undefined || !Number.isFinite(targetHeight)) continue
+    // Measure top position
+    const startLine = doc.line(group.lineStart)
+    const startBlock = view.lineBlockAt(startLine.from)
+    const top = Math.max(0, startBlock.top + contentPadding)
 
     // Measure natural height from DOM
     let naturalHeight = 0
@@ -167,17 +161,20 @@ function updateSpacers(view: EditorView) {
       naturalHeight -= previousSpacerHeight
     }
 
-    // Store natural height for reporting
-    naturalHeights.set(group.id, naturalHeight)
+    // Store layout for reporting
+    layouts.set(group.id, { top, naturalHeight })
 
-    const diff = targetHeight - naturalHeight
-    if (diff > 0.01) {
-      const isRecent = group.resultIds.some(id => lastExecutedIds.has(id))
-      builder.add(endLine.to, endLine.to, Decoration.widget({
-        widget: new Spacer(diff, group.lineEnd, isRecent),
-        block: true,
-        side: 1
-      }))
+    // Add spacer if needed
+    if (targetHeight !== undefined && Number.isFinite(targetHeight)) {
+      const diff = targetHeight - naturalHeight
+      if (diff > 0.01) {
+        const isRecent = group.resultIds.some(id => lastExecutedIds.has(id))
+        builder.add(endLine.to, endLine.to, Decoration.widget({
+          widget: new Spacer(diff, group.lineEnd, isRecent),
+          block: true,
+          side: 1
+        }))
+      }
     }
   }
 
@@ -186,36 +183,9 @@ function updateSpacers(view: EditorView) {
     view.dispatch({ effects: [adjustSpacers.of(newSpacers)] })
   }
 
-  // Report natural heights to callback
-  const naturalHeightCallback = view.state.facet(lineGroupNaturalHeightChangeFacet)
-  if (naturalHeightCallback && naturalHeights.size > 0) {
-    naturalHeightCallback(naturalHeights)
+  if (layoutCallback) {
+    layoutCallback(layouts)
   }
-}
-
-function measureAndReportTops(view: EditorView) {
-  const callback = view.state.facet(lineGroupTopChangeFacet)
-  if (!callback) return
-
-  const groups = view.state.field(lineGroupsField)
-  const doc = view.state.doc
-  if (!groups.length) {
-    callback(new Map())
-    return
-  }
-
-  // Get the cm-content padding to account for offset
-  const contentEl = view.contentDOM
-  const contentPadding = contentEl ? parseInt(getComputedStyle(contentEl).paddingTop) || 0 : 0
-
-  const tops = new Map<string, number>()
-  for (const group of groups) {
-    const line = doc.line(group.lineStart)
-    const block = view.lineBlockAt(line.from)
-    tops.set(group.id, Math.max(0, block.top + contentPadding))
-  }
-
-  callback(tops)
 }
 
 // ============================================================================
@@ -235,24 +205,19 @@ export function setLineGroupHeights(view: EditorView, heights: Map<string, numbe
 export const lineGroupLayoutExtension = [
   spacersField,
   lineGroupTargetHeightsField,
-  lineGroupTopChangeFacet.of(null),
-  lineGroupNaturalHeightChangeFacet.of(null),
-  // Like merge: updateListener that measures and dispatches synchronously
+  lineGroupLayoutChangeFacet.of(null),
   EditorView.updateListener.of(update => {
     const hasSpacerEffect = update.transactions.some(tr =>
       tr.effects.some(e => e.is(adjustSpacers))
     )
 
-    // Check if target heights changed
     const targetHeightsChanged = update.startState.field(lineGroupTargetHeightsField) !==
                                  update.state.field(lineGroupTargetHeightsField)
     const lineGroupsChanged = update.startState.field(lineGroupsField) !==
                               update.state.field(lineGroupsField)
 
-    // Phase 1: Update spacers when heights change (but not if we just applied spacers)
     if (!hasSpacerEffect && (update.heightChanged || update.geometryChanged || update.docChanged || targetHeightsChanged || lineGroupsChanged)) {
-      updateSpacers(update.view)
-      measureAndReportTops(update.view)
+      updateSpacersAndReportLayout(update.view)
     }
   })
 ]

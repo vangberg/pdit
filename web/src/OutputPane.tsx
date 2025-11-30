@@ -2,39 +2,38 @@ import React, { useRef, useEffect, useCallback, useMemo } from "react";
 import { Output } from "./Output";
 import { Expression } from "./execution";
 import { LineGroup } from "./compute-line-groups";
+import { LineGroupLayout } from "./line-group-layout";
 import { CSSProperties } from "react";
 
 interface OutputPaneProps {
   onLineGroupHeightChange?: (heights: Map<string, number>) => void;
   expressions: Expression[];
   lineGroups: LineGroup[];
-  lineGroupTops?: Map<string, number>;
+  lineGroupLayouts?: Map<string, LineGroupLayout>;
   lineGroupHeights?: Map<string, number>;
-  lineGroupNaturalHeights?: Map<string, number>;
 }
 
 export const OutputPane: React.FC<OutputPaneProps> = ({
   onLineGroupHeightChange,
   expressions,
   lineGroups,
-  lineGroupTops,
+  lineGroupLayouts,
   lineGroupHeights,
-  lineGroupNaturalHeights,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const lineGroupRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const minHeight = useMemo(() => {
-    if (!lineGroupTops || !lineGroupHeights || lineGroups.length === 0) {
+    if (!lineGroupLayouts || !lineGroupHeights || lineGroups.length === 0) {
       return undefined;
     }
 
     const lastGroup = lineGroups[lineGroups.length - 1];
-    const top = lineGroupTops.get(lastGroup.id);
+    const layout = lineGroupLayouts.get(lastGroup.id);
     const height = lineGroupHeights.get(lastGroup.id);
 
-    return (top !== undefined && height !== undefined) ? top + height : undefined;
-  }, [lineGroups, lineGroupTops, lineGroupHeights]);
+    return (layout && height !== undefined) ? layout.top + height : undefined;
+  }, [lineGroups, lineGroupLayouts, lineGroupHeights]);
 
   const getLineGroupHeights = useCallback((): Map<string, number> => {
     const heights = new Map<string, number>();
@@ -90,19 +89,16 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
         style={minHeight ? { minHeight: `${minHeight}px` } : undefined}
       >
         {lineGroups.map((group) => {
-          const topValue = lineGroupTops?.get(group.id);
-          const naturalHeight = lineGroupNaturalHeights?.get(group.id);
+          const layout = lineGroupLayouts?.get(group.id);
           const groupClassName = group.allInvisible ? "output-group output-group-invisible" : "output-group";
 
           const style: CSSProperties = {};
-          if (topValue !== undefined && Number.isFinite(topValue)) {
+          if (layout) {
             style.position = "absolute";
-            style.top = topValue;
+            style.top = layout.top;
             style.left = 0;
             style.right = 0;
-          }
-          if (naturalHeight !== undefined && Number.isFinite(naturalHeight)) {
-            style.minHeight = `${naturalHeight}px`;
+            style.minHeight = `${layout.naturalHeight}px`;
           }
 
           return (

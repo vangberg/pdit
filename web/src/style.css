@@ -192,13 +192,9 @@ body {
   height: fit-content;
 }
 
-.editor-half {
-  height: 100%;
-}
-
+.editor-half,
 .output-half {
-  background: #f3f4f6;
-  height: 100%;
+  /* Styling handled by parent container */
 }
 
 h1 {
@@ -220,7 +216,7 @@ h1 {
 
 #editor {
   width: 100%;
-  height: 100%;
+  flex: 1;
 }
 
 #editor-preview {
@@ -232,7 +228,6 @@ h1 {
 
 .cm-editor {
   font-size: 14px;
-  height: 100%;
 }
 
 .cm-focused {
@@ -252,20 +247,24 @@ h1 {
 }
 
 .output-group {
-  border-right: 3px solid #9ca3af;
+  background: #f3f4f6;
   border-top: 1px solid rgba(156, 163, 175, 0.4);
+  border-left: 2px solid #9ca3af;
+}
+
+.output-group-invisible {
+  background: transparent;
+  border-top: none;
+  border-left: none;
 }
 
 .output-container {
   padding: 0.5rem;
   padding-left: 0.75rem;
-  background: transparent;
-  border-left: none;
 }
 
 .output-container-invisible {
-  background: transparent;
-  border-left: none;
+  /* No additional styling for invisible containers */
 }
 
 .output-line {
