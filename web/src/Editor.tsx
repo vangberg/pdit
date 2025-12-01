@@ -61,6 +61,7 @@ export interface EditorHandles {
     lastExecutedResultIds?: number[];
   }) => void;
   executeCurrent: () => void;
+  insertMarkdownCell: () => void;
   focus: () => void;
 }
 
@@ -129,6 +130,22 @@ export function Editor({
     onExecuteCurrentRef.current?.(currentText, { from: fromLine, to: toLine });
   }, []);
 
+  const insertMarkdownCellAtCursor = useCallback((view: EditorView) => {
+    const pos = view.state.selection.main.head;
+    const line = view.state.doc.lineAt(pos);
+
+    // Insert markdown cell template at the start of the current line
+    // Template: # %% [markdown]\n"""\n\n"""
+    const template = '# %% [markdown]\n"""\n\n"""';
+    const insertPos = line.from;
+
+    view.dispatch({
+      changes: { from: insertPos, to: insertPos, insert: template + '\n' },
+      // Position cursor inside the triple quotes (after the first """\n)
+      selection: { anchor: insertPos + 19 }  // 19 = len('# %% [markdown]\n"""\n')
+    });
+  }, []);
+
   useEffect(() => {
     if (!editorRef.current) {
       return;
@@ -156,6 +173,13 @@ export function Editor({
           {
             key: "Cmd-Shift-d",
             run: toggleDebugPanelCommand,
+          },
+          {
+            key: "Cmd-Shift-m",
+            run: (view: EditorView) => {
+              insertMarkdownCellAtCursor(view);
+              return true;
+            },
           },
         ]),
         lineNumbers(),
@@ -282,6 +306,13 @@ export function Editor({
         }
         executeCurrentSelection(view);
       },
+      insertMarkdownCell: () => {
+        const view = viewRef.current;
+        if (!view) {
+          return;
+        }
+        insertMarkdownCellAtCursor(view);
+      },
       focus: () => {
         const view = viewRef.current;
         if (!view) {
@@ -290,7 +321,7 @@ export function Editor({
         view.focus();
       },
     }),
-    [executeCurrentSelection]
+    [executeCurrentSelection, insertMarkdownCellAtCursor]
   );
 
   useEffect(() => {

@@ -307,6 +307,83 @@ h1 {
   color: #4b5563;
 }
 
+.output-item.output-markdown {
+  color: #374151;
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+}
+
+.output-item.output-markdown h1,
+.output-item.output-markdown h2,
+.output-item.output-markdown h3,
+.output-item.output-markdown h4,
+.output-item.output-markdown h5,
+.output-item.output-markdown h6 {
+  margin-top: 0.5em;
+  margin-bottom: 0.25em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.output-item.output-markdown h1 { font-size: 1.5em; }
+.output-item.output-markdown h2 { font-size: 1.3em; }
+.output-item.output-markdown h3 { font-size: 1.1em; }
+
+.output-item.output-markdown p {
+  margin: 0.5em 0;
+}
+
+.output-item.output-markdown ul,
+.output-item.output-markdown ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+
+.output-item.output-markdown li {
+  margin: 0.25em 0;
+}
+
+.output-item.output-markdown code {
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background: #f3f4f6;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.output-item.output-markdown pre {
+  background: #f3f4f6;
+  padding: 0.75em;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+
+.output-item.output-markdown pre code {
+  background: none;
+  padding: 0;
+}
+
+.output-item.output-markdown blockquote {
+  border-left: 3px solid #d1d5db;
+  margin: 0.5em 0;
+  padding-left: 1em;
+  color: #6b7280;
+}
+
+.output-item.output-markdown a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.output-item.output-markdown strong {
+  font-weight: 600;
+}
+
+.output-item.output-markdown em {
+  font-style: italic;
+}
+
 .output-item.output-plot {
   margin-top: 0.25rem;
 }
