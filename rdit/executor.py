@@ -19,9 +19,10 @@ from typing import Any, Dict, Generator, List, Optional
 
 @dataclass
 class OutputItem:
-    """Single output item (stdout, stderr, error, or markdown)."""
-    type: str  # 'stdout', 'stderr', 'error', or 'markdown'
+    """Single output item (stdout, stderr, error, markdown, or dataframe)."""
+    type: str  # 'stdout', 'stderr', 'error', 'markdown', or 'dataframe'
     text: str
+    data: Optional[Dict[str, Any]] = None  # For dataframe: {"columns": [...], "rows": [...]}
 
 
 @dataclass
@@ -51,6 +52,47 @@ class PythonExecutor:
     def __init__(self):
         """Initialize executor with empty namespace."""
         self.namespace: Dict[str, Any] = {'__builtins__': __builtins__}
+
+    def _is_dataframe(self, obj: Any) -> bool:
+        """Check if object is a Pandas or Polars DataFrame."""
+        type_name = type(obj).__name__
+        module_name = type(obj).__module__
+
+        # Check for pandas DataFrame
+        if type_name == 'DataFrame' and 'pandas' in module_name:
+            return True
+
+        # Check for polars DataFrame
+        if type_name == 'DataFrame' and 'polars' in module_name:
+            return True
+
+        return False
+
+    def _serialize_dataframe(self, df: Any) -> Dict[str, Any]:
+        """Serialize a DataFrame (Pandas or Polars) to JSON-compatible format.
+
+        Args:
+            df: Pandas or Polars DataFrame
+
+        Returns:
+            Dictionary with 'columns' and 'rows' keys
+        """
+        type_name = type(df).__name__
+        module_name = type(df).__module__
+
+        # Handle Pandas DataFrame
+        if type_name == 'DataFrame' and 'pandas' in module_name:
+            columns = df.columns.tolist()
+            rows = df.values.tolist()
+            return {"columns": columns, "rows": rows}
+
+        # Handle Polars DataFrame
+        if type_name == 'DataFrame' and 'polars' in module_name:
+            columns = df.columns
+            rows = df.rows()
+            return {"columns": columns, "rows": rows}
+
+        return {"columns": [], "rows": []}
 
     def parse_script(self, script: str) -> List[Statement]:
         """Parse Python script into statements using AST.
@@ -162,6 +204,14 @@ class PythonExecutor:
                     # Strip the string and output as markdown
                     markdown_text = str(result).strip()
                     output.append(OutputItem(type="markdown", text=markdown_text))
+                # For dataframes, serialize and output as interactive table
+                elif is_expr and result is not None and self._is_dataframe(result):
+                    df_data = self._serialize_dataframe(result)
+                    output.append(OutputItem(
+                        type="dataframe",
+                        text="",  # No text needed for dataframes
+                        data=df_data
+                    ))
                 # For regular expressions, print result if not None
                 elif is_expr and result is not None:
                     print(repr(result))

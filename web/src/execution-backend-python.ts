@@ -3,9 +3,15 @@
  * Connects to local Python server for code execution with real-time results.
  */
 
+export interface DataFrameData {
+  columns: string[];
+  rows: any[][];
+}
+
 export interface OutputItem {
-  type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message' | 'markdown';
+  type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message' | 'markdown' | 'dataframe';
   text: string;
+  data?: DataFrameData;
 }
 
 export interface Expression {
