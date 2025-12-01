@@ -1,25 +1,24 @@
-12322
-import time
+"Hey"
 
-# Python Demo
-# Simple calculations
-x = 2 + 2
-x
-  
-y = x * 2
-y
+# %% [markdown]
+# # Markdown in comments
+# Does it work?
 
-time.sleep(1)
+# %% [arkdown]
+"""
+2
+"""
 
-# String operations
-name = "Python"
-greeting = f"Hello, {name}!"
-print(greeting)
+[1, 2, 3]
 
-# List comprehension
-squares = [i**2 for i in range(10)]
-squares
+# %% [markdown]
+"""
+# Markdown in docstring
+Does it work?
+"""
 
-# Sum calculation
-total = sum(squares)
-total
+1 + 2
+
+# %% [markdown]
+"""
+"""
