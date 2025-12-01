@@ -3,6 +3,7 @@ import React from "react";
 interface TopBarProps {
   onRunAll: () => void;
   onRunCurrent?: () => void;
+  onInsertMarkdown?: () => void;
   onSave?: () => void;
   hasUnsavedChanges?: boolean;
   scriptName?: string;
@@ -88,6 +89,7 @@ function StatusIndicator({ isReady, message }: StatusIndicatorProps) {
 export function TopBar({
   onRunAll,
   onRunCurrent,
+  onInsertMarkdown,
   onSave,
   hasUnsavedChanges,
   scriptName,
@@ -99,6 +101,7 @@ export function TopBar({
   const shortcuts = getShortcuts();
   const isMac = detectMacOS();
   const saveShortcut = isMac ? "Command + S" : "Ctrl + S";
+  const markdownShortcut = isMac ? "Command + Shift + M" : "Ctrl + Shift + M";
 
   return (
     <div className="top-bar">
@@ -121,6 +124,16 @@ export function TopBar({
           onMouseLeave={() => setHoveredButton(null)}
           tooltip={shortcuts.all}
           showTooltip={hoveredButton === "all"}
+        />
+
+        <ActionButton
+          label="MD"
+          onClick={onInsertMarkdown || (() => {})}
+          disabled={false}
+          onMouseEnter={() => setHoveredButton("markdown")}
+          onMouseLeave={() => setHoveredButton(null)}
+          tooltip={markdownShortcut}
+          showTooltip={hoveredButton === "markdown"}
         />
 
         {scriptName && (

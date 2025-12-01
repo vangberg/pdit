@@ -61,6 +61,7 @@ export interface EditorHandles {
   }) => void;
   executeCurrent: () => void;
   focus: () => void;
+  insertMarkdownCell: () => void;
 }
 
 interface EditorProps {
@@ -128,6 +129,27 @@ export function Editor({
     onExecuteCurrentRef.current?.(currentText, { from: fromLine, to: toLine });
   }, []);
 
+  const insertMarkdownCell = useCallback((view: EditorView) => {
+    const selection = view.state.selection.main;
+    const line = view.state.doc.lineAt(selection.from);
+
+    // Insert markdown cell marker at the beginning of current line
+    const insertText = line.from === selection.from && line.text.trim() === ""
+      ? '# %% [markdown]\n"""\n\n"""'
+      : '\n# %% [markdown]\n"""\n\n"""';
+
+    view.dispatch({
+      changes: {
+        from: selection.from,
+        to: selection.to,
+        insert: insertText,
+      },
+      selection: {
+        anchor: selection.from + insertText.length - 4, // Place cursor inside quotes
+      },
+    });
+  }, []);
+
   useEffect(() => {
     if (!editorRef.current) {
       return;
@@ -159,24 +181,7 @@ export function Editor({
           {
             key: "Cmd-Shift-m",
             run: (view: EditorView) => {
-              const selection = view.state.selection.main;
-              const line = view.state.doc.lineAt(selection.from);
-
-              // Insert markdown cell marker at the beginning of current line
-              const insertText = line.from === selection.from && line.text.trim() === ""
-                ? '# %% [markdown]\n"""\n\n"""'
-                : '\n# %% [markdown]\n"""\n\n"""';
-
-              view.dispatch({
-                changes: {
-                  from: selection.from,
-                  to: selection.to,
-                  insert: insertText,
-                },
-                selection: {
-                  anchor: selection.from + insertText.length - 4, // Place cursor inside quotes
-                },
-              });
+              insertMarkdownCell(view);
               return true;
             },
           },
@@ -312,8 +317,15 @@ export function Editor({
         }
         view.focus();
       },
+      insertMarkdownCell: () => {
+        const view = viewRef.current;
+        if (!view) {
+          return;
+        }
+        insertMarkdownCell(view);
+      },
     }),
-    [executeCurrentSelection]
+    [executeCurrentSelection, insertMarkdownCell]
   );
 
   useEffect(() => {
