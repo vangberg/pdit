@@ -156,6 +156,30 @@ export function Editor({
             key: "Cmd-Shift-d",
             run: toggleDebugPanelCommand,
           },
+          {
+            key: "Cmd-Shift-m",
+            run: (view: EditorView) => {
+              const selection = view.state.selection.main;
+              const line = view.state.doc.lineAt(selection.from);
+
+              // Insert markdown cell marker at the beginning of current line
+              const insertText = line.from === selection.from && line.text.trim() === ""
+                ? '# %% [markdown]\n"""\n\n"""'
+                : '\n# %% [markdown]\n"""\n\n"""';
+
+              view.dispatch({
+                changes: {
+                  from: selection.from,
+                  to: selection.to,
+                  insert: insertText,
+                },
+                selection: {
+                  anchor: selection.from + insertText.length - 4, // Place cursor inside quotes
+                },
+              });
+              return true;
+            },
+          },
         ]),
         lineNumbers(),
         highlightActiveLineGutter(),

@@ -32,6 +32,7 @@ class Statement:
     line_end: int
     is_expr: bool
     node: ast.AST  # Original AST node for type checking
+    is_markdown_cell: bool  # Whether this is a Jupytext markdown cell
 
 
 @dataclass
@@ -51,6 +52,31 @@ class PythonExecutor:
         """Initialize executor with empty namespace."""
         self.namespace: Dict[str, Any] = {'__builtins__': __builtins__}
 
+    def _is_markdown_cell(self, script_lines: List[str], line_start: int) -> bool:
+        """Check if a statement is a Jupytext markdown cell.
+
+        Args:
+            script_lines: List of source code lines
+            line_start: 1-based line number where statement starts
+
+        Returns:
+            True if the statement is preceded by a Jupytext markdown marker
+        """
+        # Check lines before the statement for Jupytext markdown markers
+        # Markers look like: # %% [markdown] or # + [markdown]
+        for i in range(line_start - 2, max(-1, line_start - 5), -1):
+            if i < 0 or i >= len(script_lines):
+                continue
+            line = script_lines[i].strip()
+            if not line or line.startswith('#'):
+                # Check for markdown markers
+                if '[markdown]' in line.lower():
+                    return True
+            else:
+                # Stop at first non-comment, non-empty line
+                break
+        return False
+
     def parse_script(self, script: str) -> List[Statement]:
         """Parse Python script into statements using AST.
 
@@ -66,6 +92,7 @@ class PythonExecutor:
             SyntaxError: If the script has syntax errors
         """
         tree = ast.parse(script)
+        script_lines = script.splitlines()
         statements = []
 
         for i, node in enumerate(tree.body):
@@ -90,24 +117,33 @@ class PythonExecutor:
                     'exec'
                 )
 
+            # Check if this is a Jupytext markdown cell
+            is_markdown_cell = (
+                is_expr and
+                isinstance(node.value, ast.Constant) and
+                isinstance(node.value.value, str) and
+                self._is_markdown_cell(script_lines, line_start)
+            )
+
             statements.append(Statement(
                 compiled=compiled,
                 node_index=i,
                 line_start=line_start,
                 line_end=line_end,
                 is_expr=is_expr,
-                node=node
+                node=node,
+                is_markdown_cell=is_markdown_cell
             ))
 
         return statements
 
-    def execute_statement(self, compiled: CodeType, is_expr: bool, node: Optional[ast.AST] = None) -> List[OutputItem]:
+    def execute_statement(self, compiled: CodeType, is_expr: bool, is_markdown_cell: bool = False) -> List[OutputItem]:
         """Execute pre-compiled statement with output capture.
 
         Args:
             compiled: Pre-compiled code object
             is_expr: Whether this is an expression (for result printing)
-            node: Original AST node (for detecting string constants)
+            is_markdown_cell: Whether this is a Jupytext markdown cell
 
         Returns:
             List of output items (stdout, stderr, errors)
@@ -121,18 +157,10 @@ class PythonExecutor:
                 # Always use eval() - works for both exec and eval compiled code
                 result = eval(compiled, self.namespace)
 
-                # For expressions, check if it's a top-level string for markdown rendering
+                # For expressions, check if it's a markdown cell
                 if is_expr and result is not None:
-                    # Check if this is a string constant expression
-                    is_string_constant = (
-                        node is not None and
-                        isinstance(node, ast.Expr) and
-                        isinstance(node.value, ast.Constant) and
-                        isinstance(node.value.value, str)
-                    )
-
-                    if is_string_constant:
-                        # Render as markdown
+                    if is_markdown_cell:
+                        # Render as markdown (for Jupytext markdown cells)
                         output.append(OutputItem(type="markdown", text=result))
                     else:
                         # Regular expression - print repr
@@ -202,7 +230,7 @@ class PythonExecutor:
                     continue
 
             # Execute statement
-            output = self.execute_statement(stmt.compiled, stmt.is_expr, stmt.node)
+            output = self.execute_statement(stmt.compiled, stmt.is_expr, stmt.is_markdown_cell)
 
             # Determine if output is invisible (no stdout/stderr/errors)
             is_invisible = len(output) == 0
