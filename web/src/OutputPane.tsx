@@ -2,13 +2,14 @@ import React, { useRef, useEffect, useCallback, useMemo } from "react";
 import { Output } from "./Output";
 import { Expression } from "./execution";
 import { LineGroup } from "./compute-line-groups";
+import { LineGroupLayout } from "./line-group-layout";
 import { CSSProperties } from "react";
 
 interface OutputPaneProps {
   onLineGroupHeightChange?: (heights: Map<string, number>) => void;
   expressions: Expression[];
   lineGroups: LineGroup[];
-  lineGroupTops?: Map<string, number>;
+  lineGroupLayouts?: Map<string, LineGroupLayout>;
   lineGroupHeights?: Map<string, number>;
 }
 
@@ -16,23 +17,23 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
   onLineGroupHeightChange,
   expressions,
   lineGroups,
-  lineGroupTops,
+  lineGroupLayouts,
   lineGroupHeights,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const lineGroupRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const minHeight = useMemo(() => {
-    if (!lineGroupTops || !lineGroupHeights || lineGroups.length === 0) {
+    if (!lineGroupLayouts || !lineGroupHeights || lineGroups.length === 0) {
       return undefined;
     }
 
     const lastGroup = lineGroups[lineGroups.length - 1];
-    const top = lineGroupTops.get(lastGroup.id);
+    const layout = lineGroupLayouts.get(lastGroup.id);
     const height = lineGroupHeights.get(lastGroup.id);
 
-    return (top !== undefined && height !== undefined) ? top + height : undefined;
-  }, [lineGroups, lineGroupTops, lineGroupHeights]);
+    return (layout && height !== undefined) ? layout.top + height : undefined;
+  }, [lineGroups, lineGroupLayouts, lineGroupHeights]);
 
   const getLineGroupHeights = useCallback((): Map<string, number> => {
     const heights = new Map<string, number>();
@@ -88,8 +89,18 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
         style={minHeight ? { minHeight: `${minHeight}px` } : undefined}
       >
         {lineGroups.map((group) => {
-          const topValue = lineGroupTops?.get(group.id);
+          const layout = lineGroupLayouts?.get(group.id);
           const groupClassName = group.allInvisible ? "output-group output-group-invisible" : "output-group";
+
+          const style: CSSProperties = {};
+          if (layout) {
+            style.position = "absolute";
+            style.top = layout.top;
+            style.left = 0;
+            style.right = 0;
+            style.minHeight = `${layout.naturalHeight}px`;
+          }
+
           return (
             <div
               className={groupClassName}
@@ -101,16 +112,7 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
                   lineGroupRefs.current.delete(group.id);
                 }
               }}
-              style={
-                topValue !== undefined && Number.isFinite(topValue)
-                  ? ({
-                      position: "absolute",
-                      top: topValue,
-                      left: 0,
-                      right: 0,
-                    } as CSSProperties)
-                  : undefined
-              }
+              style={Object.keys(style).length > 0 ? style : undefined}
             >
               {group.resultIds.map((resultId) => {
                 const index = expressions.findIndex((expr) => expr.id === resultId);

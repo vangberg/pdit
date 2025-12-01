@@ -1,5 +1,10 @@
 import React, { useState } from "react";
-import { LineGroupHeight } from "./line-group-layout";
+
+// Legacy interface for this debug panel
+interface LineGroupHeight {
+  line: number;
+  height: number;
+}
 import { Text } from "@codemirror/state";
 import { LineGroup } from "./compute-line-groups";
 

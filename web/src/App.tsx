@@ -8,6 +8,7 @@ import { LineGroup } from "./compute-line-groups";
 import { TopBar } from "./TopBar";
 import { useResults } from "./results";
 import { useScriptFile } from "./use-script-file";
+import { LineGroupLayout } from "./line-group-layout";
 
 const DEFAULT_CODE = ``;
 
@@ -51,7 +52,7 @@ function App() {
   const [lineGroupHeights, setLineGroupHeights] = useState<Map<string, number>>(
     new Map()
   );
-  const [lineGroupTops, setLineGroupTops] = useState<Map<string, number>>(
+  const [lineGroupLayouts, setLineGroupLayouts] = useState<Map<string, LineGroupLayout>>(
     new Map()
   );
   const [doc, setDoc] = useState<Text>();
@@ -86,12 +87,12 @@ function App() {
     [setLineGroups]
   );
 
-  const handleLineGroupTopChange = useCallback((tops: Map<string, number>) => {
+  const handleLineGroupLayoutChange = useCallback((layouts: Map<string, LineGroupLayout>) => {
     console.log(
-      "App received line group tops:",
-      Array.from(tops.entries()).slice(0, 5)
+      "App received line group layouts:",
+      Array.from(layouts.entries()).slice(0, 5)
     );
-    setLineGroupTops(tops);
+    setLineGroupLayouts(layouts);
   }, []);
 
   const handleExecute = useCallback(
@@ -253,7 +254,7 @@ function App() {
             onExecuteAll={handleExecuteAll}
             onDocumentChange={handleDocumentChange}
             onLineGroupsChange={handleLineGroupsChange}
-            onLineGroupTopChange={handleLineGroupTopChange}
+            onLineGroupLayoutChange={handleLineGroupLayoutChange}
             lineGroupHeights={lineGroupHeights}
           />
         </div>
@@ -262,7 +263,7 @@ function App() {
             onLineGroupHeightChange={handleLineGroupHeightChange}
             expressions={Array.from(expressions.values())}
             lineGroups={lineGroups}
-            lineGroupTops={lineGroupTops}
+            lineGroupLayouts={lineGroupLayouts}
             lineGroupHeights={lineGroupHeights}
           />
         </div>

@@ -46,7 +46,8 @@ import { LineGroup } from "./compute-line-groups";
 import {
   lineGroupLayoutExtension,
   setLineGroupHeights,
-  lineGroupTopChangeFacet,
+  lineGroupLayoutChangeFacet,
+  LineGroupLayout,
 } from "./line-group-layout";
 import {
   debugPanelExtension,
@@ -73,7 +74,7 @@ interface EditorProps {
   onDocumentChange?: (doc: Text) => void;
   onInitialDocumentLoad?: (doc: Text) => void;
   onLineGroupsChange?: (groups: LineGroup[]) => void;
-  onLineGroupTopChange?: (tops: Map<string, number>) => void;
+  onLineGroupLayoutChange?: (layouts: Map<string, LineGroupLayout>) => void;
   lineGroupHeights?: Map<string, number>;
   ref?: React.Ref<EditorHandles>;
 }
@@ -85,7 +86,7 @@ export function Editor({
   onDocumentChange,
   onInitialDocumentLoad,
   onLineGroupsChange,
-  onLineGroupTopChange,
+  onLineGroupLayoutChange,
   lineGroupHeights,
   ref: externalRef,
 }: EditorProps) {
@@ -97,7 +98,7 @@ export function Editor({
   const onInitialDocumentLoadRef = useRef(onInitialDocumentLoad);
   const onDocumentChangeRef = useRef(onDocumentChange);
   const onLineGroupsChangeRef = useRef(onLineGroupsChange);
-  const lineGroupTopCallbackCompartment = useMemo(() => new Compartment(), []);
+  const lineGroupLayoutCallbackCompartment = useMemo(() => new Compartment(), []);
 
   // Mirror the latest callbacks so long-lived view listeners stay up to date
   useEffect(() => {
@@ -186,8 +187,8 @@ export function Editor({
         resultGroupingExtension,
         lineGroupLayoutExtension,
         debugPanelExtension(),
-        lineGroupTopCallbackCompartment.of(
-          lineGroupTopChangeFacet.of(onLineGroupTopChange ?? null)
+        lineGroupLayoutCallbackCompartment.of(
+          lineGroupLayoutChangeFacet.of(onLineGroupLayoutChange ?? null)
         ),
         EditorView.updateListener.of((update: ViewUpdate) => {
           if (update.docChanged) {
@@ -317,11 +318,11 @@ export function Editor({
     }
 
     view.dispatch({
-      effects: lineGroupTopCallbackCompartment.reconfigure(
-        lineGroupTopChangeFacet.of(onLineGroupTopChange ?? null)
+      effects: lineGroupLayoutCallbackCompartment.reconfigure(
+        lineGroupLayoutChangeFacet.of(onLineGroupLayoutChange ?? null)
       ),
     });
-  }, [onLineGroupTopChange, lineGroupTopCallbackCompartment]);
+  }, [onLineGroupLayoutChange, lineGroupLayoutCallbackCompartment]);
 
   return <div id="editor" ref={editorRef} />;
 }

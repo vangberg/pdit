@@ -1,6 +1,18 @@
 import {EditorView, Decoration, WidgetType, DecorationSet} from "@codemirror/view"
-import {StateField, StateEffect, RangeSetBuilder, Facet} from "@codemirror/state"
+import {StateField, StateEffect, RangeSetBuilder, Facet, Text} from "@codemirror/state"
 import { lineGroupsField, lastExecutedIdsField } from "./result-grouping-plugin"
+import { LineGroup } from "./compute-line-groups"
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface LineGroupLayout {
+  top: number;
+  naturalHeight: number;
+}
+
+export type LineGroupLayoutChange = (layouts: Map<string, LineGroupLayout>) => void;
 
 // ============================================================================
 // Spacer Widget
@@ -64,20 +76,9 @@ export const spacersField = StateField.define<DecorationSet>({
   provide: f => EditorView.decorations.from(f)
 })
 
-// ============================================================================
-// Types and Callback
-// ============================================================================
-
-export interface LineGroupHeight {
-  line: number;
-  height: number;
-}
-
-export type LineGroupTopChange = (tops: Map<string, number>) => void;
-
-export const lineGroupTopChangeFacet = Facet.define<
-  LineGroupTopChange | null,
-  LineGroupTopChange | null
+export const lineGroupLayoutChangeFacet = Facet.define<
+  LineGroupLayoutChange | null,
+  LineGroupLayoutChange | null
 >({
   combine(values) {
     return values.length > 0 ? values[values.length - 1] : null;
@@ -85,8 +86,76 @@ export const lineGroupTopChangeFacet = Facet.define<
 });
 
 // ============================================================================
-// Core Logic (like merge's updateSpacers)
+// Measurement
 // ============================================================================
+
+function measureGroupLayouts(
+  view: EditorView,
+  groups: LineGroup[],
+  existingSpacers: Map<number, number>
+): Map<string, LineGroupLayout> {
+  const doc = view.state.doc
+  const contentPadding = parseInt(getComputedStyle(view.contentDOM).paddingTop) || 0
+  const layouts = new Map<string, LineGroupLayout>()
+
+  for (const group of groups) {
+    const startLine = doc.line(group.lineStart)
+    const startBlock = view.lineBlockAt(startLine.from)
+    const top = Math.max(0, startBlock.top + contentPadding)
+
+    let naturalHeight = 0
+    for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
+      const line = doc.line(lineNum)
+      const block = view.lineBlockAt(line.from)
+      naturalHeight += block.height
+    }
+
+    // Subtract existing spacer height to get true natural height
+    const endLine = doc.line(group.lineEnd)
+    const previousSpacerHeight = existingSpacers.get(endLine.to)
+    if (previousSpacerHeight !== undefined) {
+      naturalHeight -= previousSpacerHeight
+    }
+
+    layouts.set(group.id, { top, naturalHeight })
+  }
+
+  return layouts
+}
+
+// ============================================================================
+// Spacer Computation
+// ============================================================================
+
+function computeSpacers(
+  groups: LineGroup[],
+  layouts: Map<string, LineGroupLayout>,
+  targetHeights: Map<string, number>,
+  lastExecutedIds: Set<number>,
+  doc: Text
+): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>()
+
+  for (const group of groups) {
+    const layout = layouts.get(group.id)
+    const targetHeight = targetHeights.get(group.id)
+
+    if (layout && targetHeight !== undefined && Number.isFinite(targetHeight)) {
+      const diff = targetHeight - layout.naturalHeight
+      if (diff > 0.01) {
+        const endLine = doc.line(group.lineEnd)
+        const isRecent = group.resultIds.some(id => lastExecutedIds.has(id))
+        builder.add(endLine.to, endLine.to, Decoration.widget({
+          widget: new Spacer(diff, group.lineEnd, isRecent),
+          block: true,
+          side: 1
+        }))
+      }
+    }
+  }
+
+  return builder.finish()
+}
 
 function compareSpacers(a: DecorationSet, b: DecorationSet): boolean {
   if (a.size != b.size) return false
@@ -103,96 +172,51 @@ function compareSpacers(a: DecorationSet, b: DecorationSet): boolean {
   return true
 }
 
-function updateSpacers(view: EditorView) {
-  const groups = view.state.field(lineGroupsField)
-  const targetHeights = view.state.field(lineGroupTargetHeightsField)
-  const currentSpacers = view.state.field(spacersField)
+function getExistingSpacerHeights(spacers: DecorationSet): Map<number, number> {
+  const result = new Map<number, number>()
+  for (let iter = spacers.iter(); iter.value; iter.next()) {
+    const widget = iter.value.spec.widget
+    if (widget instanceof Spacer) {
+      result.set(iter.from, widget.height)
+    }
+  }
+  return result
+}
 
-  if (targetHeights.size === 0 || groups.length === 0) {
-    // Clear spacers when there are no groups or target heights
+// ============================================================================
+// Update Orchestration
+// ============================================================================
+
+function updateSpacersAndReportLayout(view: EditorView) {
+  const groups = view.state.field(lineGroupsField)
+  const currentSpacers = view.state.field(spacersField)
+  const layoutCallback = view.state.facet(lineGroupLayoutChangeFacet)
+
+  // Handle empty state
+  if (groups.length === 0) {
     if (currentSpacers.size > 0) {
       view.dispatch({ effects: [adjustSpacers.of(Decoration.none)] })
     }
+    layoutCallback?.(new Map())
     return
   }
 
-  const doc = view.state.doc
-  const builder = new RangeSetBuilder<Decoration>()
-  const existingSpacers = new Map<number, number>()
+  // 1. Measure layouts
+  const existingSpacers = getExistingSpacerHeights(currentSpacers)
+  const layouts = measureGroupLayouts(view, groups, existingSpacers)
 
-  for (let iter = currentSpacers.iter(); iter.value; iter.next()) {
-    const widget = iter.value.spec.widget
-    if (widget instanceof Spacer) {
-      existingSpacers.set(iter.from, widget.height)
-    }
-  }
-
-  // Get the set of last executed result IDs
+  // 2. Compute new spacers
+  const targetHeights = view.state.field(lineGroupTargetHeightsField)
   const lastExecutedIds = view.state.field(lastExecutedIdsField)
+  const newSpacers = computeSpacers(groups, layouts, targetHeights, lastExecutedIds, view.state.doc)
 
-  for (let groupIndex = 0; groupIndex < groups.length; groupIndex++) {
-    const group = groups[groupIndex]
-    const targetHeight = targetHeights.get(group.id)
-
-    // Skip if no target height set for this group
-    if (targetHeight === undefined || !Number.isFinite(targetHeight)) continue
-
-    // Measure natural height from DOM
-    let naturalHeight = 0
-    for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
-      const line = doc.line(lineNum)
-      const block = view.lineBlockAt(line.from)
-      naturalHeight += block.height
-    }
-
-    // Subtract existing spacer in this group
-    const endLine = doc.line(group.lineEnd)
-    const spacerPosition = endLine.to
-    const previousSpacerHeight = existingSpacers.get(spacerPosition)
-    if (previousSpacerHeight !== undefined) {
-      naturalHeight -= previousSpacerHeight
-    }
-
-    const diff = targetHeight - naturalHeight
-    if (diff > 0.01) {
-      const isRecent = group.resultIds.some(id => lastExecutedIds.has(id))
-      builder.add(endLine.to, endLine.to, Decoration.widget({
-        widget: new Spacer(diff, group.lineEnd, isRecent),
-        block: true,
-        side: 1
-      }))
-    }
-  }
-
-  const newSpacers = builder.finish()
+  // 3. Dispatch if changed
   if (!compareSpacers(newSpacers, currentSpacers)) {
     view.dispatch({ effects: [adjustSpacers.of(newSpacers)] })
   }
-}
 
-function measureAndReportTops(view: EditorView) {
-  const callback = view.state.facet(lineGroupTopChangeFacet)
-  if (!callback) return
-
-  const groups = view.state.field(lineGroupsField)
-  const doc = view.state.doc
-  if (!groups.length) {
-    callback(new Map())
-    return
-  }
-
-  // Get the cm-content padding to account for offset
-  const contentEl = view.contentDOM
-  const contentPadding = contentEl ? parseInt(getComputedStyle(contentEl).paddingTop) || 0 : 0
-
-  const tops = new Map<string, number>()
-  for (const group of groups) {
-    const line = doc.line(group.lineStart)
-    const block = view.lineBlockAt(line.from)
-    tops.set(group.id, Math.max(0, block.top + contentPadding))
-  }
-
-  callback(tops)
+  // 4. Report layouts
+  layoutCallback?.(layouts)
 }
 
 // ============================================================================
@@ -212,23 +236,19 @@ export function setLineGroupHeights(view: EditorView, heights: Map<string, numbe
 export const lineGroupLayoutExtension = [
   spacersField,
   lineGroupTargetHeightsField,
-  lineGroupTopChangeFacet.of(null),
-  // Like merge: updateListener that measures and dispatches synchronously
+  lineGroupLayoutChangeFacet.of(null),
   EditorView.updateListener.of(update => {
     const hasSpacerEffect = update.transactions.some(tr =>
       tr.effects.some(e => e.is(adjustSpacers))
     )
 
-    // Check if target heights changed
     const targetHeightsChanged = update.startState.field(lineGroupTargetHeightsField) !==
                                  update.state.field(lineGroupTargetHeightsField)
     const lineGroupsChanged = update.startState.field(lineGroupsField) !==
                               update.state.field(lineGroupsField)
 
-    // Phase 1: Update spacers when heights change (but not if we just applied spacers)
     if (!hasSpacerEffect && (update.heightChanged || update.geometryChanged || update.docChanged || targetHeightsChanged || lineGroupsChanged)) {
-      updateSpacers(update.view)
-      measureAndReportTops(update.view)
+      updateSpacersAndReportLayout(update.view)
     }
   })
 ]
