@@ -141,8 +141,8 @@ export function Editor({
 
     view.dispatch({
       changes: { from: insertPos, to: insertPos, insert: template + '\n' },
-      // Position cursor inside the triple quotes (after the first """\n)
-      selection: { anchor: insertPos + 19 }  // 19 = len('# %% [markdown]\n"""\n')
+      // Position cursor on the empty line between the triple quotes
+      selection: { anchor: insertPos + 20 }  // 20 = len('# %% [markdown]\n"""\n')
     });
   }, []);
 
