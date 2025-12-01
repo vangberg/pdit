@@ -256,6 +256,277 @@ class TestDataClasses:
         assert result.is_invisible is False
 
 
+class TestMarkdownCells:
+    """Tests for Jupytext-style markdown cell support."""
+
+    def setup_method(self):
+        """Create a fresh executor for each test."""
+        self.executor = PythonExecutor()
+
+    def test_basic_markdown_cell(self):
+        """Test executing a basic markdown cell."""
+        script = '''# %% [markdown]
+"""
+# Hello World
+
+This is a markdown cell.
+"""'''
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 1
+        assert len(results[0].output) == 1
+        assert results[0].output[0].type == "markdown"
+        assert "# Hello World" in results[0].output[0].text
+        assert "This is a markdown cell." in results[0].output[0].text
+        assert results[0].is_invisible is False
+
+    def test_markdown_cell_one_line_before(self):
+        """Test markdown marker exactly one line before the expression."""
+        script = '''# %% [markdown]
+"# Markdown content"'''
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 1
+        assert results[0].output[0].type == "markdown"
+        assert results[0].output[0].text == "# Markdown content"
+
+    def test_markdown_cell_two_lines_before(self):
+        """Test markdown marker two lines before the expression."""
+        script = '''# %% [markdown]
+
+"# Markdown content"'''
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 1
+        assert results[0].output[0].type == "markdown"
+        assert results[0].output[0].text == "# Markdown content"
+
+    def test_markdown_cell_three_lines_before(self):
+        """Test markdown marker three lines before the expression."""
+        script = '''# %% [markdown]
+
+
+"# Markdown content"'''
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 1
+        assert results[0].output[0].type == "markdown"
+        assert results[0].output[0].text == "# Markdown content"
+
+    def test_markdown_marker_too_far_before(self):
+        """Test that marker more than 3 lines before is NOT detected."""
+        script = '''# %% [markdown]
+
+
+
+
+"# This should be regular code"'''
+        results = list(self.executor.execute_script(script))
+
+        # Should be treated as regular expression, not markdown
+        assert len(results) == 1
+        assert results[0].output[0].type == "stdout"
+        # Regular expression should output repr() with quotes
+        assert "'# This should be regular code'" in results[0].output[0].text
+
+    def test_no_markdown_marker(self):
+        """Test string expression without markdown marker."""
+        script = '"Just a regular string"'
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 1
+        assert results[0].output[0].type == "stdout"
+        # Should be repr() output with quotes
+        assert "'Just a regular string'" in results[0].output[0].text
+
+    def test_markdown_marker_case_insensitive(self):
+        """Test that markdown marker is case-insensitive."""
+        script = '''# %% [MARKDOWN]
+"# Uppercase works too"'''
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 1
+        assert results[0].output[0].type == "markdown"
+        assert results[0].output[0].text == "# Uppercase works too"
+
+    def test_markdown_marker_with_extra_whitespace(self):
+        """Test markdown marker with various whitespace."""
+        script = '''#  %%  [markdown]
+"# Extra spaces work"'''
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 1
+        assert results[0].output[0].type == "markdown"
+        assert results[0].output[0].text == "# Extra spaces work"
+
+    def test_markdown_cell_strips_whitespace(self):
+        """Test that markdown output strips surrounding whitespace."""
+        script = '''# %% [markdown]
+"""
+
+  # Title with spaces
+
+"""'''
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 1
+        assert results[0].output[0].type == "markdown"
+        # Should be stripped
+        assert results[0].output[0].text == "# Title with spaces"
+
+    def test_multiple_markdown_cells(self):
+        """Test multiple markdown cells in one script."""
+        script = '''# %% [markdown]
+"# First markdown cell"
+
+# %% [markdown]
+"# Second markdown cell"
+
+# %% [markdown]
+"# Third markdown cell"'''
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 3
+        assert all(r.output[0].type == "markdown" for r in results)
+        assert results[0].output[0].text == "# First markdown cell"
+        assert results[1].output[0].text == "# Second markdown cell"
+        assert results[2].output[0].text == "# Third markdown cell"
+
+    def test_mixed_markdown_and_code_cells(self):
+        """Test mixing markdown cells with regular code."""
+        script = '''# %% [markdown]
+"# Introduction"
+
+x = 42
+
+# %% [markdown]
+"The answer is shown below:"
+
+x'''
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 4
+        assert results[0].output[0].type == "markdown"
+        assert results[0].output[0].text == "# Introduction"
+        assert results[1].is_invisible is True  # x = 42
+        assert results[2].output[0].type == "markdown"
+        assert results[2].output[0].text == "The answer is shown below:"
+        assert results[3].output[0].type == "stdout"
+        assert "42" in results[3].output[0].text
+
+    def test_markdown_cell_with_code_blocks(self):
+        """Test markdown cell containing code blocks."""
+        script = '''# %% [markdown]
+"""
+# Example
+
+```python
+x = 1 + 2
+```
+"""'''
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 1
+        assert results[0].output[0].type == "markdown"
+        assert "```python" in results[0].output[0].text
+        assert "x = 1 + 2" in results[0].output[0].text
+
+    def test_markdown_cell_multiline_string(self):
+        """Test markdown cell with triple-quoted string."""
+        script = '''# %% [markdown]
+"""
+# This is a title
+
+This is a paragraph with
+multiple lines.
+
+- Item 1
+- Item 2
+"""'''
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 1
+        assert results[0].output[0].type == "markdown"
+        text = results[0].output[0].text
+        assert "# This is a title" in text
+        assert "This is a paragraph with" in text
+        assert "multiple lines." in text
+        assert "- Item 1" in text
+        assert "- Item 2" in text
+
+    def test_markdown_cell_empty_string(self):
+        """Test markdown cell with empty string."""
+        script = '''# %% [markdown]
+""'''
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 1
+        assert results[0].output[0].type == "markdown"
+        assert results[0].output[0].text == ""
+
+    def test_markdown_cell_single_quoted_string(self):
+        """Test markdown cell with single-quoted string."""
+        script = """# %% [markdown]
+'# Single quoted markdown'"""
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 1
+        assert results[0].output[0].type == "markdown"
+        assert results[0].output[0].text == "# Single quoted markdown"
+
+    def test_non_string_expression_not_markdown(self):
+        """Test that non-string expressions after marker are not markdown."""
+        script = '''# %% [markdown]
+42'''
+        results = list(self.executor.execute_script(script))
+
+        # Should be regular expression output, not markdown
+        assert len(results) == 1
+        assert results[0].output[0].type == "stdout"
+        assert "42" in results[0].output[0].text
+
+    def test_markdown_cell_line_range(self):
+        """Test markdown cell with line range filtering."""
+        script = '''# %% [markdown]
+"# First cell"
+
+# %% [markdown]
+"# Second cell"
+
+# %% [markdown]
+"# Third cell"'''
+        results = list(self.executor.execute_script(script, line_range=(4, 5)))
+
+        # Should only get the second markdown cell
+        assert len(results) == 1
+        assert results[0].output[0].type == "markdown"
+        assert results[0].output[0].text == "# Second cell"
+
+    def test_markdown_marker_with_comment_before(self):
+        """Test markdown marker preceded by other comments."""
+        script = '''# Regular comment
+# Another comment
+# %% [markdown]
+"# This is markdown"'''
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 1
+        assert results[0].output[0].type == "markdown"
+        assert results[0].output[0].text == "# This is markdown"
+
+    def test_markdown_cell_with_f_string(self):
+        """Test that f-strings are NOT detected as markdown (they're JoinedStr, not Constant)."""
+        script = '''x = 42
+# %% [markdown]
+f"# The value is {x}"'''
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 2
+        # F-strings are ast.JoinedStr, not ast.Constant, so they're not detected as markdown
+        assert results[1].output[0].type == "stdout"
+        assert "'# The value is 42'" in results[1].output[0].text
+
+
 class TestEdgeCases:
     """Tests for edge cases and corner scenarios."""
 
@@ -354,6 +625,7 @@ if __name__ == "__main__":
             TestPythonExecutor,
             TestSingletonFunctions,
             TestDataClasses,
+            TestMarkdownCells,
             TestEdgeCases,
         ]
 

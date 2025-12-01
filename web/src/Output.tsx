@@ -1,4 +1,5 @@
 import React, { useImperativeHandle, useRef, useEffect } from "react";
+import Markdown from "react-markdown";
 import { Expression } from "./execution";
 
 interface OutputProps {
@@ -48,7 +49,11 @@ export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible })
             key={i}
             className={`output-item output-${item.type}`}
           >
-            <pre>{item.text}</pre>
+            {item.type === 'markdown' ? (
+              <Markdown>{item.text}</Markdown>
+            ) : (
+              <pre>{item.text}</pre>
+            )}
           </div>
         ))}
         {expression.result?.images && expression.result.images.length > 0 && (

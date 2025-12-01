@@ -4,7 +4,7 @@
  */
 
 export interface OutputItem {
-  type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message';
+  type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message' | 'markdown';
   text: string;
 }
 

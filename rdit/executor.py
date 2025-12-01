@@ -9,6 +9,7 @@ This module provides the PythonExecutor class which handles:
 
 import ast
 import io
+import re
 import traceback
 from contextlib import redirect_stdout, redirect_stderr
 from dataclasses import dataclass
@@ -18,8 +19,8 @@ from typing import Any, Dict, Generator, List, Optional
 
 @dataclass
 class OutputItem:
-    """Single output item (stdout, stderr, or error)."""
-    type: str  # 'stdout', 'stderr', or 'error'
+    """Single output item (stdout, stderr, error, or markdown)."""
+    type: str  # 'stdout', 'stderr', 'error', or 'markdown'
     text: str
 
 
@@ -31,6 +32,7 @@ class Statement:
     line_start: int
     line_end: int
     is_expr: bool
+    is_markdown_cell: bool = False
 
 
 @dataclass
@@ -66,6 +68,7 @@ class PythonExecutor:
         """
         tree = ast.parse(script)
         statements = []
+        lines = script.split('\n')
 
         for i, node in enumerate(tree.body):
             # Get line range for UI display
@@ -74,6 +77,13 @@ class PythonExecutor:
 
             # Compile AST node directly
             is_expr = isinstance(node, ast.Expr)
+            is_markdown_cell = False
+
+            # Check if this is a string expression preceded by markdown cell marker
+            if is_expr and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+                # Look for # %% [markdown] marker within 3 lines before the expression
+                is_markdown_cell = self._has_markdown_marker(lines, line_start)
+
             if is_expr:
                 # Expression: compile for eval()
                 compiled = compile(
@@ -94,20 +104,49 @@ class PythonExecutor:
                 node_index=i,
                 line_start=line_start,
                 line_end=line_end,
-                is_expr=is_expr
+                is_expr=is_expr,
+                is_markdown_cell=is_markdown_cell
             ))
 
         return statements
 
-    def execute_statement(self, compiled: CodeType, is_expr: bool) -> List[OutputItem]:
+    def _has_markdown_marker(self, lines: List[str], expr_line: int) -> bool:
+        """Check if there's a markdown cell marker within 3 lines before the expression.
+
+        Looks for '# %% [markdown]' pattern in comments.
+
+        Args:
+            lines: List of source code lines (0-indexed)
+            expr_line: 1-based line number of the expression
+
+        Returns:
+            True if a markdown marker is found
+        """
+        # Pattern matches: # %% [markdown] with optional whitespace
+        marker_pattern = re.compile(r'^\s*#\s*%%\s*\[markdown\]', re.IGNORECASE)
+
+        # Check up to 3 lines before (lines is 0-indexed, expr_line is 1-indexed)
+        start_idx = max(0, expr_line - 4)  # -4 because expr_line is 1-indexed
+        end_idx = expr_line - 1  # Line before the expression
+
+        for idx in range(start_idx, end_idx):
+            if idx < len(lines) and marker_pattern.match(lines[idx]):
+                return True
+
+        return False
+
+    def execute_statement(
+        self, compiled: CodeType, is_expr: bool, is_markdown_cell: bool = False
+    ) -> List[OutputItem]:
         """Execute pre-compiled statement with output capture.
 
         Args:
             compiled: Pre-compiled code object
             is_expr: Whether this is an expression (for result printing)
+            is_markdown_cell: Whether this is a markdown cell (output as markdown, not repr)
 
         Returns:
-            List of output items (stdout, stderr, errors)
+            List of output items (stdout, stderr, errors, markdown)
         """
         output = []
         stdout_buffer = io.StringIO()
@@ -118,8 +157,13 @@ class PythonExecutor:
                 # Always use eval() - works for both exec and eval compiled code
                 result = eval(compiled, self.namespace)
 
-                # For expressions, print result if not None
-                if is_expr and result is not None:
+                # For markdown cells, output the string content as markdown
+                if is_markdown_cell and result is not None:
+                    # Strip the string and output as markdown
+                    markdown_text = str(result).strip()
+                    output.append(OutputItem(type="markdown", text=markdown_text))
+                # For regular expressions, print result if not None
+                elif is_expr and result is not None:
                     print(repr(result))
 
         except Exception:
@@ -186,7 +230,7 @@ class PythonExecutor:
                     continue
 
             # Execute statement
-            output = self.execute_statement(stmt.compiled, stmt.is_expr)
+            output = self.execute_statement(stmt.compiled, stmt.is_expr, stmt.is_markdown_cell)
 
             # Determine if output is invisible (no stdout/stderr/errors)
             is_invisible = len(output) == 0

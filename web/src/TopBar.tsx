@@ -4,6 +4,7 @@ interface TopBarProps {
   onRunAll: () => void;
   onRunCurrent?: () => void;
   onSave?: () => void;
+  onInsertMarkdownCell?: () => void;
   hasUnsavedChanges?: boolean;
   scriptName?: string;
   hasConflict?: boolean;
@@ -19,7 +20,8 @@ function getShortcuts() {
   const isMac = detectMacOS();
   return {
     current: isMac ? "Command + Enter" : "Ctrl + Enter",
-    all: isMac ? "Command + Shift + Enter" : "Ctrl + Shift + Enter"
+    all: isMac ? "Command + Shift + Enter" : "Ctrl + Shift + Enter",
+    markdown: isMac ? "Command + Shift + M" : "Ctrl + Shift + M"
   };
 }
 
@@ -89,6 +91,7 @@ export function TopBar({
   onRunAll,
   onRunCurrent,
   onSave,
+  onInsertMarkdownCell,
   hasUnsavedChanges,
   scriptName,
   hasConflict,
@@ -121,6 +124,16 @@ export function TopBar({
           onMouseLeave={() => setHoveredButton(null)}
           tooltip={shortcuts.all}
           showTooltip={hoveredButton === "all"}
+        />
+
+        <ActionButton
+          label="Markdown"
+          onClick={onInsertMarkdownCell || (() => {})}
+          disabled={false}
+          onMouseEnter={() => setHoveredButton("markdown")}
+          onMouseLeave={() => setHoveredButton(null)}
+          tooltip={shortcuts.markdown}
+          showTooltip={hoveredButton === "markdown"}
         />
 
         {scriptName && (
