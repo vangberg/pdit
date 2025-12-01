@@ -127,7 +127,7 @@ export function TopBar({
         />
 
         <ActionButton
-          label="MD"
+          label="Markdown"
           onClick={onInsertMarkdownCell || (() => {})}
           disabled={false}
           onMouseEnter={() => setHoveredButton("markdown")}
