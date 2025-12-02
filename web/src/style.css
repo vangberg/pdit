@@ -590,3 +590,45 @@ h1 {
     opacity: 0.5;
   }
 }
+
+/* Dataframe table styles */
+.dataframe-table-container {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.dataframe-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  min-width: 100%;
+}
+
+.dataframe-table th,
+.dataframe-table td {
+  padding: 4px 8px;
+  text-align: left;
+  border: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.dataframe-table th {
+  background: #f9fafb;
+  font-weight: 600;
+  color: #374151;
+  position: sticky;
+  top: 0;
+}
+
+.dataframe-table tbody tr:hover {
+  background: #f3f4f6;
+}
+
+.dataframe-table td {
+  color: #4b5563;
+}
+
+/* Right-align numeric columns */
+.dataframe-table td:not(:first-child) {
+  text-align: right;
+}

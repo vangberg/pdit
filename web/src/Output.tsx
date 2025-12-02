@@ -1,6 +1,7 @@
 import React, { useImperativeHandle, useRef, useEffect } from "react";
 import Markdown from "react-markdown";
 import { Expression } from "./execution";
+import { DataframeTable } from "./DataframeTable";
 
 interface OutputProps {
   expression: Expression;
@@ -51,6 +52,8 @@ export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible })
           >
             {item.type === 'markdown' ? (
               <Markdown>{item.text}</Markdown>
+            ) : item.type === 'dataframe' ? (
+              <DataframeTable jsonData={item.text} />
             ) : (
               <pre>{item.text}</pre>
             )}

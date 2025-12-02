@@ -19,9 +19,124 @@ from typing import Any, Dict, Generator, List, Optional
 
 @dataclass
 class OutputItem:
-    """Single output item (stdout, stderr, error, or markdown)."""
-    type: str  # 'stdout', 'stderr', 'error', or 'markdown'
+    """Single output item (stdout, stderr, error, markdown, or dataframe)."""
+    type: str  # 'stdout', 'stderr', 'error', 'markdown', or 'dataframe'
     text: str
+
+
+def _is_dataframe(obj: Any) -> bool:
+    """Check if object is a pandas or polars DataFrame."""
+    type_name = type(obj).__name__
+    module = type(obj).__module__
+
+    # Check for pandas DataFrame
+    if type_name == 'DataFrame' and module.startswith('pandas'):
+        return True
+
+    # Check for polars DataFrame
+    if type_name == 'DataFrame' and module.startswith('polars'):
+        return True
+
+    return False
+
+
+def _serialize_dataframe(df: Any) -> str:
+    """Serialize a pandas or polars DataFrame to JSON.
+
+    Returns JSON with structure: { "columns": [...], "data": [[...], ...] }
+    Handles datetime, categorical, and missing values appropriately.
+    """
+    import json
+
+    module = type(df).__module__
+
+    if module.startswith('pandas'):
+        return _serialize_pandas_dataframe(df)
+    elif module.startswith('polars'):
+        return _serialize_polars_dataframe(df)
+    else:
+        raise ValueError(f"Unknown dataframe type: {module}")
+
+
+def _serialize_pandas_dataframe(df: Any) -> str:
+    """Serialize a pandas DataFrame to JSON."""
+    import json
+
+    columns = df.columns.tolist()
+    data = []
+
+    for _, row in df.iterrows():
+        row_data = []
+        for val in row:
+            row_data.append(_serialize_value(val))
+        data.append(row_data)
+
+    return json.dumps({"columns": columns, "data": data})
+
+
+def _serialize_polars_dataframe(df: Any) -> str:
+    """Serialize a polars DataFrame to JSON."""
+    import json
+
+    columns = df.columns
+    data = []
+
+    # Convert to rows
+    for row in df.iter_rows():
+        row_data = [_serialize_value(val) for val in row]
+        data.append(row_data)
+
+    return json.dumps({"columns": columns, "data": data})
+
+
+def _serialize_value(val: Any) -> Any:
+    """Serialize a single value, handling special types."""
+    import math
+
+    # Handle None/null
+    if val is None:
+        return None
+
+    # Handle pandas NA types
+    try:
+        import pandas as pd
+        if pd.isna(val):
+            return None
+    except (ImportError, TypeError, ValueError):
+        pass
+
+    # Handle float NaN/Inf
+    if isinstance(val, float):
+        if math.isnan(val):
+            return None
+        if math.isinf(val):
+            return str(val)  # "inf" or "-inf"
+
+    # Handle datetime types
+    type_name = type(val).__name__
+    if type_name in ('datetime', 'Timestamp', 'datetime64'):
+        return str(val)
+    if type_name == 'date':
+        return str(val)
+    if type_name == 'time':
+        return str(val)
+    if type_name == 'timedelta':
+        return str(val)
+
+    # Handle numpy types
+    if hasattr(val, 'item'):  # numpy scalar
+        return val.item()
+
+    # Handle categorical - convert to string
+    if type_name == 'Categorical':
+        return str(val)
+
+    # Basic types pass through
+    if isinstance(val, (str, int, bool)):
+        return val
+
+    # Fallback: convert to string
+    return str(val)
 
 
 @dataclass
@@ -162,6 +277,10 @@ class PythonExecutor:
                     # Strip the string and output as markdown
                     markdown_text = str(result).strip()
                     output.append(OutputItem(type="markdown", text=markdown_text))
+                # For DataFrames, output as serialized JSON
+                elif is_expr and result is not None and _is_dataframe(result):
+                    json_data = _serialize_dataframe(result)
+                    output.append(OutputItem(type="dataframe", text=json_data))
                 # For regular expressions, print result if not None
                 elif is_expr and result is not None:
                     print(repr(result))
