@@ -189,7 +189,8 @@ body {
 .output-half {
   width: 50%;
   min-width: 300px;
-  height: fit-content;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .editor-half,
@@ -256,6 +257,8 @@ h1 {
   background: transparent;
   border-top: none;
   border-left: none;
+  height: 0;
+  overflow: hidden;
 }
 
 .output-container {
