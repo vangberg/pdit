@@ -27,7 +27,7 @@ from .file_watcher import FileWatcher
 class OutputItem(BaseModel):
     """Output item from execution."""
     type: str
-    text: str
+    content: str
 
 
 class ExpressionResult(BaseModel):
@@ -131,7 +131,7 @@ async def execute_script(request: ExecuteScriptRequest):
                     lineStart=result.line_start,
                     lineEnd=result.line_end,
                     output=[
-                        OutputItem(type=o.type, text=o.text)
+                        OutputItem(type=o.type, content=o.content)
                         for o in result.output
                     ],
                     isInvisible=result.is_invisible

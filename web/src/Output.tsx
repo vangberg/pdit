@@ -51,11 +51,11 @@ export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible })
             className={`output-item output-${item.type}`}
           >
             {item.type === 'markdown' ? (
-              <Markdown>{item.text}</Markdown>
+              <Markdown>{item.content}</Markdown>
             ) : item.type === 'dataframe' ? (
-              <DataframeTable jsonData={item.text} />
+              <DataframeTable jsonData={item.content} />
             ) : (
-              <pre>{item.text}</pre>
+              <pre>{item.content}</pre>
             )}
           </div>
         ))}

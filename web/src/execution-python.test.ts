@@ -16,7 +16,7 @@ describe('executeScript', () => {
     expect(results[0].lineEnd).toBe(1);
     expect(results[0].result?.output).toHaveLength(1);
     expect(results[0].result?.output[0].type).toBe('stdout');
-    expect(results[0].result?.output[0].text).toBe('4\n');
+    expect(results[0].result?.output[0].content).toBe('4\n');
   });
 
   it('executes an assignment statement with no visible output', async () => {
@@ -43,7 +43,7 @@ describe('executeScript', () => {
     expect(results).toHaveLength(1);
     expect(results[0].result?.output).toHaveLength(1);
     expect(results[0].result?.output[0].type).toBe('stdout');
-    expect(results[0].result?.output[0].text).toBe('Hello, World!\n');
+    expect(results[0].result?.output[0].content).toBe('Hello, World!\n');
   });
 
   it('executes multiple statements in sequence', async () => {
@@ -67,7 +67,7 @@ x + y`;
 
     expect(results[2].lineStart).toBe(3);
     expect(results[2].lineEnd).toBe(3);
-    expect(results[2].result?.output[0].text).toBe('15\n');
+    expect(results[2].result?.output[0].content).toBe('15\n');
   });
 
   it('captures error messages', async () => {
@@ -83,7 +83,7 @@ x + y`;
     expect(results[0].result?.output.length).toBeGreaterThan(0);
 
     // Check that error information is captured (either in error type or stderr)
-    const allOutput = results[0].result?.output.map(o => o.text).join('\n') || '';
+    const allOutput = results[0].result?.output.map(o => o.content).join('\n') || '';
     expect(allOutput.toLowerCase()).toContain('zerodivision');
   });
 
@@ -129,7 +129,7 @@ x`;
     }
 
     expect(results).toHaveLength(3);
-    expect(results[2].result?.output[0].text).toBe('10\n');
+    expect(results[2].result?.output[0].content).toBe('10\n');
   });
 
   it('handles multi-line statements', async () => {
@@ -150,7 +150,7 @@ greet("Python")`;
 
     expect(results[1].lineStart).toBe(4);
     expect(results[1].lineEnd).toBe(4);
-    expect(results[1].result?.output[0].text).toBe("'Hello, Python!'\n");
+    expect(results[1].result?.output[0].content).toBe("'Hello, Python!'\n");
   });
 
   it('handles list comprehensions', async () => {
@@ -162,7 +162,7 @@ greet("Python")`;
     }
 
     expect(results).toHaveLength(1);
-    expect(results[0].result?.output[0].text).toBe('[0, 1, 4, 9, 16]\n');
+    expect(results[0].result?.output[0].content).toBe('[0, 1, 4, 9, 16]\n');
   });
 
   it('handles expressions that return None', async () => {
@@ -207,7 +207,7 @@ math.pi`;
 
     expect(results).toHaveLength(2);
     expect(results[0].result?.isInvisible).toBe(true);
-    expect(results[1].result?.output[0].text).toContain('3.14');
+    expect(results[1].result?.output[0].content).toContain('3.14');
   });
 
   it('handles mixed stdout and expressions', async () => {
@@ -222,9 +222,9 @@ x`;
     }
 
     expect(results).toHaveLength(4);
-    expect(results[0].result?.output[0].text).toBe('Starting\n');
+    expect(results[0].result?.output[0].content).toBe('Starting\n');
     expect(results[1].result?.isInvisible).toBe(true);
-    expect(results[2].result?.output[0].text).toBe('Result:\n');
-    expect(results[3].result?.output[0].text).toBe('8\n');
+    expect(results[2].result?.output[0].content).toBe('Result:\n');
+    expect(results[3].result?.output[0].content).toBe('8\n');
   });
 });
