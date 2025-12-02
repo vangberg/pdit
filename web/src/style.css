@@ -180,17 +180,19 @@ body {
 
 .split-container {
   display: flex;
-  width: 100%;
-  flex: 1;
-  overflow-y: auto;
+  height: 100%;
+  overflow: auto;
 }
 
-.editor-half,
-.output-half {
-  width: 50%;
-  min-width: 300px;
+.editor-half {
+  flex: 0 0 auto;
   height: 100%;
-  overflow-y: auto;
+  min-width: 50%;
+}
+
+.output-half {
+  flex: 0 0 50%;
+  height: 100%;
 }
 
 .editor-half,
