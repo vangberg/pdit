@@ -11,6 +11,9 @@ from rdit.executor import (
     PythonExecutor,
     get_executor,
     reset_executor,
+    _is_dataframe,
+    _serialize_value,
+    _serialize_dataframe,
 )
 
 
@@ -527,6 +530,277 @@ f"# The value is {x}"'''
         assert "'# The value is 42'" in results[1].output[0].text
 
 
+class TestDataFrameRendering:
+    """Tests for DataFrame rendering feature."""
+
+    def setup_method(self):
+        """Create a fresh executor for each test."""
+        self.executor = PythonExecutor()
+
+    def test_is_dataframe_pandas(self):
+        """Test detecting pandas DataFrames."""
+        import pandas as pd
+        df = pd.DataFrame({'a': [1, 2]})
+        assert _is_dataframe(df) is True
+
+    def test_is_dataframe_polars(self):
+        """Test detecting polars DataFrames."""
+        import polars as pl
+        df = pl.DataFrame({'a': [1, 2]})
+        assert _is_dataframe(df) is True
+
+    def test_is_dataframe_non_dataframe(self):
+        """Test that non-DataFrames are not detected."""
+        assert _is_dataframe([1, 2, 3]) is False
+        assert _is_dataframe({'a': 1}) is False
+        assert _is_dataframe("not a dataframe") is False
+        assert _is_dataframe(42) is False
+
+    def test_serialize_value_none(self):
+        """Test serializing None values."""
+        assert _serialize_value(None) is None
+
+    def test_serialize_value_basic_types(self):
+        """Test serializing basic Python types."""
+        assert _serialize_value("hello") == "hello"
+        assert _serialize_value(42) == 42
+        assert _serialize_value(True) is True
+        assert _serialize_value(False) is False
+
+    def test_serialize_value_float_nan(self):
+        """Test serializing NaN values."""
+        import math
+        assert _serialize_value(float('nan')) is None
+
+    def test_serialize_value_float_inf(self):
+        """Test serializing infinity values."""
+        assert _serialize_value(float('inf')) == "inf"
+        assert _serialize_value(float('-inf')) == "-inf"
+
+    def test_serialize_value_pandas_na(self):
+        """Test serializing pandas NA values."""
+        import pandas as pd
+        assert _serialize_value(pd.NA) is None
+        assert _serialize_value(pd.NaT) is None
+
+    def test_serialize_value_numpy_scalar(self):
+        """Test serializing numpy scalar types."""
+        import numpy as np
+        assert _serialize_value(np.int64(42)) == 42
+        assert _serialize_value(np.float64(3.14)) == 3.14
+        assert _serialize_value(np.bool_(True)) is True
+
+    def test_serialize_value_datetime(self):
+        """Test serializing datetime types."""
+        import pandas as pd
+        import datetime
+        dt = datetime.datetime(2025, 1, 1, 12, 0, 0)
+        assert isinstance(_serialize_value(dt), str)
+        assert _serialize_value(pd.Timestamp('2025-01-01')) == str(pd.Timestamp('2025-01-01'))
+
+    def test_pandas_dataframe_basic(self):
+        """Test executing code with a basic pandas DataFrame."""
+        script = """
+import pandas as pd
+df = pd.DataFrame({'col1': [1, 2, 3], 'col2': ['a', 'b', 'c']})
+df
+"""
+        results = list(self.executor.execute_script(script))
+
+        # Should get 3 results: import, assignment, df expression
+        assert len(results) == 3
+        assert results[2].output[0].type == "dataframe"
+
+        # Parse the JSON output
+        import json
+        data = json.loads(results[2].output[0].text)
+        assert data['columns'] == ['col1', 'col2']
+        assert len(data['data']) == 3
+        assert data['data'][0] == [1, 'a']
+        assert data['data'][1] == [2, 'b']
+        assert data['data'][2] == [3, 'c']
+
+    def test_pandas_dataframe_with_nan(self):
+        """Test pandas DataFrame with NaN values."""
+        script = """
+import pandas as pd
+import numpy as np
+df = pd.DataFrame({'a': [1, np.nan, 3], 'b': [4, 5, np.nan]})
+df
+"""
+        results = list(self.executor.execute_script(script))
+
+        import json
+        data = json.loads(results[-1].output[0].text)
+        # NaN should be serialized as None (null in JSON)
+        assert data['data'][1][0] is None  # np.nan in 'a' column
+        assert data['data'][2][1] is None  # np.nan in 'b' column
+
+    def test_pandas_dataframe_with_datetime(self):
+        """Test pandas DataFrame with datetime columns."""
+        script = """
+import pandas as pd
+df = pd.DataFrame({'date': pd.date_range('2025-01-01', periods=3), 'value': [1, 2, 3]})
+df
+"""
+        results = list(self.executor.execute_script(script))
+
+        import json
+        data = json.loads(results[-1].output[0].text)
+        assert len(data['data']) == 3
+        # Dates should be serialized as strings
+        assert isinstance(data['data'][0][0], str)
+        assert '2025-01-01' in data['data'][0][0]
+
+    def test_pandas_dataframe_empty(self):
+        """Test empty pandas DataFrame."""
+        script = """
+import pandas as pd
+df = pd.DataFrame()
+df
+"""
+        results = list(self.executor.execute_script(script))
+
+        import json
+        data = json.loads(results[-1].output[0].text)
+        assert data['columns'] == []
+        assert data['data'] == []
+
+    def test_polars_dataframe_basic(self):
+        """Test executing code with a basic polars DataFrame."""
+        script = """
+import polars as pl
+df = pl.DataFrame({'col1': [1, 2, 3], 'col2': ['a', 'b', 'c']})
+df
+"""
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 3
+        assert results[2].output[0].type == "dataframe"
+
+        import json
+        data = json.loads(results[2].output[0].text)
+        assert data['columns'] == ['col1', 'col2']
+        assert len(data['data']) == 3
+        assert data['data'][0] == [1, 'a']
+        assert data['data'][1] == [2, 'b']
+        assert data['data'][2] == [3, 'c']
+
+    def test_polars_dataframe_with_null(self):
+        """Test polars DataFrame with null values."""
+        script = """
+import polars as pl
+df = pl.DataFrame({'a': [1, None, 3], 'b': [4, 5, None]})
+df
+"""
+        results = list(self.executor.execute_script(script))
+
+        import json
+        data = json.loads(results[-1].output[0].text)
+        # None should remain as None (null in JSON)
+        assert data['data'][1][0] is None
+        assert data['data'][2][1] is None
+
+    def test_polars_dataframe_with_datetime(self):
+        """Test polars DataFrame with datetime columns."""
+        script = """
+import polars as pl
+from datetime import date
+df = pl.DataFrame({'date': [date(2025, 1, 1), date(2025, 1, 2), date(2025, 1, 3)], 'value': [1, 2, 3]})
+df
+"""
+        results = list(self.executor.execute_script(script))
+
+        import json
+        data = json.loads(results[-1].output[0].text)
+        assert len(data['data']) == 3
+        # Dates should be serialized as strings
+        assert isinstance(data['data'][0][0], str)
+        assert '2025-01-01' in data['data'][0][0]
+
+    def test_dataframe_not_printed_if_statement(self):
+        """Test that DataFrame in statement (not expression) is not rendered."""
+        script = """
+import pandas as pd
+df = pd.DataFrame({'a': [1, 2, 3]})
+"""
+        results = list(self.executor.execute_script(script))
+
+        # Should get 2 results: import and assignment
+        # The assignment should be invisible (no dataframe output)
+        assert len(results) == 2
+        assert results[1].is_invisible is True
+        assert len(results[1].output) == 0
+
+    def test_dataframe_in_expression_context(self):
+        """Test that DataFrame as expression is rendered."""
+        script = """
+import pandas as pd
+pd.DataFrame({'a': [1, 2, 3]})
+"""
+        results = list(self.executor.execute_script(script))
+
+        # Should get 2 results: import and expression
+        assert len(results) == 2
+        assert results[1].output[0].type == "dataframe"
+
+    def test_multiple_dataframes(self):
+        """Test multiple DataFrames in one script."""
+        script = """
+import pandas as pd
+df1 = pd.DataFrame({'a': [1, 2]})
+df1
+df2 = pd.DataFrame({'b': [3, 4]})
+df2
+"""
+        results = list(self.executor.execute_script(script))
+
+        # Should have dataframe outputs for df1 and df2
+        dataframe_results = [r for r in results if r.output and r.output[0].type == "dataframe"]
+        assert len(dataframe_results) == 2
+
+    def test_serialize_pandas_dataframe_directly(self):
+        """Test _serialize_pandas_dataframe function directly."""
+        import pandas as pd
+        import numpy as np
+        import json
+
+        df = pd.DataFrame({
+            'int_col': [1, 2, 3],
+            'float_col': [1.1, np.nan, 3.3],
+            'str_col': ['a', 'b', 'c'],
+            'bool_col': [True, False, True]
+        })
+
+        json_str = _serialize_dataframe(df)
+        data = json.loads(json_str)
+
+        assert set(data['columns']) == {'int_col', 'float_col', 'str_col', 'bool_col'}
+        assert len(data['data']) == 3
+        # Check that NaN is serialized as None
+        assert data['data'][1][1] is None
+
+    def test_serialize_polars_dataframe_directly(self):
+        """Test _serialize_polars_dataframe function directly."""
+        import polars as pl
+        import json
+
+        df = pl.DataFrame({
+            'int_col': [1, 2, 3],
+            'float_col': [1.1, None, 3.3],
+            'str_col': ['a', 'b', 'c'],
+            'bool_col': [True, False, True]
+        })
+
+        json_str = _serialize_dataframe(df)
+        data = json.loads(json_str)
+
+        assert set(data['columns']) == {'int_col', 'float_col', 'str_col', 'bool_col'}
+        assert len(data['data']) == 3
+        # Check that None is preserved
+        assert data['data'][1][1] is None
+
+
 class TestEdgeCases:
     """Tests for edge cases and corner scenarios."""
 
@@ -626,6 +900,7 @@ if __name__ == "__main__":
             TestSingletonFunctions,
             TestDataClasses,
             TestMarkdownCells,
+            TestDataFrameRendering,
             TestEdgeCases,
         ]
 
