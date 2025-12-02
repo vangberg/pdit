@@ -826,13 +826,13 @@ result
         import json
         data = json.loads(dataframe_result[0].output[0].content)
 
-        # Columns should be strings joined with " - " separator
-        # e.g., "Axis - count", "Axis - mean", "Axis - std", etc.
+        # Columns should be strings joined with "_" separator
+        # e.g., "Axis_count", "Axis_mean", "Axis_std", etc.
         assert all(isinstance(col, str) for col in data['columns'])
-        assert any('Axis' in col for col in data['columns'])
-        assert any('Dia' in col for col in data['columns'])
-        assert any('count' in col for col in data['columns'])
-        assert any('mean' in col for col in data['columns'])
+        assert any('Axis_count' in col for col in data['columns'])
+        assert any('Dia_mean' in col for col in data['columns'])
+        assert any('_count' in col for col in data['columns'])
+        assert any('_mean' in col for col in data['columns'])
 
         # Should have 2 rows (one for each group)
         assert len(data['data']) == 2

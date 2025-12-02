@@ -83,8 +83,8 @@ def _serialize_pandas_dataframe(df: Any) -> str:
 
     # Handle MultiIndex columns (e.g., from groupby().describe())
     if hasattr(df.columns, 'levels'):
-        # MultiIndex: convert tuples to strings like "Axis - count"
-        columns = [' - '.join(str(level) for level in col) if isinstance(col, tuple) else str(col)
+        # MultiIndex: convert tuples to strings like "Axis_count"
+        columns = ['_'.join(str(level) for level in col) if isinstance(col, tuple) else str(col)
                    for col in df.columns]
     else:
         columns = df.columns.tolist()
