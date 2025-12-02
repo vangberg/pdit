@@ -186,6 +186,8 @@ body {
 }
 
 .editor-half {
+  display: flex;
+  flex-direction: column;
   flex: 0 0 50%;
   min-width: 0;
 }
@@ -218,10 +220,9 @@ h1 {
 }
 
 #editor {
+  flex: 1;
   width: 100%;
   min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
 }
 
 #editor-preview {
