@@ -3,8 +3,10 @@ import {
   useReactTable,
   getCoreRowModel,
   getPaginationRowModel,
+  getSortedRowModel,
   flexRender,
   createColumnHelper,
+  SortingState,
 } from "@tanstack/react-table";
 
 interface DataframeData {
@@ -18,6 +20,7 @@ interface DataframeTableProps {
 
 export const DataframeTable: React.FC<DataframeTableProps> = ({ jsonData }) => {
   const [pageIndex, setPageIndex] = useState(0);
+  const [sorting, setSorting] = useState<SortingState>([]);
   const pageSize = 10;
 
   const { columns, rows } = useMemo(() => {
@@ -49,13 +52,16 @@ export const DataframeTable: React.FC<DataframeTableProps> = ({ jsonData }) => {
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     state: {
       pagination: { pageIndex, pageSize },
+      sorting,
     },
     onPaginationChange: (updater) => {
       const newState = typeof updater === 'function' ? updater({ pageIndex, pageSize }) : updater;
       setPageIndex(newState.pageIndex);
     },
+    onSortingChange: setSorting,
   });
 
   return (
@@ -65,11 +71,33 @@ export const DataframeTable: React.FC<DataframeTableProps> = ({ jsonData }) => {
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
-                <th key={header.id}>
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
+                <th
+                  key={header.id}
+                  onClick={header.column.getToggleSortingHandler()}
+                  style={{ cursor: header.column.getCanSort() ? "pointer" : "default", userSelect: "none" }}
+                  title={
+                    header.column.getCanSort()
+                      ? header.column.getIsSorted() === "desc"
+                        ? "Sorted descending. Click to sort ascending."
+                        : header.column.getIsSorted() === "asc"
+                        ? "Sorted ascending. Click to unsort."
+                        : "Click to sort ascending."
+                      : undefined
+                  }
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                    <span style={{ fontSize: "0.85em", opacity: 0.6, flexShrink: 0 }}>
+                      {header.column.getIsSorted() === "asc"
+                        ? "▲"
+                        : header.column.getIsSorted() === "desc"
+                        ? "▼"
+                        : ""}
+                    </span>
+                  </div>
                 </th>
               ))}
             </tr>
