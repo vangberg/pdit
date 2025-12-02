@@ -17,6 +17,7 @@ function App() {
   const scriptPath = new URLSearchParams(window.location.search).get("script");
   const [hasConflict, setHasConflict] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [doc, setDoc] = useState<Text>();
   const isProgrammaticUpdate = useRef(false);
 
   const editorRef = useRef<EditorHandles | null>(null);
@@ -27,7 +28,12 @@ function App() {
         // User has local edits → show conflict banner
         setHasConflict(true);
       } else {
-        // No local edits → safe to auto-reload
+        // No local edits → check if content actually changed
+        if (doc && doc.toString() === newContent) {
+          // Content is the same, don't reload (preserves line groups)
+          return;
+        }
+        // Content differs → safe to auto-reload
         isProgrammaticUpdate.current = true;
         editorRef.current?.applyExecutionUpdate({
           doc: newContent,
@@ -36,7 +42,7 @@ function App() {
         isProgrammaticUpdate.current = false;
       }
     },
-    [hasUnsavedChanges]
+    [hasUnsavedChanges, doc]
   );
 
   const {
@@ -55,7 +61,6 @@ function App() {
   const [lineGroupLayouts, setLineGroupLayouts] = useState<Map<string, LineGroupLayout>>(
     new Map()
   );
-  const [doc, setDoc] = useState<Text>();
 
   const handleLineGroupHeightChange = useCallback(
     (heights: Map<string, number>) => {
