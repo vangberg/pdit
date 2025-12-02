@@ -32,7 +32,7 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
     const layout = lineGroupLayouts.get(lastGroup.id);
     const height = lineGroupHeights.get(lastGroup.id);
 
-    return (layout && height !== undefined) ? layout.top + height : undefined;
+    return layout && height !== undefined ? layout.top + height : undefined;
   }, [lineGroups, lineGroupLayouts, lineGroupHeights]);
 
   const getLineGroupHeights = useCallback((): Map<string, number> => {
@@ -65,14 +65,14 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
 
     // Observe the container for mutations and resizes
     if (containerRef.current) {
-      // mutationObserver.observe(containerRef.current, {
-      //   childList: true,
-      //   subtree: true,
-      //   attributes: true,
-      //   attributeFilter: ["style", "class"],
-      // });
+      mutationObserver.observe(containerRef.current, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["style", "class"],
+      });
       // Single ResizeObserver on the container catches all internal size changes
-      // resizeObserver.observe(containerRef.current);
+      resizeObserver.observe(containerRef.current);
     }
 
     return () => {
@@ -90,7 +90,9 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
       >
         {lineGroups.map((group) => {
           const layout = lineGroupLayouts?.get(group.id);
-          const groupClassName = group.allInvisible ? "output-group output-group-invisible" : "output-group";
+          const groupClassName = group.allInvisible
+            ? "output-group output-group-invisible"
+            : "output-group";
 
           const style: CSSProperties = {};
           if (layout) {
@@ -115,7 +117,9 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
               style={Object.keys(style).length > 0 ? style : undefined}
             >
               {group.resultIds.map((resultId) => {
-                const index = expressions.findIndex((expr) => expr.id === resultId);
+                const index = expressions.findIndex(
+                  (expr) => expr.id === resultId
+                );
                 if (index === -1) return null;
                 const expression = expressions[index];
 
