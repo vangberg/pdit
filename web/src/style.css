@@ -720,3 +720,115 @@ h1 {
   color: #6b7280;
   min-width: 0;
 }
+
+.dataframe-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px 4px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 11px;
+}
+
+.dataframe-filter-input {
+  padding: 1px 3px;
+  border: 1px solid #d1d5db;
+  border-radius: 2px;
+  font-size: 11px;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  color: #4b5563;
+  background: transparent;
+  min-width: 150px;
+  height: 20px;
+  transition: all 0.15s;
+}
+
+.dataframe-filter-input:hover {
+  border-color: #9ca3af;
+}
+
+.dataframe-filter-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #f0f9ff;
+}
+
+.dataframe-toolbar-pagination {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  margin-left: auto;
+}
+
+.dataframe-toolbar button {
+  background: transparent;
+  border: 1px solid #d1d5db;
+  border-radius: 2px;
+  padding: 0;
+  font-size: 11px;
+  cursor: pointer;
+  color: #4b5563;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  transition: all 0.15s;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dataframe-toolbar button:hover:not(:disabled) {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.dataframe-toolbar button:disabled {
+  cursor: not-allowed;
+  color: #d1d5db;
+  border-color: #e5e7eb;
+  opacity: 0.6;
+}
+
+.dataframe-toolbar-pagination-group {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  margin: 0 4px;
+}
+
+.dataframe-toolbar-pagination-group input {
+  background: transparent;
+  border: 1px solid #d1d5db;
+  border-radius: 2px;
+  padding: 1px 3px;
+  font-size: 11px;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  color: #4b5563;
+  width: 32px;
+  text-align: center;
+  transition: all 0.15s;
+  height: 20px;
+}
+
+.dataframe-toolbar-pagination-group input:hover {
+  border-color: #9ca3af;
+}
+
+.dataframe-toolbar-pagination-group input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #f0f9ff;
+}
+
+.dataframe-toolbar-pagination-separator {
+  color: #9ca3af;
+  padding: 0 2px;
+}
+
+.dataframe-toolbar-pagination-total {
+  color: #6b7280;
+  min-width: 0;
+}
