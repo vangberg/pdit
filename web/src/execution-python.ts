@@ -31,11 +31,13 @@ function getBackend(): PythonServerBackend {
  *
  * @param script - The Python code to execute
  * @param options.lineRange - Optional line range to filter which statements to execute (1-based, inclusive)
+ * @param options.scriptName - Optional script name for verbose output
  */
 export async function* executeScript(
   script: string,
   options?: {
     lineRange?: { from: number; to: number };
+    scriptName?: string;
   }
 ) {
   const backend = getBackend();

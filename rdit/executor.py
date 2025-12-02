@@ -20,12 +20,19 @@ from typing import Any, Dict, Generator, List, Optional
 
 # Module-level verbose mode flag
 _verbose_mode = False
+_current_script_name = None
 
 
 def set_verbose_mode(verbose: bool) -> None:
     """Set verbose mode for printing execution details to stdout/stderr."""
     global _verbose_mode
     _verbose_mode = verbose
+
+
+def set_script_name(script_name: Optional[str]) -> None:
+    """Set the current script name for verbose output."""
+    global _current_script_name
+    _current_script_name = script_name
 
 
 @dataclass
@@ -293,11 +300,11 @@ class PythonExecutor:
         """
         # Print statement info in verbose mode
         if _verbose_mode:
-            line_info = f"[Lines {line_start}-{line_end}]" if line_start != line_end else f"[Line {line_start}]"
-            print(f"\n{'=' * 60}", file=sys.stderr)
-            print(f"{line_info} Executing:", file=sys.stderr)
-            print(source, file=sys.stderr)
-            print('=' * 60, file=sys.stderr)
+            script_info = f"[{_current_script_name}] " if _current_script_name else ""
+            # Print each line with >>> prefix (like Python REPL)
+            source_lines = source.split('\n')
+            for line in source_lines:
+                print(f"{script_info}>>> {line}", file=sys.stderr)
 
         output = []
         stdout_buffer = io.StringIO()
@@ -353,18 +360,22 @@ class PythonExecutor:
     def execute_script(
         self,
         script: str,
-        line_range: Optional[tuple[int, int]] = None
+        line_range: Optional[tuple[int, int]] = None,
+        script_name: Optional[str] = None
     ) -> Generator[ExecutionResult, None, None]:
         """Execute Python script, yielding results as each statement completes.
 
         Args:
             script: Python source code to execute
             line_range: Optional (from, to) line range (1-based, inclusive)
+            script_name: Optional script name for verbose output
 
         Yields:
             ExecutionResult for each statement as it completes.
             If there's a syntax error, yields a single result with the error.
         """
+        # Set script name for verbose output
+        set_script_name(script_name)
         # Parse script into statements
         try:
             statements = self.parse_script(script)

@@ -48,6 +48,7 @@ class LineRange(BaseModel):
 class ExecuteScriptRequest(BaseModel):
     """Request to execute a Python script."""
     script: str
+    scriptName: Optional[str] = None
     lineRange: Optional[LineRange] = None
 
 
@@ -121,7 +122,7 @@ async def execute_script(request: ExecuteScriptRequest):
 
         try:
             # Execute script (returns generator of results)
-            results = executor.execute_script(request.script, line_range)
+            results = executor.execute_script(request.script, line_range, request.scriptName)
 
             # Stream each result as SSE event
             for result in results:

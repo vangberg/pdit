@@ -108,7 +108,13 @@ function App() {
       try {
         const allExpressions: Expression[] = [];
 
-        for await (const expression of executeScript(script, options)) {
+        // Extract script name from path (just the filename)
+        const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
+
+        for await (const expression of executeScript(script, {
+          ...options,
+          scriptName
+        })) {
           console.log("Execute expression:", expression);
 
           allExpressions.push(expression);
@@ -127,7 +133,7 @@ function App() {
         console.error("Execution error:", error);
       }
     },
-    [addExpressions]
+    [addExpressions, scriptPath]
   );
 
   const handleExecuteCurrent = useCallback(
