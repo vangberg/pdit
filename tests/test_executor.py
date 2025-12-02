@@ -11,6 +11,9 @@ from rdit.executor import (
     PythonExecutor,
     get_executor,
     reset_executor,
+    _is_dataframe,
+    _serialize_value,
+    _serialize_dataframe,
 )
 
 
@@ -30,7 +33,7 @@ class TestPythonExecutor:
         assert results[0].line_end == 1
         assert len(results[0].output) == 1
         assert results[0].output[0].type == "stdout"
-        assert results[0].output[0].text.strip() == "4"
+        assert results[0].output[0].content.strip() == "4"
         assert results[0].is_invisible is False
 
     def test_basic_statement(self):
@@ -49,7 +52,7 @@ class TestPythonExecutor:
         # Use it in next execution
         results = list(self.executor.execute_script("x + 5"))
 
-        assert results[0].output[0].text.strip() == "15"
+        assert results[0].output[0].content.strip() == "15"
 
     def test_multiple_statements(self):
         """Test executing multiple statements."""
@@ -64,7 +67,7 @@ x + y
         assert results[0].is_invisible is True  # x = 10
         assert results[1].is_invisible is True  # y = 20
         assert results[2].is_invisible is False  # x + y
-        assert results[2].output[0].text.strip() == "30"
+        assert results[2].output[0].content.strip() == "30"
 
     def test_print_statement(self):
         """Test that print() output is captured."""
@@ -72,7 +75,7 @@ x + y
 
         assert len(results[0].output) == 1
         assert results[0].output[0].type == "stdout"
-        assert results[0].output[0].text.strip() == "Hello, World!"
+        assert results[0].output[0].content.strip() == "Hello, World!"
 
     def test_error_handling(self):
         """Test that errors are captured properly."""
@@ -80,14 +83,14 @@ x + y
 
         assert len(results[0].output) == 1
         assert results[0].output[0].type == "error"
-        assert "ZeroDivisionError" in results[0].output[0].text
+        assert "ZeroDivisionError" in results[0].output[0].content
 
     def test_undefined_variable_error(self):
         """Test error when using undefined variable."""
         results = list(self.executor.execute_script("undefined_var"))
 
         assert results[0].output[0].type == "error"
-        assert "NameError" in results[0].output[0].text
+        assert "NameError" in results[0].output[0].content
 
     def test_syntax_error(self):
         """Test that syntax errors are captured in results."""
@@ -96,7 +99,7 @@ x + y
         # Should return one result with error
         assert len(results) == 1
         assert results[0].output[0].type == "error"
-        assert "SyntaxError" in results[0].output[0].text
+        assert "SyntaxError" in results[0].output[0].content
         assert results[0].is_invisible is False
 
     def test_reset_clears_namespace(self):
@@ -110,7 +113,7 @@ x + y
         # Try to use the variable
         results = list(self.executor.execute_script("try:\n    x\nexcept NameError:\n    print('cleared')"))
 
-        assert "cleared" in results[0].output[0].text
+        assert "cleared" in results[0].output[0].content
 
     def test_line_range_single_line(self):
         """Test filtering by line range - single line."""
@@ -156,20 +159,20 @@ add(5, 3)
         assert len(results) == 2
         assert results[0].line_start == 2
         assert results[0].line_end == 3
-        assert results[1].output[0].text.strip() == "8"
+        assert results[1].output[0].content.strip() == "8"
 
     def test_import_statement(self):
         """Test importing standard library modules."""
         results = list(self.executor.execute_script("import math\nmath.pi"))
 
         assert len(results) == 2
-        assert "3.14" in results[1].output[0].text
+        assert "3.14" in results[1].output[0].content
 
     def test_list_comprehension(self):
         """Test list comprehension execution."""
         results = list(self.executor.execute_script("[x * 2 for x in range(5)]"))
 
-        assert results[0].output[0].text.strip() == "[0, 2, 4, 6, 8]"
+        assert results[0].output[0].content.strip() == "[0, 2, 4, 6, 8]"
 
     def test_stderr_capture(self):
         """Test that stderr output is captured."""
@@ -182,7 +185,7 @@ print("error", file=sys.stderr)
         # Find stderr output
         stderr_outputs = [o for o in results[-1].output if o.type == "stderr"]
         assert len(stderr_outputs) == 1
-        assert "error" in stderr_outputs[0].text
+        assert "error" in stderr_outputs[0].content
 
     def test_both_stdout_and_stderr(self):
         """Test capturing both stdout and stderr in same statement."""
@@ -217,7 +220,7 @@ class TestSingletonFunctions:
         reset_executor()
 
         results = list(executor.execute_script("try:\n    global_var\nexcept NameError:\n    print('cleared')"))
-        assert "cleared" in results[0].output[0].text
+        assert "cleared" in results[0].output[0].content
 
     def test_namespace_persists_across_calls(self):
         """Test that namespace persists when using singleton."""
@@ -227,7 +230,7 @@ class TestSingletonFunctions:
         executor2 = get_executor()
         results = list(executor2.execute_script("persistent"))
 
-        assert results[0].output[0].text.strip() == "42"
+        assert results[0].output[0].content.strip() == "42"
 
 
 class TestDataClasses:
@@ -235,10 +238,10 @@ class TestDataClasses:
 
     def test_output_item_creation(self):
         """Test OutputItem dataclass."""
-        item = OutputItem(type="stdout", text="hello")
+        item = OutputItem(type="stdout", content="hello")
 
         assert item.type == "stdout"
-        assert item.text == "hello"
+        assert item.content == "hello"
 
     def test_execution_result_creation(self):
         """Test ExecutionResult dataclass."""
@@ -246,7 +249,7 @@ class TestDataClasses:
             node_index=0,
             line_start=1,
             line_end=1,
-            output=[OutputItem(type="stdout", text="test")],
+            output=[OutputItem(type="stdout", content="test")],
             is_invisible=False
         )
 
@@ -276,8 +279,8 @@ This is a markdown cell.
         assert len(results) == 1
         assert len(results[0].output) == 1
         assert results[0].output[0].type == "markdown"
-        assert "# Hello World" in results[0].output[0].text
-        assert "This is a markdown cell." in results[0].output[0].text
+        assert "# Hello World" in results[0].output[0].content
+        assert "This is a markdown cell." in results[0].output[0].content
         assert results[0].is_invisible is False
 
     def test_markdown_cell_one_line_before(self):
@@ -288,7 +291,7 @@ This is a markdown cell.
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
-        assert results[0].output[0].text == "# Markdown content"
+        assert results[0].output[0].content == "# Markdown content"
 
     def test_markdown_cell_two_lines_before(self):
         """Test markdown marker two lines before the expression."""
@@ -299,7 +302,7 @@ This is a markdown cell.
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
-        assert results[0].output[0].text == "# Markdown content"
+        assert results[0].output[0].content == "# Markdown content"
 
     def test_markdown_cell_three_lines_before(self):
         """Test markdown marker three lines before the expression."""
@@ -311,7 +314,7 @@ This is a markdown cell.
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
-        assert results[0].output[0].text == "# Markdown content"
+        assert results[0].output[0].content == "# Markdown content"
 
     def test_markdown_marker_too_far_before(self):
         """Test that marker more than 3 lines before is NOT detected."""
@@ -327,7 +330,7 @@ This is a markdown cell.
         assert len(results) == 1
         assert results[0].output[0].type == "stdout"
         # Regular expression should output repr() with quotes
-        assert "'# This should be regular code'" in results[0].output[0].text
+        assert "'# This should be regular code'" in results[0].output[0].content
 
     def test_no_markdown_marker(self):
         """Test string expression without markdown marker."""
@@ -337,7 +340,7 @@ This is a markdown cell.
         assert len(results) == 1
         assert results[0].output[0].type == "stdout"
         # Should be repr() output with quotes
-        assert "'Just a regular string'" in results[0].output[0].text
+        assert "'Just a regular string'" in results[0].output[0].content
 
     def test_markdown_marker_case_insensitive(self):
         """Test that markdown marker is case-insensitive."""
@@ -347,7 +350,7 @@ This is a markdown cell.
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
-        assert results[0].output[0].text == "# Uppercase works too"
+        assert results[0].output[0].content == "# Uppercase works too"
 
     def test_markdown_marker_with_extra_whitespace(self):
         """Test markdown marker with various whitespace."""
@@ -357,7 +360,7 @@ This is a markdown cell.
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
-        assert results[0].output[0].text == "# Extra spaces work"
+        assert results[0].output[0].content == "# Extra spaces work"
 
     def test_markdown_cell_strips_whitespace(self):
         """Test that markdown output strips surrounding whitespace."""
@@ -372,7 +375,7 @@ This is a markdown cell.
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
         # Should be stripped
-        assert results[0].output[0].text == "# Title with spaces"
+        assert results[0].output[0].content == "# Title with spaces"
 
     def test_multiple_markdown_cells(self):
         """Test multiple markdown cells in one script."""
@@ -388,9 +391,9 @@ This is a markdown cell.
 
         assert len(results) == 3
         assert all(r.output[0].type == "markdown" for r in results)
-        assert results[0].output[0].text == "# First markdown cell"
-        assert results[1].output[0].text == "# Second markdown cell"
-        assert results[2].output[0].text == "# Third markdown cell"
+        assert results[0].output[0].content == "# First markdown cell"
+        assert results[1].output[0].content == "# Second markdown cell"
+        assert results[2].output[0].content == "# Third markdown cell"
 
     def test_mixed_markdown_and_code_cells(self):
         """Test mixing markdown cells with regular code."""
@@ -407,12 +410,12 @@ x'''
 
         assert len(results) == 4
         assert results[0].output[0].type == "markdown"
-        assert results[0].output[0].text == "# Introduction"
+        assert results[0].output[0].content == "# Introduction"
         assert results[1].is_invisible is True  # x = 42
         assert results[2].output[0].type == "markdown"
-        assert results[2].output[0].text == "The answer is shown below:"
+        assert results[2].output[0].content == "The answer is shown below:"
         assert results[3].output[0].type == "stdout"
-        assert "42" in results[3].output[0].text
+        assert "42" in results[3].output[0].content
 
     def test_markdown_cell_with_code_blocks(self):
         """Test markdown cell containing code blocks."""
@@ -428,8 +431,8 @@ x = 1 + 2
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
-        assert "```python" in results[0].output[0].text
-        assert "x = 1 + 2" in results[0].output[0].text
+        assert "```python" in results[0].output[0].content
+        assert "x = 1 + 2" in results[0].output[0].content
 
     def test_markdown_cell_multiline_string(self):
         """Test markdown cell with triple-quoted string."""
@@ -447,7 +450,7 @@ multiple lines.
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
-        text = results[0].output[0].text
+        text = results[0].output[0].content
         assert "# This is a title" in text
         assert "This is a paragraph with" in text
         assert "multiple lines." in text
@@ -462,7 +465,7 @@ multiple lines.
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
-        assert results[0].output[0].text == ""
+        assert results[0].output[0].content == ""
 
     def test_markdown_cell_single_quoted_string(self):
         """Test markdown cell with single-quoted string."""
@@ -472,7 +475,7 @@ multiple lines.
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
-        assert results[0].output[0].text == "# Single quoted markdown"
+        assert results[0].output[0].content == "# Single quoted markdown"
 
     def test_non_string_expression_not_markdown(self):
         """Test that non-string expressions after marker are not markdown."""
@@ -483,7 +486,7 @@ multiple lines.
         # Should be regular expression output, not markdown
         assert len(results) == 1
         assert results[0].output[0].type == "stdout"
-        assert "42" in results[0].output[0].text
+        assert "42" in results[0].output[0].content
 
     def test_markdown_cell_line_range(self):
         """Test markdown cell with line range filtering."""
@@ -500,7 +503,7 @@ multiple lines.
         # Should only get the second markdown cell
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
-        assert results[0].output[0].text == "# Second cell"
+        assert results[0].output[0].content == "# Second cell"
 
     def test_markdown_marker_with_comment_before(self):
         """Test markdown marker preceded by other comments."""
@@ -512,7 +515,7 @@ multiple lines.
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
-        assert results[0].output[0].text == "# This is markdown"
+        assert results[0].output[0].content == "# This is markdown"
 
     def test_markdown_cell_with_f_string(self):
         """Test that f-strings are NOT detected as markdown (they're JoinedStr, not Constant)."""
@@ -524,7 +527,278 @@ f"# The value is {x}"'''
         assert len(results) == 2
         # F-strings are ast.JoinedStr, not ast.Constant, so they're not detected as markdown
         assert results[1].output[0].type == "stdout"
-        assert "'# The value is 42'" in results[1].output[0].text
+        assert "'# The value is 42'" in results[1].output[0].content
+
+
+class TestDataFrameRendering:
+    """Tests for DataFrame rendering feature."""
+
+    def setup_method(self):
+        """Create a fresh executor for each test."""
+        self.executor = PythonExecutor()
+
+    def test_is_dataframe_pandas(self):
+        """Test detecting pandas DataFrames."""
+        import pandas as pd
+        df = pd.DataFrame({'a': [1, 2]})
+        assert _is_dataframe(df) is True
+
+    def test_is_dataframe_polars(self):
+        """Test detecting polars DataFrames."""
+        import polars as pl
+        df = pl.DataFrame({'a': [1, 2]})
+        assert _is_dataframe(df) is True
+
+    def test_is_dataframe_non_dataframe(self):
+        """Test that non-DataFrames are not detected."""
+        assert _is_dataframe([1, 2, 3]) is False
+        assert _is_dataframe({'a': 1}) is False
+        assert _is_dataframe("not a dataframe") is False
+        assert _is_dataframe(42) is False
+
+    def test_serialize_value_none(self):
+        """Test serializing None values."""
+        assert _serialize_value(None) is None
+
+    def test_serialize_value_basic_types(self):
+        """Test serializing basic Python types."""
+        assert _serialize_value("hello") == "hello"
+        assert _serialize_value(42) == 42
+        assert _serialize_value(True) is True
+        assert _serialize_value(False) is False
+
+    def test_serialize_value_float_nan(self):
+        """Test serializing NaN values."""
+        import math
+        assert _serialize_value(float('nan')) is None
+
+    def test_serialize_value_float_inf(self):
+        """Test serializing infinity values."""
+        assert _serialize_value(float('inf')) == "inf"
+        assert _serialize_value(float('-inf')) == "-inf"
+
+    def test_serialize_value_pandas_na(self):
+        """Test serializing pandas NA values."""
+        import pandas as pd
+        assert _serialize_value(pd.NA) is None
+        assert _serialize_value(pd.NaT) is None
+
+    def test_serialize_value_numpy_scalar(self):
+        """Test serializing numpy scalar types."""
+        import numpy as np
+        assert _serialize_value(np.int64(42)) == 42
+        assert _serialize_value(np.float64(3.14)) == 3.14
+        assert _serialize_value(np.bool_(True)) is True
+
+    def test_serialize_value_datetime(self):
+        """Test serializing datetime types."""
+        import pandas as pd
+        import datetime
+        dt = datetime.datetime(2025, 1, 1, 12, 0, 0)
+        assert isinstance(_serialize_value(dt), str)
+        assert _serialize_value(pd.Timestamp('2025-01-01')) == str(pd.Timestamp('2025-01-01'))
+
+    def test_pandas_dataframe_basic(self):
+        """Test executing code with a basic pandas DataFrame."""
+        script = """
+import pandas as pd
+df = pd.DataFrame({'col1': [1, 2, 3], 'col2': ['a', 'b', 'c']})
+df
+"""
+        results = list(self.executor.execute_script(script))
+
+        # Should get 3 results: import, assignment, df expression
+        assert len(results) == 3
+        assert results[2].output[0].type == "dataframe"
+
+        # Parse the JSON output
+        import json
+        data = json.loads(results[2].output[0].content)
+        assert data['columns'] == ['col1', 'col2']
+        assert len(data['data']) == 3
+        assert data['data'][0] == [1, 'a']
+        assert data['data'][1] == [2, 'b']
+        assert data['data'][2] == [3, 'c']
+
+    def test_pandas_dataframe_with_nan(self):
+        """Test pandas DataFrame with NaN values."""
+        script = """
+import pandas as pd
+import numpy as np
+df = pd.DataFrame({'a': [1, np.nan, 3], 'b': [4, 5, np.nan]})
+df
+"""
+        results = list(self.executor.execute_script(script))
+
+        import json
+        data = json.loads(results[-1].output[0].content)
+        # NaN should be serialized as None (null in JSON)
+        assert data['data'][1][0] is None  # np.nan in 'a' column
+        assert data['data'][2][1] is None  # np.nan in 'b' column
+
+    def test_pandas_dataframe_with_datetime(self):
+        """Test pandas DataFrame with datetime columns."""
+        script = """
+import pandas as pd
+df = pd.DataFrame({'date': pd.date_range('2025-01-01', periods=3), 'value': [1, 2, 3]})
+df
+"""
+        results = list(self.executor.execute_script(script))
+
+        import json
+        data = json.loads(results[-1].output[0].content)
+        assert len(data['data']) == 3
+        # Dates should be serialized as strings
+        assert isinstance(data['data'][0][0], str)
+        assert '2025-01-01' in data['data'][0][0]
+
+    def test_pandas_dataframe_empty(self):
+        """Test empty pandas DataFrame."""
+        script = """
+import pandas as pd
+df = pd.DataFrame()
+df
+"""
+        results = list(self.executor.execute_script(script))
+
+        import json
+        data = json.loads(results[-1].output[0].content)
+        assert data['columns'] == []
+        assert data['data'] == []
+
+    def test_polars_dataframe_basic(self):
+        """Test executing code with a basic polars DataFrame."""
+        script = """
+import polars as pl
+df = pl.DataFrame({'col1': [1, 2, 3], 'col2': ['a', 'b', 'c']})
+df
+"""
+        results = list(self.executor.execute_script(script))
+
+        assert len(results) == 3
+        assert results[2].output[0].type == "dataframe"
+
+        import json
+        data = json.loads(results[2].output[0].content)
+        assert data['columns'] == ['col1', 'col2']
+        assert len(data['data']) == 3
+        assert data['data'][0] == [1, 'a']
+        assert data['data'][1] == [2, 'b']
+        assert data['data'][2] == [3, 'c']
+
+    def test_polars_dataframe_with_null(self):
+        """Test polars DataFrame with null values."""
+        script = """
+import polars as pl
+df = pl.DataFrame({'a': [1, None, 3], 'b': [4, 5, None]})
+df
+"""
+        results = list(self.executor.execute_script(script))
+
+        import json
+        data = json.loads(results[-1].output[0].content)
+        # None should remain as None (null in JSON)
+        assert data['data'][1][0] is None
+        assert data['data'][2][1] is None
+
+    def test_polars_dataframe_with_datetime(self):
+        """Test polars DataFrame with datetime columns."""
+        script = """
+import polars as pl
+from datetime import date
+df = pl.DataFrame({'date': [date(2025, 1, 1), date(2025, 1, 2), date(2025, 1, 3)], 'value': [1, 2, 3]})
+df
+"""
+        results = list(self.executor.execute_script(script))
+
+        import json
+        data = json.loads(results[-1].output[0].content)
+        assert len(data['data']) == 3
+        # Dates should be serialized as strings
+        assert isinstance(data['data'][0][0], str)
+        assert '2025-01-01' in data['data'][0][0]
+
+    def test_dataframe_not_printed_if_statement(self):
+        """Test that DataFrame in statement (not expression) is not rendered."""
+        script = """
+import pandas as pd
+df = pd.DataFrame({'a': [1, 2, 3]})
+"""
+        results = list(self.executor.execute_script(script))
+
+        # Should get 2 results: import and assignment
+        # The assignment should be invisible (no dataframe output)
+        assert len(results) == 2
+        assert results[1].is_invisible is True
+        assert len(results[1].output) == 0
+
+    def test_dataframe_in_expression_context(self):
+        """Test that DataFrame as expression is rendered."""
+        script = """
+import pandas as pd
+pd.DataFrame({'a': [1, 2, 3]})
+"""
+        results = list(self.executor.execute_script(script))
+
+        # Should get 2 results: import and expression
+        assert len(results) == 2
+        assert results[1].output[0].type == "dataframe"
+
+    def test_multiple_dataframes(self):
+        """Test multiple DataFrames in one script."""
+        script = """
+import pandas as pd
+df1 = pd.DataFrame({'a': [1, 2]})
+df1
+df2 = pd.DataFrame({'b': [3, 4]})
+df2
+"""
+        results = list(self.executor.execute_script(script))
+
+        # Should have dataframe outputs for df1 and df2
+        dataframe_results = [r for r in results if r.output and r.output[0].type == "dataframe"]
+        assert len(dataframe_results) == 2
+
+    def test_serialize_pandas_dataframe_directly(self):
+        """Test _serialize_pandas_dataframe function directly."""
+        import pandas as pd
+        import numpy as np
+        import json
+
+        df = pd.DataFrame({
+            'int_col': [1, 2, 3],
+            'float_col': [1.1, np.nan, 3.3],
+            'str_col': ['a', 'b', 'c'],
+            'bool_col': [True, False, True]
+        })
+
+        json_str = _serialize_dataframe(df)
+        data = json.loads(json_str)
+
+        assert set(data['columns']) == {'int_col', 'float_col', 'str_col', 'bool_col'}
+        assert len(data['data']) == 3
+        # Check that NaN is serialized as None
+        assert data['data'][1][1] is None
+
+    def test_serialize_polars_dataframe_directly(self):
+        """Test _serialize_polars_dataframe function directly."""
+        import polars as pl
+        import json
+
+        df = pl.DataFrame({
+            'int_col': [1, 2, 3],
+            'float_col': [1.1, None, 3.3],
+            'str_col': ['a', 'b', 'c'],
+            'bool_col': [True, False, True]
+        })
+
+        json_str = _serialize_dataframe(df)
+        data = json.loads(json_str)
+
+        assert set(data['columns']) == {'int_col', 'float_col', 'str_col', 'bool_col'}
+        assert len(data['data']) == 3
+        # Check that None is preserved
+        assert data['data'][1][1] is None
 
 
 class TestEdgeCases:
@@ -557,7 +831,7 @@ class TestEdgeCases:
         script = "print('x' * 10000)"
         results = list(self.executor.execute_script(script))
 
-        assert len(results[0].output[0].text) > 10000
+        assert len(results[0].output[0].content) > 10000
 
     def test_recursive_function(self):
         """Test executing recursive functions."""
@@ -571,7 +845,7 @@ factorial(5)
 """
         results = list(self.executor.execute_script(script))
 
-        assert results[-1].output[0].text.strip() == "120"
+        assert results[-1].output[0].content.strip() == "120"
 
     def test_exception_in_middle(self):
         """Test that execution stops on exception."""
@@ -593,13 +867,13 @@ b = 2
         """Test that builtin functions are available."""
         results = list(self.executor.execute_script("len([1, 2, 3])"))
 
-        assert results[0].output[0].text.strip() == "3"
+        assert results[0].output[0].content.strip() == "3"
 
     def test_lambda_expression(self):
         """Test lambda expressions."""
         results = list(self.executor.execute_script("(lambda x: x * 2)(5)"))
 
-        assert results[0].output[0].text.strip() == "10"
+        assert results[0].output[0].content.strip() == "10"
 
     def test_multiple_print_statements(self):
         """Test multiple print statements in one line."""
@@ -626,6 +900,7 @@ if __name__ == "__main__":
             TestSingletonFunctions,
             TestDataClasses,
             TestMarkdownCells,
+            TestDataFrameRendering,
             TestEdgeCases,
         ]
 

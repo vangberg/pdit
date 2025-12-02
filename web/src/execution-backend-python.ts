@@ -4,8 +4,8 @@
  */
 
 export interface OutputItem {
-  type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message' | 'markdown';
-  text: string;
+  type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message' | 'markdown' | 'dataframe';
+  content: string;
 }
 
 export interface Expression {

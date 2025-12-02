@@ -19,9 +19,126 @@ from typing import Any, Dict, Generator, List, Optional
 
 @dataclass
 class OutputItem:
-    """Single output item (stdout, stderr, error, or markdown)."""
-    type: str  # 'stdout', 'stderr', 'error', or 'markdown'
-    text: str
+    """Single output item (stdout, stderr, error, markdown, or dataframe)."""
+    type: str  # 'stdout', 'stderr', 'error', 'markdown', or 'dataframe'
+    content: str
+
+
+def _is_dataframe(obj: Any) -> bool:
+    """Check if object is a pandas or polars DataFrame."""
+    type_name = type(obj).__name__
+    module = type(obj).__module__
+
+    # Check for pandas DataFrame (e.g., pandas.core.frame.DataFrame)
+    if type_name == 'DataFrame' and 'pandas' in module.split('.'):
+        return True
+
+    # Check for polars DataFrame (e.g., polars.dataframe.frame.DataFrame)
+    if type_name == 'DataFrame' and 'polars' in module.split('.'):
+        return True
+
+    return False
+
+
+def _serialize_dataframe(df: Any) -> str:
+    """Serialize a pandas or polars DataFrame to JSON.
+
+    Returns JSON with structure: { "columns": [...], "data": [[...], ...] }
+    Handles datetime, categorical, and missing values appropriately.
+    """
+    import json
+
+    module = type(df).__module__
+    module_parts = module.split('.')
+
+    if 'pandas' in module_parts:
+        return _serialize_pandas_dataframe(df)
+    elif 'polars' in module_parts:
+        return _serialize_polars_dataframe(df)
+    else:
+        raise ValueError(f"Unknown dataframe type: {module}")
+
+
+def _serialize_pandas_dataframe(df: Any) -> str:
+    """Serialize a pandas DataFrame to JSON."""
+    import json
+
+    columns = df.columns.tolist()
+    data = []
+
+    for _, row in df.iterrows():
+        row_data = []
+        for val in row:
+            row_data.append(_serialize_value(val))
+        data.append(row_data)
+
+    return json.dumps({"columns": columns, "data": data})
+
+
+def _serialize_polars_dataframe(df: Any) -> str:
+    """Serialize a polars DataFrame to JSON."""
+    import json
+
+    columns = df.columns
+    data = []
+
+    # Convert to rows
+    for row in df.iter_rows():
+        row_data = [_serialize_value(val) for val in row]
+        data.append(row_data)
+
+    return json.dumps({"columns": columns, "data": data})
+
+
+def _serialize_value(val: Any) -> Any:
+    """Serialize a single value, handling special types."""
+    import math
+
+    # Handle None/null first (cheapest check)
+    if val is None:
+        return None
+
+    # Basic types pass through (fast path for common cases)
+    if isinstance(val, (str, int, bool)):
+        return val
+
+    # Handle float NaN/Inf (before expensive pandas check)
+    if isinstance(val, float):
+        if math.isnan(val):
+            return None
+        if math.isinf(val):
+            return str(val)  # "inf" or "-inf"
+        return val
+
+    # Handle numpy scalars (common in DataFrames)
+    if hasattr(val, 'item'):  # numpy scalar
+        return val.item()
+
+    # Handle datetime types
+    type_name = type(val).__name__
+    if type_name in ('datetime', 'Timestamp', 'datetime64'):
+        return str(val)
+    if type_name == 'date':
+        return str(val)
+    if type_name == 'time':
+        return str(val)
+    if type_name == 'timedelta':
+        return str(val)
+
+    # Handle categorical - convert to string
+    if type_name == 'Categorical':
+        return str(val)
+
+    # Handle pandas NA types (expensive, only if needed)
+    try:
+        import pandas as pd
+        if pd.isna(val):
+            return None
+    except (ImportError, TypeError, ValueError):
+        pass
+
+    # Fallback: convert to string
+    return str(val)
 
 
 @dataclass
@@ -161,7 +278,11 @@ class PythonExecutor:
                 if is_markdown_cell and result is not None:
                     # Strip the string and output as markdown
                     markdown_text = str(result).strip()
-                    output.append(OutputItem(type="markdown", text=markdown_text))
+                    output.append(OutputItem(type="markdown", content=markdown_text))
+                # For DataFrames, output as serialized JSON
+                elif is_expr and result is not None and _is_dataframe(result):
+                    json_data = _serialize_dataframe(result)
+                    output.append(OutputItem(type="dataframe", content=json_data))
                 # For regular expressions, print result if not None
                 elif is_expr and result is not None:
                     print(repr(result))
@@ -170,17 +291,17 @@ class PythonExecutor:
             # Capture full traceback
             error_buffer = io.StringIO()
             traceback.print_exc(file=error_buffer)
-            output.append(OutputItem(type="error", text=error_buffer.getvalue()))
+            output.append(OutputItem(type="error", content=error_buffer.getvalue()))
 
         # Capture stdout output
         stdout_content = stdout_buffer.getvalue()
         if stdout_content:
-            output.append(OutputItem(type="stdout", text=stdout_content))
+            output.append(OutputItem(type="stdout", content=stdout_content))
 
         # Capture stderr output
         stderr_content = stderr_buffer.getvalue()
         if stderr_content:
-            output.append(OutputItem(type="stderr", text=stderr_content))
+            output.append(OutputItem(type="stderr", content=stderr_content))
 
         return output
 
@@ -212,7 +333,7 @@ class PythonExecutor:
                 node_index=0,
                 line_start=error_line,
                 line_end=error_line,
-                output=[OutputItem(type="error", text=error_buffer.getvalue())],
+                output=[OutputItem(type="error", content=error_buffer.getvalue())],
                 is_invisible=False
             )
             return
