@@ -181,18 +181,18 @@ body {
 .split-container {
   display: flex;
   height: 100%;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .editor-half {
-  flex: 0 0 auto;
-  height: 100%;
-  min-width: 50%;
+  flex: 0 0 50%;
+  min-width: 0;
 }
 
 .output-half {
   flex: 0 0 50%;
-  height: 100%;
+  min-width: 0;
 }
 
 .editor-half,
@@ -219,7 +219,9 @@ h1 {
 
 #editor {
   width: 100%;
-  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 #editor-preview {
@@ -231,6 +233,7 @@ h1 {
 
 .cm-editor {
   font-size: 14px;
+  min-width: 0;
 }
 
 .cm-focused {
@@ -240,6 +243,10 @@ h1 {
 #output {
   font-size: 14px;
   font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .output-content {
