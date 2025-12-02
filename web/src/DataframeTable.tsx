@@ -1,7 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
+  getPaginationRowModel,
   flexRender,
   createColumnHelper,
 } from "@tanstack/react-table";
@@ -16,6 +17,9 @@ interface DataframeTableProps {
 }
 
 export const DataframeTable: React.FC<DataframeTableProps> = ({ jsonData }) => {
+  const [pageIndex, setPageIndex] = useState(0);
+  const pageSize = 10;
+
   const { columns, rows } = useMemo(() => {
     const parsed: DataframeData = JSON.parse(jsonData);
 
@@ -44,6 +48,14 @@ export const DataframeTable: React.FC<DataframeTableProps> = ({ jsonData }) => {
     data: rows,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    state: {
+      pagination: { pageIndex, pageSize },
+    },
+    onPaginationChange: (updater) => {
+      const newState = typeof updater === 'function' ? updater({ pageIndex, pageSize }) : updater;
+      setPageIndex(newState.pageIndex);
+    },
   });
 
   return (
@@ -75,6 +87,50 @@ export const DataframeTable: React.FC<DataframeTableProps> = ({ jsonData }) => {
           ))}
         </tbody>
       </table>
+      <div className="dataframe-pagination">
+        <button
+          onClick={() => table.setPageIndex(0)}
+          disabled={!table.getCanPreviousPage()}
+          title="First page"
+        >
+          &lt;&lt;
+        </button>
+        <button
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+          title="Previous page"
+        >
+          &lt;
+        </button>
+        <div className="pagination-input-group">
+          <input
+            type="number"
+            min={1}
+            max={table.getPageCount()}
+            value={table.getState().pagination.pageIndex + 1}
+            onChange={(e) => {
+              const page = e.target.value ? Number(e.target.value) - 1 : 0;
+              table.setPageIndex(Math.min(Math.max(page, 0), table.getPageCount() - 1));
+            }}
+          />
+          <span className="pagination-separator">/</span>
+          <span className="pagination-total">{table.getPageCount()}</span>
+        </div>
+        <button
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+          title="Next page"
+        >
+          &gt;
+        </button>
+        <button
+          onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+          disabled={!table.getCanNextPage()}
+          title="Last page"
+        >
+          &gt;&gt;
+        </button>
+      </div>
     </div>
   );
 };

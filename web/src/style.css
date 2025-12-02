@@ -632,3 +632,91 @@ h1 {
 .dataframe-table td:not(:first-child) {
   text-align: right;
 }
+
+/* Pagination controls */
+.dataframe-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1px;
+  padding: 2px 4px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 11px;
+}
+
+.pagination-input-group {
+  margin-left: 0;
+}
+
+.dataframe-pagination button {
+  background: transparent;
+  border: 1px solid #d1d5db;
+  border-radius: 2px;
+  padding: 0;
+  font-size: 11px;
+  cursor: pointer;
+  color: #4b5563;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  transition: all 0.15s;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dataframe-pagination button:hover:not(:disabled) {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.dataframe-pagination button:disabled {
+  cursor: not-allowed;
+  color: #d1d5db;
+  border-color: #e5e7eb;
+  opacity: 0.6;
+}
+
+.pagination-input-group {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  margin: 0 4px;
+}
+
+.pagination-input-group input {
+  background: transparent;
+  border: 1px solid #d1d5db;
+  border-radius: 2px;
+  padding: 1px 3px;
+  font-size: 11px;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  color: #4b5563;
+  width: 32px;
+  text-align: center;
+  transition: all 0.15s;
+  height: 20px;
+}
+
+.pagination-input-group input:hover {
+  border-color: #9ca3af;
+}
+
+.pagination-input-group input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #f0f9ff;
+}
+
+.pagination-separator {
+  color: #9ca3af;
+  padding: 0 2px;
+}
+
+.pagination-total {
+  color: #6b7280;
+  min-width: 0;
+}
