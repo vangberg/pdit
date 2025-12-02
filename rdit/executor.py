@@ -10,11 +10,22 @@ This module provides the PythonExecutor class which handles:
 import ast
 import io
 import re
+import sys
 import traceback
 from contextlib import redirect_stdout, redirect_stderr
 from dataclasses import dataclass
 from types import CodeType
 from typing import Any, Dict, Generator, List, Optional
+
+
+# Module-level verbose mode flag
+_verbose_mode = False
+
+
+def set_verbose_mode(verbose: bool) -> None:
+    """Set verbose mode for printing execution details to stdout/stderr."""
+    global _verbose_mode
+    _verbose_mode = verbose
 
 
 @dataclass
@@ -149,6 +160,7 @@ class Statement:
     line_start: int
     line_end: int
     is_expr: bool
+    source: str  # Original source code for this statement
     is_markdown_cell: bool = False
 
 
@@ -192,6 +204,10 @@ class PythonExecutor:
             line_start = node.lineno
             line_end = node.end_lineno or node.lineno
 
+            # Extract source code for this statement (lines are 1-indexed)
+            source_lines = lines[line_start - 1:line_end]
+            source = '\n'.join(source_lines)
+
             # Compile AST node directly
             is_expr = isinstance(node, ast.Expr)
             is_markdown_cell = False
@@ -222,6 +238,7 @@ class PythonExecutor:
                 line_start=line_start,
                 line_end=line_end,
                 is_expr=is_expr,
+                source=source,
                 is_markdown_cell=is_markdown_cell
             ))
 
@@ -253,18 +270,35 @@ class PythonExecutor:
         return False
 
     def execute_statement(
-        self, compiled: CodeType, is_expr: bool, is_markdown_cell: bool = False
+        self,
+        compiled: CodeType,
+        is_expr: bool,
+        source: str,
+        line_start: int,
+        line_end: int,
+        is_markdown_cell: bool = False
     ) -> List[OutputItem]:
         """Execute pre-compiled statement with output capture.
 
         Args:
             compiled: Pre-compiled code object
             is_expr: Whether this is an expression (for result printing)
+            source: Original source code for this statement
+            line_start: Starting line number (1-based)
+            line_end: Ending line number (1-based)
             is_markdown_cell: Whether this is a markdown cell (output as markdown, not repr)
 
         Returns:
             List of output items (stdout, stderr, errors, markdown)
         """
+        # Print statement info in verbose mode
+        if _verbose_mode:
+            line_info = f"[Lines {line_start}-{line_end}]" if line_start != line_end else f"[Line {line_start}]"
+            print(f"\n{'=' * 60}", file=sys.stderr)
+            print(f"{line_info} Executing:", file=sys.stderr)
+            print(source, file=sys.stderr)
+            print('=' * 60, file=sys.stderr)
+
         output = []
         stdout_buffer = io.StringIO()
         stderr_buffer = io.StringIO()
@@ -291,17 +325,28 @@ class PythonExecutor:
             # Capture full traceback
             error_buffer = io.StringIO()
             traceback.print_exc(file=error_buffer)
-            output.append(OutputItem(type="error", content=error_buffer.getvalue()))
+            error_content = error_buffer.getvalue()
+            output.append(OutputItem(type="error", content=error_content))
+
+            # Print error to stderr in verbose mode
+            if _verbose_mode:
+                print(error_content, file=sys.stderr, end='')
 
         # Capture stdout output
         stdout_content = stdout_buffer.getvalue()
         if stdout_content:
             output.append(OutputItem(type="stdout", content=stdout_content))
+            # Print to actual stdout in verbose mode
+            if _verbose_mode:
+                print(stdout_content, end='')
 
         # Capture stderr output
         stderr_content = stderr_buffer.getvalue()
         if stderr_content:
             output.append(OutputItem(type="stderr", content=stderr_content))
+            # Print to actual stderr in verbose mode
+            if _verbose_mode:
+                print(stderr_content, file=sys.stderr, end='')
 
         return output
 
@@ -351,7 +396,14 @@ class PythonExecutor:
                     continue
 
             # Execute statement
-            output = self.execute_statement(stmt.compiled, stmt.is_expr, stmt.is_markdown_cell)
+            output = self.execute_statement(
+                stmt.compiled,
+                stmt.is_expr,
+                stmt.source,
+                stmt.line_start,
+                stmt.line_end,
+                stmt.is_markdown_cell
+            )
 
             # Determine if output is invisible (no stdout/stderr/errors)
             is_invisible = len(output) == 0

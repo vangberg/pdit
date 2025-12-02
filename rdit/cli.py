@@ -42,13 +42,18 @@ class Server(uvicorn.Server):
 @click.option("--port", default=8888, help="Port to run server on")
 @click.option("--host", default="127.0.0.1", help="Host to bind to")
 @click.option("--no-browser", is_flag=True, help="Don't open browser automatically")
-def main(script, port, host, no_browser):
+@click.option("--verbose", is_flag=True, help="Print all computation stdout/stderr to console")
+def main(script, port, host, no_browser, verbose):
     """rdit - Interactive Python notebook.
 
     Starts a local Python execution server and opens the web interface.
 
     SCRIPT: Optional Python script file to open
     """
+    # Set verbose mode in executor
+    from .executor import set_verbose_mode
+    set_verbose_mode(verbose)
+
     # Check if frontend is built
     static_dir = Path(__file__).parent / "_static"
     if not static_dir.exists() or not (static_dir / "index.html").exists():
