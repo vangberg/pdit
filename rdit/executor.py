@@ -81,7 +81,14 @@ def _serialize_pandas_dataframe(df: Any) -> str:
     """Serialize a pandas DataFrame to JSON."""
     import json
 
-    columns = df.columns.tolist()
+    # Handle MultiIndex columns (e.g., from groupby().describe())
+    if hasattr(df.columns, 'levels'):
+        # MultiIndex: convert tuples to strings like "Axis - count"
+        columns = [' - '.join(str(level) for level in col) if isinstance(col, tuple) else str(col)
+                   for col in df.columns]
+    else:
+        columns = df.columns.tolist()
+
     data = []
 
     for _, row in df.iterrows():

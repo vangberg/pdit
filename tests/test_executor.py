@@ -800,6 +800,43 @@ df2
         # Check that None is preserved
         assert data['data'][1][1] is None
 
+    def test_pandas_dataframe_multiindex_columns(self):
+        """Test pandas DataFrame with MultiIndex columns (e.g., from groupby().describe())."""
+        script = """
+import pandas as pd
+import numpy as np
+
+# Create test data
+all_data = pd.DataFrame({
+    'condition': ['A', 'A', 'A', 'B', 'B', 'B'],
+    'Axis': [1.1, 2.2, 3.3, 4.4, 5.5, 6.6],
+    'Dia': [10.5, 20.3, 30.7, 40.2, 50.9, 60.1]
+})
+
+# Create grouped describe - this produces MultiIndex columns
+result = all_data.groupby("condition")[["Axis", "Dia"]].describe()
+result
+"""
+        results = list(self.executor.execute_script(script))
+
+        # Should have dataframe output
+        dataframe_result = [r for r in results if r.output and r.output[0].type == "dataframe"]
+        assert len(dataframe_result) == 1
+
+        import json
+        data = json.loads(dataframe_result[0].output[0].content)
+
+        # Columns should be strings joined with " - " separator
+        # e.g., "Axis - count", "Axis - mean", "Axis - std", etc.
+        assert all(isinstance(col, str) for col in data['columns'])
+        assert any('Axis' in col for col in data['columns'])
+        assert any('Dia' in col for col in data['columns'])
+        assert any('count' in col for col in data['columns'])
+        assert any('mean' in col for col in data['columns'])
+
+        # Should have 2 rows (one for each group)
+        assert len(data['data']) == 2
+
 
 class TestEdgeCases:
     """Tests for edge cases and corner scenarios."""

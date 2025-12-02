@@ -17,19 +17,31 @@ rdit runs from the local uv environment so dependencies work seamlessly.
 If pyproject.toml exists, just add rdit and run:
 ```bash
 uv add git+ssh://git@github.com/vangberg/rdit@main
-uv run rdit script.py
+uv run rdit script.py --verbose
 ```
 
 If starting fresh:
 ```bash
 uv init
 uv add git+ssh://git@github.com/vangberg/rdit@main
-uv run rdit script.py
+uv run rdit script.py --verbose
 ```
 
 Run with `run_in_background: true` in the Bash tool so you can continue editing.
 
-Options: `--port 9000` (different port), `--no-browser` (don't auto-open browser)
+**IMPORTANT: Always use `--verbose` when Claude is running rdit.**
+
+Verbose mode prints all execution output to the console where rdit is running:
+- Shows each line being executed (with `>>>` prefix like Python REPL)
+- Displays all stdout/stderr output in real-time
+- Shows script name with `[script.py]` prefix
+- Allows Claude to see what's happening in the user's browser without waiting for feedback
+- Essential for debugging and validating code changes
+
+Options:
+- `--verbose` - Print all computation stdout/stderr to console (REQUIRED for Claude)
+- `--port 9000` - Use different port (default: 8888)
+- `--no-browser` - Don't auto-open browser
 
 Server runs on `127.0.0.1:8888`, browser opens automatically.
 
@@ -86,7 +98,7 @@ in the user's editor automatically.
 1. Write/edit the `.py` file
 2. Run `uv run script.py` to validate - fix any errors
 3. User sees clean code and runs with Cmd+Enter
-4. Iterate based on results user describes
+4. With `--verbose`, you can see execution output in your console and validate without user feedback
 
 **When user shares output:**
 - Results show stdout, stderr, and expression values
