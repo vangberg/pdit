@@ -37,7 +37,6 @@ class ExpressionResult(BaseModel):
     lineEnd: int
     output: List[OutputItem]
     isInvisible: bool
-    images: Optional[List[str]] = None  # base64-encoded PNG data URLs
 
 
 class LineRange(BaseModel):
@@ -136,8 +135,7 @@ async def execute_script(request: ExecuteScriptRequest):
                         OutputItem(type=o.type, content=o.content)
                         for o in result.output
                     ],
-                    isInvisible=result.is_invisible,
-                    images=result.images
+                    isInvisible=result.is_invisible
                 )
 
                 # SSE format: "data: <json>\n\n"

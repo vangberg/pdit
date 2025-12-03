@@ -38,8 +38,8 @@ def set_script_name(script_name: Optional[str]) -> None:
 
 @dataclass
 class OutputItem:
-    """Single output item (stdout, stderr, error, markdown, or dataframe)."""
-    type: str  # 'stdout', 'stderr', 'error', 'markdown', or 'dataframe'
+    """Single output item (stdout, stderr, error, markdown, dataframe, or image)."""
+    type: str  # 'stdout', 'stderr', 'error', 'markdown', 'dataframe', or 'image'
     content: str
 
 
@@ -187,7 +187,6 @@ class ExecutionResult:
     line_end: int
     output: List[OutputItem]
     is_invisible: bool
-    images: Optional[List[str]] = None  # base64-encoded PNG images
 
 
 class PythonExecutor:
@@ -285,11 +284,11 @@ class PythonExecutor:
 
         return False
 
-    def capture_matplotlib_figures(self) -> List[str]:
-        """Capture any active matplotlib figures as base64-encoded PNG images.
+    def capture_matplotlib_figures(self) -> List[OutputItem]:
+        """Capture any active matplotlib figures as OutputItems with type='image'.
 
         Returns:
-            List of base64-encoded PNG image strings (data URLs)
+            List of OutputItems with type='image' and base64-encoded PNG content
         """
         images = []
 
@@ -312,7 +311,7 @@ class PythonExecutor:
                     # Encode as base64 data URL
                     img_base64 = base64.b64encode(buf.read()).decode('utf-8')
                     img_data_url = f"data:image/png;base64,{img_base64}"
-                    images.append(img_data_url)
+                    images.append(OutputItem(type="image", content=img_data_url))
 
                     buf.close()
 
@@ -336,7 +335,7 @@ class PythonExecutor:
         line_start: int,
         line_end: int,
         is_markdown_cell: bool = False
-    ) -> tuple[List[OutputItem], List[str]]:
+    ) -> List[OutputItem]:
         """Execute pre-compiled statement with output capture.
 
         Args:
@@ -348,7 +347,7 @@ class PythonExecutor:
             is_markdown_cell: Whether this is a markdown cell (output as markdown, not repr)
 
         Returns:
-            Tuple of (output items, base64-encoded images)
+            List of output items (stdout, stderr, errors, markdown, dataframes, images)
         """
         # Print statement info in verbose mode
         if _verbose_mode:
@@ -407,10 +406,10 @@ class PythonExecutor:
             if _verbose_mode:
                 print(stderr_content, file=sys.stderr, end='')
 
-        # Capture any matplotlib figures
-        images = self.capture_matplotlib_figures()
+        # Capture any matplotlib figures and append as image OutputItems
+        output.extend(self.capture_matplotlib_figures())
 
-        return output, images
+        return output
 
     def execute_script(
         self,
@@ -462,7 +461,7 @@ class PythonExecutor:
                     continue
 
             # Execute statement
-            output, images = self.execute_statement(
+            output = self.execute_statement(
                 stmt.compiled,
                 stmt.is_expr,
                 stmt.source,
@@ -471,8 +470,8 @@ class PythonExecutor:
                 stmt.is_markdown_cell
             )
 
-            # Determine if output is invisible (no stdout/stderr/errors and no images)
-            is_invisible = len(output) == 0 and len(images) == 0
+            # Determine if output is invisible (no output items at all)
+            is_invisible = len(output) == 0
 
             # Yield result immediately after execution
             yield ExecutionResult(
@@ -480,8 +479,7 @@ class PythonExecutor:
                 line_start=stmt.line_start,
                 line_end=stmt.line_end,
                 output=output,
-                is_invisible=is_invisible,
-                images=images if images else None
+                is_invisible=is_invisible
             )
 
     def reset(self) -> None:

@@ -10,32 +10,52 @@ interface OutputProps {
   allInvisible?: boolean;
 }
 
+// Component for rendering a single image output item
+const ImageOutput: React.FC<{ dataUrl: string }> = ({ dataUrl }) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [dimensions, setDimensions] = React.useState({ width: 800, height: 600 });
+
+  useEffect(() => {
+    const loadImage = async () => {
+      try {
+        // Convert data URL to Blob
+        const response = await fetch(dataUrl);
+        const blob = await response.blob();
+        // Convert Blob to ImageBitmap
+        const imageBitmap = await createImageBitmap(blob);
+
+        // Update dimensions
+        setDimensions({ width: imageBitmap.width, height: imageBitmap.height });
+
+        // Draw on canvas
+        if (canvasRef.current) {
+          const ctx = canvasRef.current.getContext('2d');
+          if (ctx) {
+            ctx.clearRect(0, 0, imageBitmap.width, imageBitmap.height);
+            ctx.drawImage(imageBitmap, 0, 0);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load image:', error);
+      }
+    };
+
+    loadImage();
+  }, [dataUrl]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={dimensions.width}
+      height={dimensions.height}
+    />
+  );
+};
+
 export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible }) => {
   const elementRef = useRef<HTMLDivElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useImperativeHandle(ref, () => elementRef.current as HTMLDivElement, []);
-
-  // Composite all images onto a single canvas
-  useEffect(() => {
-    if (expression.result?.images && expression.result.images.length > 0 && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        // Clear canvas first
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        // Draw all images on top of each other
-        expression.result.images.forEach((image) => {
-          ctx.drawImage(image, 0, 0);
-        });
-      }
-    }
-  }, [expression.result?.images]);
-
-  // Get dimensions from first image if available
-  const firstImage = expression.result?.images?.[0];
-  const width = firstImage?.width || 800;
-  const height = firstImage?.height || 600;
 
   const containerClassName = allInvisible ? "output-container output-container-invisible" : "output-container";
 
@@ -54,22 +74,13 @@ export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible })
               <Markdown>{item.content}</Markdown>
             ) : item.type === 'dataframe' ? (
               <DataframeTable jsonData={item.content} />
+            ) : item.type === 'image' ? (
+              <ImageOutput dataUrl={item.content} />
             ) : (
               <pre>{item.content}</pre>
             )}
           </div>
         ))}
-        {expression.result?.images && expression.result.images.length > 0 && (
-          <div
-            className="output-item output-plot"
-          >
-            <canvas
-              ref={canvasRef}
-              width={width}
-              height={height}
-            />
-          </div>
-        )}
       </div>
     </div>
   );
