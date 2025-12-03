@@ -193,8 +193,10 @@ body {
 }
 
 .output-half {
+  display: flex;
   flex: 0 0 50%;
   min-width: 0;
+  border-left: 3px solid #d1d5db;
 }
 
 .editor-half,
@@ -248,27 +250,33 @@ h1 {
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
+  background: #fafafa;
 }
 
 .output-content {
   display: flex;
   flex-direction: column;
   position: relative;
-  padding-top: 4px;
+  padding: 8px 0;
 }
 
 .output-group {
-  background: #f3f4f6;
-  border-top: 1px solid rgba(156, 163, 175, 0.4);
-  border-left: 2px solid #9ca3af;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 8px 12px;
 }
 
 .output-group-invisible {
   background: transparent;
-  border-top: none;
-  border-left: none;
+  border: none;
   height: 0;
   overflow: hidden;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .output-container {
@@ -277,7 +285,7 @@ h1 {
 }
 
 .output-container-invisible {
-  /* No additional styling for invisible containers */
+  padding: 0;
 }
 
 .output-line {

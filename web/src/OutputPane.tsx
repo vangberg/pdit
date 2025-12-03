@@ -98,8 +98,8 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
           if (layout) {
             style.position = "absolute";
             style.top = layout.top;
-            style.left = 0;
-            style.right = 0;
+            style.left = 8;
+            style.right = 8;
             style.minHeight = `${layout.naturalHeight}px`;
           }
 
