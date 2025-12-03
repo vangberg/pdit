@@ -849,15 +849,12 @@ class TestMatplotlibCapture:
         else:
             try:
                 import matplotlib
-                matplotlib.use('Agg')
             except ImportError:
                 # Skip test manually if pytest not available
                 return
 
+        # Executor automatically sets Agg backend in __init__
         self.executor = PythonExecutor()
-        # Configure matplotlib to use non-interactive backend for testing
-        import matplotlib
-        matplotlib.use('Agg')
 
     def test_basic_plot_capture(self):
         """Test capturing a basic matplotlib plot via plt.gca()."""

@@ -219,6 +219,15 @@ class PythonExecutor:
         """Initialize executor with empty namespace."""
         self.namespace: Dict[str, Any] = {'__builtins__': __builtins__}
 
+        # Set matplotlib to use non-interactive Agg backend to avoid display/segfault issues
+        # This must be done before any user code imports matplotlib
+        try:
+            import matplotlib
+            matplotlib.use('Agg')
+        except ImportError:
+            # matplotlib not installed, no problem
+            pass
+
     def parse_script(self, script: str) -> List[Statement]:
         """Parse Python script into statements using AST.
 
@@ -319,6 +328,12 @@ class PythonExecutor:
         images = []
 
         try:
+            import matplotlib
+            import sys
+            # Set Agg backend if pyplot hasn't been imported yet
+            # (handles case where matplotlib was installed after executor initialization)
+            if 'matplotlib.pyplot' not in sys.modules:
+                matplotlib.use('Agg')
             import matplotlib.pyplot as plt
         except ImportError:
             # matplotlib not installed, no images to capture
