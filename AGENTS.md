@@ -8,21 +8,6 @@
 - NEVER COMMIT CODE UNLESS ASKED TO
 - Use GitHub CLI for pull requests
 
-## Matplotlib Usage
-
-When creating matplotlib plots in rdit, use `plt.gca()` to display plots, NOT `plt.show()`:
-
-```python
-import matplotlib.pyplot as plt
-
-plt.plot([1, 2, 3], [1, 4, 9])
-plt.gca()  # ✅ This triggers plot capture
-```
-
-**Why?** rdit captures matplotlib plots by detecting when an expression returns an Axes or Figure object. `plt.gca()` returns the current Axes, triggering capture. `plt.show()` is for interactive displays and won't work in rdit's execution environment.
-
-## Issue Tracking with bd (beads)
-
 **IMPORTANT**: This project uses **bd (beads)** for ALL issue tracking. Do NOT use markdown TODOs, task lists, or other tracking methods.
 
 ### Why bd?
