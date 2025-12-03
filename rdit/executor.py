@@ -320,38 +320,34 @@ class PythonExecutor:
 
         try:
             import matplotlib.pyplot as plt
-
-            # Get the figure from the matplotlib object
-            type_name = type(mpl_object).__name__
-            if type_name == 'Figure' or 'Figure' in type_name:
-                fig = mpl_object
-            else:
-                # It's an Axes object, get its figure
-                fig = mpl_object.figure
-
-            # Check if figure has any axes with content
-            if fig.get_axes():
-                # Save figure to bytes buffer
-                buf = io.BytesIO()
-                fig.savefig(buf, format='png', bbox_inches='tight')
-                buf.seek(0)
-
-                # Encode as base64 data URL
-                img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-                img_data_url = f"data:image/png;base64,{img_base64}"
-                images.append(OutputItem(type="image", content=img_data_url))
-
-                buf.close()
-
-            # Close the figure to free memory
-            plt.close(fig)
-
         except ImportError:
             # matplotlib not installed, no images to capture
-            pass
-        except Exception:
-            # Silently ignore matplotlib capture errors
-            pass
+            return images
+
+        # Get the figure from the matplotlib object
+        type_name = type(mpl_object).__name__
+        if type_name == 'Figure' or 'Figure' in type_name:
+            fig = mpl_object
+        else:
+            # It's an Axes object, get its figure
+            fig = mpl_object.figure
+
+        # Check if figure has any axes with content
+        if fig.get_axes():
+            # Save figure to bytes buffer
+            buf = io.BytesIO()
+            fig.savefig(buf, format='png', bbox_inches='tight')
+            buf.seek(0)
+
+            # Encode as base64 data URL
+            img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+            img_data_url = f"data:image/png;base64,{img_base64}"
+            images.append(OutputItem(type="image", content=img_data_url))
+
+            buf.close()
+
+        # Close the figure to free memory
+        plt.close(fig)
 
         return images
 
@@ -403,11 +399,12 @@ class PythonExecutor:
                 elif is_expr and result is not None and _is_dataframe(result):
                     json_data = _serialize_dataframe(result)
                     output.append(OutputItem(type="dataframe", content=json_data))
-                # For matplotlib Axes/Figure, print repr and capture plots as images
+                # For matplotlib Axes/Figure, capture the plot immediately
                 elif is_expr and result is not None and _is_matplotlib_axes_or_figure(result):
-                    # Print the repr (e.g., "<Axes: >") and capture the plot image
-                    print(repr(result))
-                    # Images will be captured after stdout/stderr
+                    # Capture happens here, inside the try block
+                    # Note: We do this INSIDE the with redirect block, but capture_matplotlib_figures
+                    # doesn't produce stdout/stderr, so this is fine
+                    output.extend(self.capture_matplotlib_figures(result))
                 # For regular expressions, print result if not None
                 elif is_expr and result is not None:
                     print(repr(result))
@@ -438,15 +435,6 @@ class PythonExecutor:
             # Print to actual stderr in verbose mode
             if _verbose_mode:
                 print(stderr_content, file=sys.stderr, end='')
-
-        # Capture matplotlib figure if result was a matplotlib object
-        # This is done outside the try/except to ensure we can access 'result'
-        try:
-            if is_expr and result is not None and _is_matplotlib_axes_or_figure(result):
-                output.extend(self.capture_matplotlib_figures(result))
-        except NameError:
-            # result not defined (exception occurred), no matplotlib capture needed
-            pass
 
         return output
 

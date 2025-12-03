@@ -880,7 +880,7 @@ plt.gca()
         # The gca() command returns Axes, so it IS captured
         gca_result = results[2]
         output_types = [o.type for o in gca_result.output]
-        assert "stdout" in output_types  # Axes repr
+        assert "stdout" not in output_types  # No repr printed for matplotlib objects
         assert "image" in output_types  # captured plot
 
         # Find the image output from gca()
