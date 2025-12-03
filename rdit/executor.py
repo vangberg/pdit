@@ -60,13 +60,10 @@ def _is_dataframe(obj: Any) -> bool:
 
 
 def _is_matplotlib_axes_or_figure(obj: Any) -> bool:
-    """Check if object is a matplotlib Axes or Figure (or contains one).
+    """Check if object is a matplotlib Axes or Figure.
 
-    Returns True if:
-    - obj is a matplotlib Axes or Figure
-    - obj is a tuple/list containing Axes or Figure
+    Returns True if obj is a matplotlib Axes or Figure object.
     """
-    # Check direct types
     type_name = type(obj).__name__
     module = type(obj).__module__
 
@@ -81,12 +78,6 @@ def _is_matplotlib_axes_or_figure(obj: Any) -> bool:
     # Check for Axes subclasses (Axes3D, etc.)
     if 'Axes' in type_name and 'matplotlib' in module.split('.'):
         return True
-
-    # Check if it's a tuple/list containing matplotlib objects
-    if isinstance(obj, (tuple, list)):
-        for item in obj:
-            if _is_matplotlib_axes_or_figure(item):
-                return True
 
     return False
 
@@ -316,39 +307,44 @@ class PythonExecutor:
 
         return False
 
-    def capture_matplotlib_figures(self) -> List[OutputItem]:
-        """Capture any active matplotlib figures as OutputItems with type='image'.
+    def capture_matplotlib_figures(self, mpl_object: Any) -> List[OutputItem]:
+        """Capture the matplotlib figure associated with an Axes or Figure object.
+
+        Args:
+            mpl_object: A matplotlib Axes or Figure object
 
         Returns:
-            List of OutputItems with type='image' and base64-encoded PNG content
+            List containing one OutputItem with type='image' and base64-encoded PNG content
         """
         images = []
 
         try:
             import matplotlib.pyplot as plt
 
-            # Get all figure numbers
-            fig_nums = plt.get_fignums()
+            # Get the figure from the matplotlib object
+            type_name = type(mpl_object).__name__
+            if type_name == 'Figure' or 'Figure' in type_name:
+                fig = mpl_object
+            else:
+                # It's an Axes object, get its figure
+                fig = mpl_object.figure
 
-            for fig_num in fig_nums:
-                fig = plt.figure(fig_num)
+            # Check if figure has any axes with content
+            if fig.get_axes():
+                # Save figure to bytes buffer
+                buf = io.BytesIO()
+                fig.savefig(buf, format='png', bbox_inches='tight')
+                buf.seek(0)
 
-                # Check if figure has any axes with content
-                if fig.get_axes():
-                    # Save figure to bytes buffer
-                    buf = io.BytesIO()
-                    fig.savefig(buf, format='png', bbox_inches='tight')
-                    buf.seek(0)
+                # Encode as base64 data URL
+                img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+                img_data_url = f"data:image/png;base64,{img_base64}"
+                images.append(OutputItem(type="image", content=img_data_url))
 
-                    # Encode as base64 data URL
-                    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-                    img_data_url = f"data:image/png;base64,{img_base64}"
-                    images.append(OutputItem(type="image", content=img_data_url))
+                buf.close()
 
-                    buf.close()
-
-                # Close the figure to free memory
-                plt.close(fig)
+            # Close the figure to free memory
+            plt.close(fig)
 
         except ImportError:
             # matplotlib not installed, no images to capture
@@ -443,11 +439,11 @@ class PythonExecutor:
             if _verbose_mode:
                 print(stderr_content, file=sys.stderr, end='')
 
-        # Capture matplotlib figures if result was a matplotlib object
+        # Capture matplotlib figure if result was a matplotlib object
         # This is done outside the try/except to ensure we can access 'result'
         try:
             if is_expr and result is not None and _is_matplotlib_axes_or_figure(result):
-                output.extend(self.capture_matplotlib_figures())
+                output.extend(self.capture_matplotlib_figures(result))
         except NameError:
             # result not defined (exception occurred), no matplotlib capture needed
             pass
