@@ -14,6 +14,7 @@ interface OutputProps {
 const ImageOutput: React.FC<{ dataUrl: string }> = ({ dataUrl }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [dimensions, setDimensions] = React.useState({ width: 800, height: 600 });
+  const imageBitmapRef = useRef<ImageBitmap | null>(null);
 
   useEffect(() => {
     const loadImage = async () => {
@@ -24,17 +25,11 @@ const ImageOutput: React.FC<{ dataUrl: string }> = ({ dataUrl }) => {
         // Convert Blob to ImageBitmap
         const imageBitmap = await createImageBitmap(blob);
 
-        // Update dimensions
-        setDimensions({ width: imageBitmap.width, height: imageBitmap.height });
+        // Store the bitmap for later drawing
+        imageBitmapRef.current = imageBitmap;
 
-        // Draw on canvas
-        if (canvasRef.current) {
-          const ctx = canvasRef.current.getContext('2d');
-          if (ctx) {
-            ctx.clearRect(0, 0, imageBitmap.width, imageBitmap.height);
-            ctx.drawImage(imageBitmap, 0, 0);
-          }
-        }
+        // Update dimensions (this will trigger a re-render and another useEffect)
+        setDimensions({ width: imageBitmap.width, height: imageBitmap.height });
       } catch (error) {
         console.error('Failed to load image:', error);
       }
@@ -42,6 +37,17 @@ const ImageOutput: React.FC<{ dataUrl: string }> = ({ dataUrl }) => {
 
     loadImage();
   }, [dataUrl]);
+
+  // Draw the image whenever dimensions change or canvas ref updates
+  useEffect(() => {
+    if (canvasRef.current && imageBitmapRef.current) {
+      const ctx = canvasRef.current.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, dimensions.width, dimensions.height);
+        ctx.drawImage(imageBitmapRef.current, 0, 0);
+      }
+    }
+  }, [dimensions]);
 
   return (
     <canvas
