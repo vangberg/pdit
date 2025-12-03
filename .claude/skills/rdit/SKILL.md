@@ -29,6 +29,13 @@ uv run rdit script.py --verbose
 
 **Note:** The `@dist` branch contains pre-built frontend assets, so no Node.js or build step is needed.
 
+**Upgrading rdit:**
+
+To upgrade to the latest version of rdit:
+```bash
+uv lock --upgrade-package rdit
+```
+
 Run with `run_in_background: true` in the Bash tool so you can continue editing.
 
 **IMPORTANT: Always use `--verbose` when Claude is running rdit.**
