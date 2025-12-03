@@ -178,12 +178,19 @@ body {
   color: #f97316;
 }
 
-.split-container {
-  display: flex;
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
+/* Grid layout ensures both columns match the height of the tallest content.
+   - min-height: 100% ensures container fills viewport (not fixed height: 100%)
+   - Grid columns automatically stretch to match each other's height
+   - overflow-y: auto provides scrolling when content exceeds viewport
+   - This allows editor-half to grow beyond viewport while output-half stretches to match */
+ .split-container {
+   display: grid;
+   grid-template-columns: 1fr 1fr;
+   min-height: 100%;
+   overflow-y: auto;
+   overflow-x: hidden;
+ }
+
 
 .editor-half {
   display: flex;
