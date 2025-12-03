@@ -126,9 +126,10 @@ GET  /api/health          - Health check
 
 ## Markdown Cells
 
-rdit supports markdown cells for documentation and explanations using docstring style:
+rdit supports markdown cells for documentation and explanations using `# %% [markdown]` followed by a docstring:
 
 ```python
+# %% [markdown]
 """
 # Data Analysis
 This section loads and explores the dataset
@@ -138,6 +139,7 @@ import pandas as pd
 df = pd.read_csv("data.csv")
 df.head()
 
+# %% [markdown]
 """
 ## Summary Statistics
 Let's look at the distribution of values
@@ -147,7 +149,8 @@ df.describe()
 ```
 
 **Usage:**
-- Use triple-quoted strings (`"""..."""`) as markdown cells
+- Start with `# %% [markdown]` on its own line
+- Follow with a triple-quoted docstring (`"""..."""`) containing markdown
 - Content is rendered as markdown in the output pane
 - Supports standard markdown: headers, lists, links, code blocks, etc.
 - Great for documenting analysis steps and explaining results
