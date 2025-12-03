@@ -4,7 +4,7 @@
  */
 
 export interface OutputItem {
-  type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message' | 'markdown' | 'dataframe';
+  type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message' | 'markdown' | 'dataframe' | 'image';
   content: string;
 }
 
@@ -17,7 +17,6 @@ export interface Expression {
 
 export interface ExpressionResult {
   output: OutputItem[];
-  images?: ImageBitmap[];
   isInvisible?: boolean;
 }
 

@@ -8,6 +8,7 @@ This module provides the PythonExecutor class which handles:
 """
 
 import ast
+import base64
 import io
 import re
 import sys
@@ -37,8 +38,8 @@ def set_script_name(script_name: Optional[str]) -> None:
 
 @dataclass
 class OutputItem:
-    """Single output item (stdout, stderr, error, markdown, or dataframe)."""
-    type: str  # 'stdout', 'stderr', 'error', 'markdown', or 'dataframe'
+    """Single output item (stdout, stderr, error, markdown, dataframe, or image)."""
+    type: str  # 'stdout', 'stderr', 'error', 'markdown', 'dataframe', or 'image'
     content: str
 
 
@@ -53,6 +54,29 @@ def _is_dataframe(obj: Any) -> bool:
 
     # Check for polars DataFrame (e.g., polars.dataframe.frame.DataFrame)
     if type_name == 'DataFrame' and 'polars' in module.split('.'):
+        return True
+
+    return False
+
+
+def _is_matplotlib_axes_or_figure(obj: Any) -> bool:
+    """Check if object is a matplotlib Axes or Figure.
+
+    Returns True if obj is a matplotlib Axes or Figure object.
+    """
+    type_name = type(obj).__name__
+    module = type(obj).__module__
+
+    # Check for matplotlib Axes (e.g., matplotlib.axes._axes.Axes)
+    if type_name == 'Axes' and 'matplotlib' in module.split('.'):
+        return True
+
+    # Check for matplotlib Figure (e.g., matplotlib.figure.Figure)
+    if type_name == 'Figure' and 'matplotlib' in module.split('.'):
+        return True
+
+    # Check for Axes subclasses (Axes3D, etc.)
+    if 'Axes' in type_name and 'matplotlib' in module.split('.'):
         return True
 
     return False
@@ -195,6 +219,15 @@ class PythonExecutor:
         """Initialize executor with empty namespace."""
         self.namespace: Dict[str, Any] = {'__builtins__': __builtins__}
 
+        # Set matplotlib to use non-interactive Agg backend to avoid display/segfault issues
+        # This must be done before any user code imports matplotlib
+        try:
+            import matplotlib
+            matplotlib.use('Agg')
+        except ImportError:
+            # matplotlib not installed, no problem
+            pass
+
     def parse_script(self, script: str) -> List[Statement]:
         """Parse Python script into statements using AST.
 
@@ -283,6 +316,56 @@ class PythonExecutor:
 
         return False
 
+    def capture_matplotlib_figures(self, mpl_object: Any) -> List[OutputItem]:
+        """Capture the matplotlib figure associated with an Axes or Figure object.
+
+        Args:
+            mpl_object: A matplotlib Axes or Figure object
+
+        Returns:
+            List containing one OutputItem with type='image' and base64-encoded PNG content
+        """
+        images = []
+
+        try:
+            import matplotlib
+            import sys
+            # Set Agg backend if pyplot hasn't been imported yet
+            # (handles case where matplotlib was installed after executor initialization)
+            if 'matplotlib.pyplot' not in sys.modules:
+                matplotlib.use('Agg')
+            import matplotlib.pyplot as plt
+        except ImportError:
+            # matplotlib not installed, no images to capture
+            return images
+
+        # Get the figure from the matplotlib object
+        type_name = type(mpl_object).__name__
+        if type_name == 'Figure' or 'Figure' in type_name:
+            fig = mpl_object
+        else:
+            # It's an Axes object, get its figure
+            fig = mpl_object.figure
+
+        # Check if figure has any axes with content
+        if fig.get_axes():
+            # Save figure to bytes buffer
+            buf = io.BytesIO()
+            fig.savefig(buf, format='png', bbox_inches='tight')
+            buf.seek(0)
+
+            # Encode as base64 data URL
+            img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+            img_data_url = f"data:image/png;base64,{img_base64}"
+            images.append(OutputItem(type="image", content=img_data_url))
+
+            buf.close()
+
+        # Close the figure to free memory
+        plt.close(fig)
+
+        return images
+
     def execute_statement(
         self,
         compiled: CodeType,
@@ -303,7 +386,7 @@ class PythonExecutor:
             is_markdown_cell: Whether this is a markdown cell (output as markdown, not repr)
 
         Returns:
-            List of output items (stdout, stderr, errors, markdown)
+            List of output items (stdout, stderr, errors, markdown, dataframes, images)
         """
         # Print statement info in verbose mode
         if _verbose_mode:
@@ -331,6 +414,12 @@ class PythonExecutor:
                 elif is_expr and result is not None and _is_dataframe(result):
                     json_data = _serialize_dataframe(result)
                     output.append(OutputItem(type="dataframe", content=json_data))
+                # For matplotlib Axes/Figure, capture the plot immediately
+                elif is_expr and result is not None and _is_matplotlib_axes_or_figure(result):
+                    # Capture happens here, inside the try block
+                    # Note: We do this INSIDE the with redirect block, but capture_matplotlib_figures
+                    # doesn't produce stdout/stderr, so this is fine
+                    output.extend(self.capture_matplotlib_figures(result))
                 # For regular expressions, print result if not None
                 elif is_expr and result is not None:
                     print(repr(result))
@@ -423,7 +512,7 @@ class PythonExecutor:
                 stmt.is_markdown_cell
             )
 
-            # Determine if output is invisible (no stdout/stderr/errors)
+            # Determine if output is invisible (no output items at all)
             is_invisible = len(output) == 0
 
             # Yield result immediately after execution
