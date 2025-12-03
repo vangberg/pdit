@@ -16,16 +16,18 @@ rdit runs from the local uv environment so dependencies work seamlessly.
 
 If pyproject.toml exists, just add rdit and run:
 ```bash
-uv add git+ssh://git@github.com/vangberg/rdit@main
+uv add git+https://github.com/vangberg/rdit@dist
 uv run rdit script.py --verbose
 ```
 
 If starting fresh:
 ```bash
 uv init
-uv add git+ssh://git@github.com/vangberg/rdit@main
+uv add git+https://github.com/vangberg/rdit@dist
 uv run rdit script.py --verbose
 ```
+
+**Note:** The `@dist` branch contains pre-built frontend assets, so no Node.js or build step is needed.
 
 Run with `run_in_background: true` in the Bash tool so you can continue editing.
 
