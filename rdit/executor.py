@@ -59,6 +59,38 @@ def _is_dataframe(obj: Any) -> bool:
     return False
 
 
+def _is_matplotlib_axes_or_figure(obj: Any) -> bool:
+    """Check if object is a matplotlib Axes or Figure (or contains one).
+
+    Returns True if:
+    - obj is a matplotlib Axes or Figure
+    - obj is a tuple/list containing Axes or Figure
+    """
+    # Check direct types
+    type_name = type(obj).__name__
+    module = type(obj).__module__
+
+    # Check for matplotlib Axes (e.g., matplotlib.axes._axes.Axes)
+    if type_name == 'Axes' and 'matplotlib' in module.split('.'):
+        return True
+
+    # Check for matplotlib Figure (e.g., matplotlib.figure.Figure)
+    if type_name == 'Figure' and 'matplotlib' in module.split('.'):
+        return True
+
+    # Check for Axes subclasses (Axes3D, etc.)
+    if 'Axes' in type_name and 'matplotlib' in module.split('.'):
+        return True
+
+    # Check if it's a tuple/list containing matplotlib objects
+    if isinstance(obj, (tuple, list)):
+        for item in obj:
+            if _is_matplotlib_axes_or_figure(item):
+                return True
+
+    return False
+
+
 def _serialize_dataframe(df: Any) -> str:
     """Serialize a pandas or polars DataFrame to JSON.
 
@@ -375,6 +407,11 @@ class PythonExecutor:
                 elif is_expr and result is not None and _is_dataframe(result):
                     json_data = _serialize_dataframe(result)
                     output.append(OutputItem(type="dataframe", content=json_data))
+                # For matplotlib Axes/Figure, print repr and capture plots as images
+                elif is_expr and result is not None and _is_matplotlib_axes_or_figure(result):
+                    # Print the repr (e.g., "<Axes: >") and capture the plot image
+                    print(repr(result))
+                    # Images will be captured after stdout/stderr
                 # For regular expressions, print result if not None
                 elif is_expr and result is not None:
                     print(repr(result))
@@ -406,8 +443,14 @@ class PythonExecutor:
             if _verbose_mode:
                 print(stderr_content, file=sys.stderr, end='')
 
-        # Capture any matplotlib figures and append as image OutputItems
-        output.extend(self.capture_matplotlib_figures())
+        # Capture matplotlib figures if result was a matplotlib object
+        # This is done outside the try/except to ensure we can access 'result'
+        try:
+            if is_expr and result is not None and _is_matplotlib_axes_or_figure(result):
+                output.extend(self.capture_matplotlib_figures())
+        except NameError:
+            # result not defined (exception occurred), no matplotlib capture needed
+            pass
 
         return output
 

@@ -860,7 +860,7 @@ class TestMatplotlibCapture:
         matplotlib.use('Agg')
 
     def test_basic_plot_capture(self):
-        """Test capturing a basic matplotlib plot."""
+        """Test capturing a basic matplotlib plot via plt.gca()."""
         script = """
 import matplotlib.pyplot as plt
 plt.plot([1, 2, 3, 4], [1, 4, 2, 3])
@@ -871,14 +871,20 @@ plt.gca()
         # Should get 3 results: import, plot, gca
         assert len(results) == 3
 
-        # The plot command should have stdout and image outputs
+        # The plot command returns Line2D, NOT captured
         plot_result = results[1]
         output_types = [o.type for o in plot_result.output]
         assert "stdout" in output_types  # matplotlib returns Line2D object
+        assert "image" not in output_types  # NOT captured (doesn't return Axes)
+
+        # The gca() command returns Axes, so it IS captured
+        gca_result = results[2]
+        output_types = [o.type for o in gca_result.output]
+        assert "stdout" in output_types  # Axes repr
         assert "image" in output_types  # captured plot
 
-        # Find the image output
-        image_outputs = [o for o in plot_result.output if o.type == "image"]
+        # Find the image output from gca()
+        image_outputs = [o for o in gca_result.output if o.type == "image"]
         assert len(image_outputs) == 1
 
         # Image should be a data URL with base64-encoded PNG
@@ -902,7 +908,7 @@ plt.gca()
         assert len(image_outputs) == 1
 
     def test_multiple_plots_separate_statements(self):
-        """Test multiple plots in separate statements get separate images."""
+        """Test multiple plots in separate statements - only gca() captures."""
         script = """
 import matplotlib.pyplot as plt
 plt.plot([1, 2, 3])
@@ -913,15 +919,16 @@ plt.gca()
 """
         results = list(self.executor.execute_script(script))
 
-        # Each statement with active figures triggers capture
-        # plt.plot() creates figure and captures, plt.gca() creates new figure and captures
-        # So we get: plot(1) -> 1 image, gca() -> 1 image, figure() -> 0, plot(2) -> 1 image, gca() -> 1 image
+        # Only gca() calls return Axes and trigger capture
+        # plt.plot() returns Line2D (not captured)
+        # plt.figure() returns Figure (captured, but has no axes so no image)
+        # plt.gca() returns Axes (captured)
         image_count = sum(
             1 for r in results
             for o in r.output
             if o.type == "image"
         )
-        assert image_count == 4  # Each plot() and gca() captures an image
+        assert image_count == 2  # One for each gca() call
 
     def test_plot_without_gca_no_capture(self):
         """Test that plots without gca() don't get captured."""
@@ -935,7 +942,7 @@ plt.plot([1, 2, 3])
         plot_result = results[-1]
         output_types = [o.type for o in plot_result.output]
         assert "stdout" in output_types
-        assert "image" in output_types  # Images are captured automatically after each statement
+        assert "image" not in output_types  # NOT captured (doesn't return Axes/Figure)
 
     def test_matplotlib_not_installed_no_error(self):
         """Test that missing matplotlib doesn't cause errors."""
@@ -998,19 +1005,18 @@ import matplotlib.pyplot as plt
 # Create a figure with a plot
 fig = plt.figure()
 plt.plot([1, 2, 3])
-# Check figure count before it gets captured (should be 1)
-figs_before = len(plt.get_fignums())
+# Explicitly return axes as expression to trigger capture
+plt.gca()
+# Check figure count after capture
+figs_after = len(plt.get_fignums())
+figs_after
 """
         results = list(self.executor.execute_script(script))
 
-        # After the plot statement, the figure should have been captured and closed
-        # So by the time we reach the assignment, figs_before should be 0
-        # (because capture happened after plt.plot and closed the figure)
-        script2 = "figs_before"
-        results2 = list(self.executor.execute_script(script2))
-
-        # The figure was closed after the plot was captured
-        assert "0" in results2[0].output[0].content
+        # The gca() expression should have triggered capture and closed the figure
+        # So figs_after should be 0
+        final_result = results[-1]
+        assert "0" in final_result.output[0].content
 
     def test_image_output_is_valid_base64(self):
         """Test that image output is valid base64 encoded data."""
