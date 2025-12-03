@@ -124,12 +124,62 @@ POST /api/save-file       - Save file to disk
 GET  /api/health          - Health check
 ```
 
+## Markdown Cells
+
+rdit supports markdown cells for documentation and explanations using docstring style:
+
+```python
+"""
+# Data Analysis
+This section loads and explores the dataset
+"""
+
+import pandas as pd
+df = pd.read_csv("data.csv")
+df.head()
+
+"""
+## Summary Statistics
+Let's look at the distribution of values
+"""
+
+df.describe()
+```
+
+**Usage:**
+- Use triple-quoted strings (`"""..."""`) as markdown cells
+- Content is rendered as markdown in the output pane
+- Supports standard markdown: headers, lists, links, code blocks, etc.
+- Great for documenting analysis steps and explaining results
+
+**Shortcut:**
+- Insert markdown cell: Cmd+M / Ctrl+M (inserts template and positions cursor)
+
+## Matplotlib Plots
+
+rdit captures matplotlib plots automatically:
+
+```python
+import matplotlib.pyplot as plt
+
+plt.plot([1, 2, 3], [1, 4, 9])
+plt.title("My Plot")
+plt.gca()  # ✅ This triggers plot capture
+```
+
+**IMPORTANT:** Use `plt.gca()` to display plots, NOT `plt.show()`:
+- `plt.gca()` returns the Axes object, which rdit captures and renders
+- `plt.show()` is for interactive displays and won't work in rdit
+- Plots appear inline in the output pane automatically
+
 ## Tips
 
 - Expressions show their values inline - `print()` is rarely needed
 - Write intermediate expressions to see values: `df.shape` instead of `print(df.shape)`
 - Long-running code streams results as each statement completes
 - User has full filesystem and package access (local Python execution)
+- Use docstring-style markdown cells to document your analysis
+- Use `plt.gca()` to display matplotlib plots inline
 
 ## Dependencies
 
