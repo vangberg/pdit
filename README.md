@@ -15,10 +15,13 @@ An interactive Python code editor with inline execution results.
 **Requirement**: [uv](https://github.com/astral-sh/uv)
 
 ```bash
-# From GitHub (no cloning needed, requires SSH key)
-uvx --from git+ssh://git@github.com/vangberg/rdit rdit script.py
+# Install from dist branch (recommended, includes pre-built assets)
+uv add git+https://github.com/vangberg/rdit@dist
 
-# From cloned repo
+# Or use directly with uvx
+uvx --from git+https://github.com/vangberg/rdit@dist rdit script.py
+
+# From cloned repo (for development)
 git clone git@github.com:vangberg/rdit.git
 cd rdit
 uv pip install -e .

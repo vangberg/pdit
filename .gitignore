@@ -13,6 +13,9 @@ build/
 .eggs/
 *.egg
 
+# Static build output (only on dist branch)
+rdit/_static/
+
 # Testing
 tests/.cache
 .pytest_cache/
