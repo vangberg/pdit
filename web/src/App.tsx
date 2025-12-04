@@ -106,34 +106,79 @@ function App() {
       options?: { lineRange?: { from: number; to: number } }
     ) => {
       try {
-        const allExpressions: Expression[] = [];
+        // Track expressions by nodeIndex for state updates
+        const expressionsByNodeIndex = new Map<number, Expression>();
 
         // Extract script name from path (just the filename)
         const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
 
-        for await (const expression of executeScript(script, {
+        for await (const event of executeScript(script, {
           ...options,
           scriptName
         })) {
-          console.log("Execute expression:", expression);
+          console.log("Execute event:", event);
 
-          allExpressions.push(expression);
+          if (event.type === 'pending') {
+            // All expressions are now pending
+            // Preserve old results from current line groups to avoid flicker
 
-          const { lineGroups } = addExpressions(allExpressions, {
+            // Build set of expression IDs currently in active line groups
+            const activeExprIds = new Set<number>();
+            for (const group of lineGroups) {
+              for (const id of group.resultIds) {
+                activeExprIds.add(id);
+              }
+            }
+
+            for (const expr of event.expressions) {
+              // Look for existing expression with same line range in active groups only
+              const existingExpr = Array.from(expressions.values()).find(
+                e => activeExprIds.has(e.id) &&
+                     e.lineStart === expr.lineStart &&
+                     e.lineEnd === expr.lineEnd
+              );
+              if (existingExpr?.result) {
+                // Keep old result while pending
+                expressionsByNodeIndex.set(expr.nodeIndex, { ...expr, result: existingExpr.result });
+              } else {
+                expressionsByNodeIndex.set(expr.nodeIndex, expr);
+              }
+            }
+          } else if (event.type === 'executing') {
+            // Update expression state to executing (keep any preserved result)
+            const expr = expressionsByNodeIndex.get(event.nodeIndex);
+            if (expr) {
+              expressionsByNodeIndex.set(event.nodeIndex, { ...expr, state: 'executing' });
+            }
+          } else if (event.type === 'done') {
+            // Update expression with new result (replaces any preserved old result)
+            expressionsByNodeIndex.set(event.expression.nodeIndex, event.expression);
+          }
+
+          // Get all expressions as array
+          const allExpressions = Array.from(expressionsByNodeIndex.values());
+
+          // Compute line groups and update editor
+          const { lineGroups: newLineGroups } = addExpressions(allExpressions, {
             lineRange: options?.lineRange,
           });
 
+          // Only include done expressions in lastExecutedResultIds
+          const doneIds = allExpressions
+            .filter(expr => expr.state === 'done')
+            .map(expr => expr.id);
+
           editorRef.current?.applyExecutionUpdate({
             doc: script,
-            lineGroups,
-            lastExecutedResultIds: allExpressions.map((expr) => expr.id),
+            lineGroups: newLineGroups,
+            lastExecutedResultIds: doneIds,
           });
         }
       } catch (error) {
         console.error("Execution error:", error);
       }
     },
-    [addExpressions, scriptPath]
+    [addExpressions, scriptPath, expressions, lineGroups]
   );
 
   const handleExecuteCurrent = useCallback(

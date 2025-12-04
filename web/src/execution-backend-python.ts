@@ -8,10 +8,14 @@ export interface OutputItem {
   content: string;
 }
 
+export type ExpressionState = 'pending' | 'executing' | 'done';
+
 export interface Expression {
   id: number;
+  nodeIndex: number;
   lineStart: number;
   lineEnd: number;
+  state: ExpressionState;
   result?: ExpressionResult;
 }
 
@@ -19,6 +23,12 @@ export interface ExpressionResult {
   output: OutputItem[];
   isInvisible?: boolean;
 }
+
+// Events yielded by executeScript
+export type ExecutionEvent =
+  | { type: 'pending'; expressions: Expression[] }
+  | { type: 'executing'; nodeIndex: number }
+  | { type: 'done'; expression: Expression };
 
 // Global counter for expression IDs
 let globalIdCounter = 1;
@@ -32,7 +42,7 @@ export class PythonServerBackend {
 
   /**
    * Execute a Python script with SSE streaming.
-   * Yields results as each statement completes.
+   * Yields events as execution progresses: pending, executing, done.
    */
   async *executeScript(
     script: string,
@@ -40,7 +50,7 @@ export class PythonServerBackend {
       lineRange?: { from: number; to: number };
       scriptName?: string;
     }
-  ): AsyncGenerator<Expression, void, unknown> {
+  ): AsyncGenerator<ExecutionEvent, void, unknown> {
     // Use Fetch API with POST (EventSource only supports GET)
     const response = await fetch(`${this.baseUrl}/api/execute-script`, {
       method: 'POST',
@@ -67,6 +77,9 @@ export class PythonServerBackend {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+
+    // Map nodeIndex to expression ID for correlation
+    const nodeIndexToId = new Map<number, number>();
 
     try {
       while (true) {
@@ -99,14 +112,45 @@ export class PythonServerBackend {
             throw new Error(data.message);
           }
 
-          // Handle result event (statement execution result)
+          // Handle pending batch - all expressions before execution starts
+          if (data.type === 'pending') {
+            const expressions: Expression[] = data.expressions.map(
+              (expr: { nodeIndex: number; lineStart: number; lineEnd: number }) => {
+                const id = globalIdCounter++;
+                nodeIndexToId.set(expr.nodeIndex, id);
+                return {
+                  id,
+                  nodeIndex: expr.nodeIndex,
+                  lineStart: expr.lineStart,
+                  lineEnd: expr.lineEnd,
+                  state: 'pending' as const,
+                };
+              }
+            );
+            yield { type: 'pending', expressions };
+            continue;
+          }
+
+          // Handle executing notification
+          if (data.type === 'executing') {
+            yield { type: 'executing', nodeIndex: data.nodeIndex };
+            continue;
+          }
+
+          // Handle result event (statement execution complete)
+          const id = nodeIndexToId.get(data.nodeIndex) ?? globalIdCounter++;
           yield {
-            id: globalIdCounter++,
-            lineStart: data.lineStart,
-            lineEnd: data.lineEnd,
-            result: {
-              output: data.output,
-              isInvisible: data.isInvisible,
+            type: 'done',
+            expression: {
+              id,
+              nodeIndex: data.nodeIndex,
+              lineStart: data.lineStart,
+              lineEnd: data.lineEnd,
+              state: 'done' as const,
+              result: {
+                output: data.output,
+                isInvisible: data.isInvisible,
+              },
             },
           };
         }

@@ -16,7 +16,7 @@ import {
   Text,
 } from "@codemirror/state";
 import { invertedEffects } from "@codemirror/commands";
-import { LineGroup } from "./compute-line-groups";
+import { LineGroup, LineGroupState } from "./compute-line-groups";
 import { debugPanelState } from "./codemirror-debug-panel";
 
 export class GroupValue extends RangeValue {
@@ -26,14 +26,15 @@ export class GroupValue extends RangeValue {
   constructor(
     public id: string,
     public resultIds: number[],
-    public allInvisible: boolean = false
+    public allInvisible: boolean = false,
+    public state: LineGroupState = 'done'
   ) {
     super();
   }
 
   eq(other: GroupValue) {
-    // Compare allInvisible flag for proper decoration updates
-    return this.allInvisible === other.allInvisible;
+    // Compare allInvisible flag and state for proper decoration updates
+    return this.allInvisible === other.allInvisible && this.state === other.state;
   }
 }
 
@@ -134,7 +135,7 @@ export function lineGroupsToRangeSet(
     return {
       from: fromLine.from,
       to: toLine.to,
-      value: new GroupValue(group.id, group.resultIds, group.allInvisible || false),
+      value: new GroupValue(group.id, group.resultIds, group.allInvisible || false, group.state),
     };
   });
 
@@ -162,6 +163,7 @@ export function rangeSetToLineGroups(
       lineEnd: endLine,
       resultIds: [...value.resultIds].sort((a, b) => a - b),
       allInvisible: value.allInvisible,
+      state: value.state,
     });
   });
 
@@ -198,7 +200,8 @@ function areLineGroupsEqual(a: LineGroup[], b: LineGroup[]): boolean {
       groupA.lineStart !== groupB.lineStart ||
       groupA.lineEnd !== groupB.lineEnd ||
       groupA.resultIds.length !== groupB.resultIds.length ||
-      groupA.allInvisible !== groupB.allInvisible
+      groupA.allInvisible !== groupB.allInvisible ||
+      groupA.state !== groupB.state
     ) {
       return false;
     }
@@ -314,10 +317,18 @@ function mergeSnappedRanges(
       // Merged group is invisible only if both groups are invisible
       const mergedAllInvisible = current.value.allInvisible && next.value.allInvisible;
 
+      // Merged state: any executing → executing, any pending → pending, otherwise done
+      let mergedState: LineGroupState = 'done';
+      if (current.value.state === 'executing' || next.value.state === 'executing') {
+        mergedState = 'executing';
+      } else if (current.value.state === 'pending' || next.value.state === 'pending') {
+        mergedState = 'pending';
+      }
+
       current = {
         ...current,
         to: Math.max(current.to, next.to),
-        value: new GroupValue(current.value.id, uniqueResultIds, mergedAllInvisible)
+        value: new GroupValue(current.value.id, uniqueResultIds, mergedAllInvisible, mergedState)
       };
       continue;
     }
@@ -383,19 +394,25 @@ export const lineGroupBackgroundField = StateField.define<DecorationSet>({
     for (const group of lineGroups) {
       const isRecent = group.resultIds.some(id => lastExecutedIds.has(id));
 
-      // For invisible groups, use different classes (border only, no background)
+      // Determine class based on group state
       let bgClass: string;
-      if (group.allInvisible) {
+      if (group.state === 'pending') {
+        bgClass = 'cm-line-group-pending';
+      } else if (group.state === 'executing') {
+        bgClass = 'cm-line-group-executing';
+      } else if (group.allInvisible) {
+        // Done state with invisible output
         bgClass = isRecent ? 'cm-line-group-invisible cm-line-group-recent' : 'cm-line-group-invisible';
       } else {
+        // Done state with visible output
         bgClass = isRecent ? 'cm-line-group-bg cm-line-group-recent' : 'cm-line-group-bg';
       }
 
       for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
         const line = tr.state.doc.line(lineNum);
         decorations.push(Decoration.line({ class: bgClass }).range(line.from));
-        // Add border to first line of each group (skip for invisible groups)
-        if (lineNum === group.lineStart && !group.allInvisible) {
+        // Add border to first line of each group (skip for invisible and pending/executing groups)
+        if (lineNum === group.lineStart && !group.allInvisible && group.state === 'done') {
           decorations.push(Decoration.line({ class: 'cm-line-group-top' }).range(line.from));
         }
       }
@@ -413,6 +430,7 @@ const groupTheme = EditorView.theme({
   ".cm-result-line": {
     backgroundColor: "rgba(225, 239, 254, 0.3)",
   },
+  // Done state (blue)
   ".cm-line-group-bg": {
     backgroundColor: "rgba(225, 239, 254, 0.3)",
     borderLeft: "3px solid #7dd3fc",
@@ -426,12 +444,30 @@ const groupTheme = EditorView.theme({
   ".cm-line-group-recent": {
     borderLeft: "3px solid #0284c7",
   },
+  // Pending state (grey)
+  ".cm-line-group-pending": {
+    borderLeft: "3px solid #9ca3af",
+    backgroundColor: "rgba(156, 163, 175, 0.1)",
+  },
+  // Executing state (green)
+  ".cm-line-group-executing": {
+    borderLeft: "3px solid #22c55e",
+    backgroundColor: "rgba(34, 197, 94, 0.1)",
+  },
   ".cm-preview-spacer": {
     backgroundColor: "rgba(225, 239, 254, 0.3)",
     borderLeft: "3px solid #7dd3fc",
   },
   ".cm-preview-spacer-recent": {
     borderLeft: "3px solid #0284c7",
+  },
+  ".cm-preview-spacer-pending": {
+    borderLeft: "3px solid #9ca3af",
+    backgroundColor: "rgba(156, 163, 175, 0.1)",
+  },
+  ".cm-preview-spacer-executing": {
+    borderLeft: "3px solid #22c55e",
+    backgroundColor: "rgba(34, 197, 94, 0.1)",
   },
   // Make selections more visible on colored backgrounds
   ".cm-selectionBackground, ::selection": {
