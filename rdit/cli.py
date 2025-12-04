@@ -34,7 +34,7 @@ class Server(uvicorn.Server):
         finally:
             # Clean shutdown
             self.should_exit = True
-            thread.join()
+            thread.join(timeout=1.0)
 
 
 @click.command()
