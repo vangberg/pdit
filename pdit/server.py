@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from .executor import get_executor, reset_executor, PendingBatch, ExecutingNotification, ExecutionResult
+from .executor import get_executor, reset_executor
 from .sse import format_sse
 from .file_watcher import FileWatcher
 
@@ -121,43 +121,25 @@ async def execute_script(request: ExecuteScriptRequest):
             line_range = (request.lineRange.from_, request.lineRange.to)
 
         try:
-            # Execute script (returns generator of events)
-            events = executor.execute_script(request.script, line_range, request.scriptName)
+            # Execute script (returns generator of results)
+            results = executor.execute_script(request.script, line_range, request.scriptName)
 
-            # Stream each event as SSE
-            for event in events:
-                if isinstance(event, PendingBatch):
-                    # Send all pending expressions
-                    yield format_sse({
-                        "type": "pending",
-                        "expressions": [
-                            {
-                                "nodeIndex": expr.node_index,
-                                "lineStart": expr.line_start,
-                                "lineEnd": expr.line_end
-                            }
-                            for expr in event.expressions
-                        ]
-                    })
-                elif isinstance(event, ExecutingNotification):
-                    # Send executing notification
-                    yield format_sse({
-                        "type": "executing",
-                        "nodeIndex": event.node_index
-                    })
-                elif isinstance(event, ExecutionResult):
-                    # Convert to API response format
-                    expr_result = ExpressionResult(
-                        nodeIndex=event.node_index,
-                        lineStart=event.line_start,
-                        lineEnd=event.line_end,
-                        output=[
-                            OutputItem(type=o.type, content=o.content)
-                            for o in event.output
-                        ],
-                        isInvisible=event.is_invisible
-                    )
-                    yield format_sse(expr_result.model_dump())
+            # Stream each result as SSE event
+            for result in results:
+                # Convert to API response format
+                expr_result = ExpressionResult(
+                    nodeIndex=result.node_index,
+                    lineStart=result.line_start,
+                    lineEnd=result.line_end,
+                    output=[
+                        OutputItem(type=o.type, content=o.content)
+                        for o in result.output
+                    ],
+                    isInvisible=result.is_invisible
+                )
+
+                # SSE format: "data: <json>\n\n"
+                yield format_sse(expr_result.model_dump())
 
                 # Force async yield to flush immediately
                 await asyncio.sleep(0)

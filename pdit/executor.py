@@ -16,27 +16,7 @@ import traceback
 from contextlib import redirect_stdout, redirect_stderr
 from dataclasses import dataclass
 from types import CodeType
-from typing import Any, Dict, Generator, List, Optional, Union
-
-
-@dataclass
-class PendingExpression:
-    """Expression that is pending execution."""
-    node_index: int
-    line_start: int
-    line_end: int
-
-
-@dataclass
-class PendingBatch:
-    """Batch of all expressions pending execution, sent before execution starts."""
-    expressions: List[PendingExpression]
-
-
-@dataclass
-class ExecutingNotification:
-    """Notification that an expression is about to execute."""
-    node_index: int
+from typing import Any, Dict, Generator, List, Optional
 
 
 # Module-level verbose mode flag
@@ -487,7 +467,7 @@ class PythonExecutor:
         script: str,
         line_range: Optional[tuple[int, int]] = None,
         script_name: Optional[str] = None
-    ) -> Generator[Union[PendingBatch, ExecutingNotification, ExecutionResult], None, None]:
+    ) -> Generator[ExecutionResult, None, None]:
         """Execute Python script, yielding results as each statement completes.
 
         Args:
@@ -496,8 +476,6 @@ class PythonExecutor:
             script_name: Optional script name for verbose output
 
         Yields:
-            PendingBatch with all expressions before execution starts.
-            ExecutingNotification before each statement executes.
             ExecutionResult for each statement as it completes.
             If there's a syntax error, yields a single result with the error.
         """
@@ -526,30 +504,12 @@ class PythonExecutor:
         if line_range:
             from_line, to_line = line_range
 
-        # Filter statements by line range
-        filtered_statements = []
         for stmt in statements:
+            # Filter by line range if specified
             if line_range:
+                # Skip statements that don't overlap with requested range
                 if stmt.line_end < from_line or stmt.line_start > to_line:
                     continue
-            filtered_statements.append(stmt)
-
-        # Yield pending batch with all expressions before execution
-        yield PendingBatch(
-            expressions=[
-                PendingExpression(
-                    node_index=stmt.node_index,
-                    line_start=stmt.line_start,
-                    line_end=stmt.line_end
-                )
-                for stmt in filtered_statements
-            ]
-        )
-
-        # Execute each statement
-        for stmt in filtered_statements:
-            # Notify that execution is starting
-            yield ExecutingNotification(node_index=stmt.node_index)
 
             # Execute statement
             output = self.execute_statement(
