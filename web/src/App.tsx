@@ -106,8 +106,8 @@ function App() {
       options?: { lineRange?: { from: number; to: number } }
     ) => {
       try {
-        // Track expressions by nodeIndex for state updates
-        const expressionsByNodeIndex = new Map<number, Expression>();
+        // Track expressions by line range key for matching
+        const expressionsByLineRange = new Map<string, Expression>();
 
         // Extract script name from path (just the filename)
         const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
@@ -118,45 +118,42 @@ function App() {
         })) {
           console.log("Execute event:", event);
 
-          if (event.type === 'pending') {
-            // All expressions are now pending
-            // Preserve old results from current line groups to avoid flicker
+          if (event.type === 'expressions') {
+            // Backend sent all expressions that will be executed
+            // First one is executing, rest are pending
+            for (let i = 0; i < event.expressions.length; i++) {
+              const expr = event.expressions[i];
+              const key = `${expr.lineStart}-${expr.lineEnd}`;
+              const state = i === 0 ? 'executing' : 'pending';
 
-            // Build set of expression IDs currently in active line groups
-            const activeExprIds = new Set<number>();
-            for (const group of lineGroups) {
-              for (const id of group.resultIds) {
-                activeExprIds.add(id);
-              }
-            }
-
-            for (const expr of event.expressions) {
-              // Look for existing expression with same line range in active groups only
+              // Look for existing expression with same line range
               const existingExpr = Array.from(expressions.values()).find(
-                e => activeExprIds.has(e.id) &&
-                     e.lineStart === expr.lineStart &&
-                     e.lineEnd === expr.lineEnd
+                e => e.lineStart === expr.lineStart && e.lineEnd === expr.lineEnd
               );
+
               if (existingExpr?.result) {
-                // Keep old result while pending
-                expressionsByNodeIndex.set(expr.nodeIndex, { ...expr, result: existingExpr.result });
+                // Keep old result while pending/executing
+                expressionsByLineRange.set(key, { ...expr, state, result: existingExpr.result });
               } else {
-                expressionsByNodeIndex.set(expr.nodeIndex, expr);
+                expressionsByLineRange.set(key, { ...expr, state });
               }
-            }
-          } else if (event.type === 'executing') {
-            // Update expression state to executing (keep any preserved result)
-            const expr = expressionsByNodeIndex.get(event.nodeIndex);
-            if (expr) {
-              expressionsByNodeIndex.set(event.nodeIndex, { ...expr, state: 'executing' });
             }
           } else if (event.type === 'done') {
-            // Update expression with new result (replaces any preserved old result)
-            expressionsByNodeIndex.set(event.expression.nodeIndex, event.expression);
+            // Update/replace expression with new result
+            const key = `${event.expression.lineStart}-${event.expression.lineEnd}`;
+            expressionsByLineRange.set(key, event.expression);
+
+            // Find first pending expression and mark it as executing
+            for (const [k, expr] of expressionsByLineRange) {
+              if (expr.state === 'pending') {
+                expressionsByLineRange.set(k, { ...expr, state: 'executing' });
+                break;
+              }
+            }
           }
 
           // Get all expressions as array
-          const allExpressions = Array.from(expressionsByNodeIndex.values());
+          const allExpressions = Array.from(expressionsByLineRange.values());
 
           // Compute line groups and update editor
           const { lineGroups: newLineGroups } = addExpressions(allExpressions, {

@@ -26,8 +26,7 @@ export interface ExpressionResult {
 
 // Events yielded by executeScript
 export type ExecutionEvent =
-  | { type: 'pending'; expressions: Expression[] }
-  | { type: 'executing'; nodeIndex: number }
+  | { type: 'expressions'; expressions: Expression[] }
   | { type: 'done'; expression: Expression };
 
 // Global counter for expression IDs
@@ -112,8 +111,8 @@ export class PythonServerBackend {
             throw new Error(data.message);
           }
 
-          // Handle pending batch - all expressions before execution starts
-          if (data.type === 'pending') {
+          // Handle expressions list (first event from backend)
+          if (data.type === 'expressions') {
             const expressions: Expression[] = data.expressions.map(
               (expr: { nodeIndex: number; lineStart: number; lineEnd: number }) => {
                 const id = globalIdCounter++;
@@ -127,13 +126,7 @@ export class PythonServerBackend {
                 };
               }
             );
-            yield { type: 'pending', expressions };
-            continue;
-          }
-
-          // Handle executing notification
-          if (data.type === 'executing') {
-            yield { type: 'executing', nodeIndex: data.nodeIndex };
+            yield { type: 'expressions', expressions };
             continue;
           }
 

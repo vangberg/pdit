@@ -179,7 +179,7 @@ x`;
     expect(results[3].result?.output[0].content).toBe('8\n');
   });
 
-  it('emits pending events before execution', async () => {
+  it('emits expressions event before results', async () => {
     const script = `x = 1
 y = 2`;
     const events: ExecutionEvent[] = [];
@@ -187,25 +187,31 @@ y = 2`;
       events.push(event);
     }
 
-    // First event should be pending with all expressions
-    expect(events[0].type).toBe('pending');
-    if (events[0].type === 'pending') {
+    // First event should be expressions with all pending expressions
+    expect(events[0].type).toBe('expressions');
+    if (events[0].type === 'expressions') {
       expect(events[0].expressions).toHaveLength(2);
       expect(events[0].expressions[0].state).toBe('pending');
       expect(events[0].expressions[1].state).toBe('pending');
     }
+    // Followed by done events for each expression
+    expect(events.filter(e => e.type === 'done')).toHaveLength(2);
   });
 
-  it('emits executing events before each expression runs', async () => {
+  it('expressions event only includes filtered expressions', async () => {
     const script = `x = 1
-y = 2`;
+y = 2
+z = 3`;
     const events: ExecutionEvent[] = [];
-    for await (const event of executeScript(script)) {
+    for await (const event of executeScript(script, { lineRange: { from: 2, to: 2 } })) {
       events.push(event);
     }
 
-    // Should have: pending, executing, done, executing, done
-    const executingEvents = events.filter(e => e.type === 'executing');
-    expect(executingEvents).toHaveLength(2);
+    expect(events[0].type).toBe('expressions');
+    if (events[0].type === 'expressions') {
+      // Only y = 2 should be included
+      expect(events[0].expressions).toHaveLength(1);
+      expect(events[0].expressions[0].lineStart).toBe(2);
+    }
   });
 });
