@@ -8,11 +8,11 @@
 # Install dependencies (with dev tools)
 uv pip install -e ".[dev]"
 
-# Run rdit
-uv run rdit script.py
+# Run pdit
+uv run pdit script.py
 ```
 
-Built frontend assets are committed to git in `rdit/_static/`, so you don't need Node.js to run rdit.
+Built frontend assets are committed to git in `pdit/_static/`, so you don't need Node.js to run pdit.
 
 ## Run from GitHub without cloning
 
@@ -20,7 +20,7 @@ Built frontend assets are committed to git in `rdit/_static/`, so you don't need
 
 ```bash
 # Run directly from GitHub
-uvx --from git+https://github.com/vangberg/rdit rdit script.py
+uvx --from git+https://github.com/vangberg/pdit pdit script.py
 ```
 
 ## Frontend development
@@ -30,16 +30,16 @@ uvx --from git+https://github.com/vangberg/rdit rdit script.py
 ```bash
 cd web
 npm install
-npm run build  # Outputs to ../rdit/_static/
+npm run build  # Outputs to ../pdit/_static/
 cd ..
-git add rdit/_static/ web/
+git add pdit/_static/ web/
 ```
 
 For hot reloading during development:
 
 ```bash
 # Terminal 1: Backend
-uv run uvicorn rdit.server:app --reload --port 8888
+uv run uvicorn pdit.server:app --reload --port 8888
 
 # Terminal 2: Frontend dev server
 cd web

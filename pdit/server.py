@@ -70,8 +70,8 @@ class SaveFileRequest(BaseModel):
 
 # FastAPI app
 app = FastAPI(
-    title="rdit Python Backend",
-    description="Local Python execution server for rdit",
+    title="pdit Python Backend",
+    description="Local Python execution server for pdit",
     version="0.1.0"
 )
 

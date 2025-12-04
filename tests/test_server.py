@@ -9,12 +9,12 @@ except ImportError:
 
 try:
     from fastapi.testclient import TestClient
-    from rdit.server import app
+    from pdit.server import app
     HAS_FASTAPI = True
 except ImportError:
     HAS_FASTAPI = False
 
-from rdit.executor import reset_executor
+from pdit.executor import reset_executor
 
 
 if HAS_FASTAPI:

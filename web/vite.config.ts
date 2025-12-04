@@ -17,7 +17,7 @@ export default defineConfig({
     },
   ],
   build: {
-    outDir: '../rdit/_static',
+    outDir: '../pdit/_static',
     emptyOutDir: true,
   },
   server: {

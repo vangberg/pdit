@@ -1,4 +1,4 @@
-# rdit
+# pdit
 
 An interactive Python code editor with inline execution results.
 
@@ -16,24 +16,24 @@ An interactive Python code editor with inline execution results.
 
 ```bash
 # Install from dist branch (recommended, includes pre-built assets)
-uv add git+https://github.com/vangberg/rdit@dist
+uv add git+https://github.com/vangberg/pdit@dist
 
 # Or use directly with uvx
-uvx --from git+https://github.com/vangberg/rdit@dist rdit script.py
+uvx --from git+https://github.com/vangberg/pdit@dist pdit script.py
 
 # From cloned repo (for development)
-git clone git@github.com:vangberg/rdit.git
-cd rdit
+git clone git@github.com:vangberg/pdit.git
+cd pdit
 uv pip install -e .
-uv run rdit script.py
+uv run pdit script.py
 ```
 
 ## Usage
 
-Start rdit with a Python file:
+Start pdit with a Python file:
 
 ```bash
-uv run rdit script.py
+uv run pdit script.py
 ```
 
 This will:
@@ -44,7 +44,7 @@ This will:
 ### Options
 
 ```bash
-uv run rdit [OPTIONS] [SCRIPT]
+uv run pdit [OPTIONS] [SCRIPT]
 
 Options:
   --port INTEGER       Port to run server on (default: 8888)
@@ -57,16 +57,16 @@ Options:
 
 ```bash
 # Start with script
-uv run rdit analysis.py
+uv run pdit analysis.py
 
 # Custom port
-uv run rdit --port 9000 script.py
+uv run pdit --port 9000 script.py
 
 # Start without opening browser
-uv run rdit --no-browser script.py
+uv run pdit --no-browser script.py
 
 # Just start the editor (no script)
-uv run rdit
+uv run pdit
 ```
 
 ## Development

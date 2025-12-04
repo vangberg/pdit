@@ -39,7 +39,7 @@ jobs:
           mkdir -p /tmp/dist-deploy
 
           # Copy Python source files
-          cp -r rdit /tmp/dist-deploy/
+          cp -r pdit /tmp/dist-deploy/
 
           # Copy essential files
           cp pyproject.toml /tmp/dist-deploy/
@@ -50,7 +50,7 @@ jobs:
           # Create .gitattributes for dist branch
           cat > /tmp/dist-deploy/.gitattributes << 'EOF'
           # Mark static assets as generated
-          rdit/_static/* linguist-generated=true
+          pdit/_static/* linguist-generated=true
           EOF
 
       - name: Deploy to dist branch

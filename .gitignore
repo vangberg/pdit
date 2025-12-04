@@ -14,7 +14,7 @@ build/
 *.egg
 
 # Static build output (only on dist branch)
-rdit/_static/
+pdit/_static/
 
 # Testing
 tests/.cache

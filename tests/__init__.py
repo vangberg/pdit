@@ -1,1 +1,1 @@
-"""Tests for the rdit package."""
+"""Tests for the pdit package."""

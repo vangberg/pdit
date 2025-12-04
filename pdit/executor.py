@@ -1,5 +1,5 @@
 """
-Core Python execution logic for rdit.
+Core Python execution logic for pdit.
 
 This module provides the PythonExecutor class which handles:
 - Parsing Python scripts into statements using AST
@@ -268,14 +268,14 @@ class PythonExecutor:
                 # Expression: compile for eval()
                 compiled = compile(
                     ast.Expression(body=node.value),
-                    '<rdit>',
+                    '<pdit>',
                     'eval'
                 )
             else:
                 # Statement: compile for exec()
                 compiled = compile(
                     ast.Module(body=[node], type_ignores=[]),
-                    '<rdit>',
+                    '<pdit>',
                     'exec'
                 )
 

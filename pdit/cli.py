@@ -1,7 +1,7 @@
 """
-Command-line interface for rdit.
+Command-line interface for pdit.
 
-Provides the `rdit` command to start the server and open the web interface.
+Provides the `pdit` command to start the server and open the web interface.
 """
 
 import contextlib
@@ -44,7 +44,7 @@ class Server(uvicorn.Server):
 @click.option("--no-browser", is_flag=True, help="Don't open browser automatically")
 @click.option("--verbose", is_flag=True, help="Print all computation stdout/stderr to console")
 def main(script, port, host, no_browser, verbose):
-    """rdit - Interactive Python notebook.
+    """pdit - Interactive Python notebook.
 
     Starts a local Python execution server and opens the web interface.
 
@@ -57,7 +57,7 @@ def main(script, port, host, no_browser, verbose):
     # Check if frontend is built
     static_dir = Path(__file__).parent / "_static"
     if not static_dir.exists() or not (static_dir / "index.html").exists():
-        click.echo("Warning: Frontend build not found at rdit/_static/", err=True)
+        click.echo("Warning: Frontend build not found at pdit/_static/", err=True)
         click.echo("The server will start but the web interface won't be available.", err=True)
         click.echo("Run './scripts/build-frontend.sh' to build and copy the frontend.", err=True)
         click.echo()
@@ -72,11 +72,11 @@ def main(script, port, host, no_browser, verbose):
     if script_path:
         url += f"?script={script_path}"
 
-    click.echo(f"Starting rdit server on {host}:{port}")
+    click.echo(f"Starting pdit server on {host}:{port}")
 
     # Configure and create server
     config = uvicorn.Config(
-        "rdit.server:app",
+        "pdit.server:app",
         host=host,
         port=port,
         log_level="info"

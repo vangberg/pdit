@@ -1,46 +1,46 @@
 ---
-name: rdit
-description: Collaborate with users running rdit, an interactive Python editor with inline execution results. Use when user mentions rdit, runs `uv rdit`, or is doing collaborative Python development where they see live execution output in a browser.
+name: pdit
+description: Collaborate with users running pdit, an interactive Python editor with inline execution results. Use when user mentions pdit, runs `uv pdit`, or is doing collaborative Python development where they see live execution output in a browser.
 ---
 
-# rdit Collaboration
+# pdit Collaboration
 
-rdit is an interactive Python editor with inline execution results. The user sees a browser-based
+pdit is an interactive Python editor with inline execution results. The user sees a browser-based
 split-pane interface: code editor (left) and streaming execution results (right).
 
 ## User's Environment
 
-**Starting rdit:**
+**Starting pdit:**
 
-rdit runs from the local uv environment so dependencies work seamlessly.
+pdit runs from the local uv environment so dependencies work seamlessly.
 
-If pyproject.toml exists, just add rdit and run:
+If pyproject.toml exists, just add pdit and run:
 ```bash
-uv add git+https://github.com/vangberg/rdit@dist
-uv run rdit script.py --verbose
+uv add git+https://github.com/vangberg/pdit@dist
+uv run pdit script.py --verbose
 ```
 
 If starting fresh:
 ```bash
 uv init
-uv add git+https://github.com/vangberg/rdit@dist
-uv run rdit script.py --verbose
+uv add git+https://github.com/vangberg/pdit@dist
+uv run pdit script.py --verbose
 ```
 
 **Note:** The `@dist` branch contains pre-built frontend assets, so no Node.js or build step is needed.
 
-**Upgrading rdit:**
+**Upgrading pdit:**
 
-To upgrade to the latest version of rdit:
+To upgrade to the latest version of pdit:
 ```bash
-uv lock --upgrade-package rdit
+uv lock --upgrade-package pdit
 ```
 
 Run with `run_in_background: true` in the Bash tool so you can continue editing.
 
-**IMPORTANT: Always use `--verbose` when Claude is running rdit.**
+**IMPORTANT: Always use `--verbose` when Claude is running pdit.**
 
-Verbose mode prints all execution output to the console where rdit is running:
+Verbose mode prints all execution output to the console where pdit is running:
 - Shows each line being executed (with `>>>` prefix like Python REPL)
 - Displays all stdout/stderr output in real-time
 - Shows script name with `[script.py]` prefix
@@ -126,7 +126,7 @@ GET  /api/health          - Health check
 
 ## Markdown Cells
 
-rdit supports markdown cells for documentation and explanations using `# %% [markdown]` followed by a docstring:
+pdit supports markdown cells for documentation and explanations using `# %% [markdown]` followed by a docstring:
 
 ```python
 # %% [markdown]
@@ -160,7 +160,7 @@ df.describe()
 
 ## Matplotlib Plots
 
-rdit captures matplotlib plots automatically:
+pdit captures matplotlib plots automatically:
 
 ```python
 import matplotlib.pyplot as plt
@@ -171,8 +171,8 @@ plt.gca()  # ✅ This triggers plot capture
 ```
 
 **IMPORTANT:** Use `plt.gca()` to display plots, NOT `plt.show()`:
-- `plt.gca()` returns the Axes object, which rdit captures and renders
-- `plt.show()` is for interactive displays and won't work in rdit
+- `plt.gca()` returns the Axes object, which pdit captures and renders
+- `plt.show()` is for interactive displays and won't work in pdit
 - Plots appear inline in the output pane automatically
 
 ## Tips
@@ -186,10 +186,10 @@ plt.gca()  # ✅ This triggers plot capture
 
 ## Dependencies
 
-Since rdit runs from the local uv environment, add packages with `uv add`:
+Since pdit runs from the local uv environment, add packages with `uv add`:
 
 ```bash
 uv add pandas matplotlib
 ```
 
-No server restart needed - packages are available immediately in both rdit and `uv run` validation.
+No server restart needed - packages are available immediately in both pdit and `uv run` validation.

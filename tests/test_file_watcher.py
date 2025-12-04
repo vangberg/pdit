@@ -4,7 +4,7 @@ import asyncio
 import tempfile
 from pathlib import Path
 
-from rdit.file_watcher import (
+from pdit.file_watcher import (
     FileWatcher,
     InitialFileEvent,
     FileChangedEvent,

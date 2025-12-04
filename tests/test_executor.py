@@ -5,7 +5,7 @@ try:
 except ImportError:
     pytest = None
 
-from rdit.executor import (
+from pdit.executor import (
     ExecutionResult,
     OutputItem,
     PythonExecutor,

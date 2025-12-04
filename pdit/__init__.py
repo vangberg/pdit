@@ -1,5 +1,5 @@
 """
-rdit - Interactive Python code editor with inline execution results.
+pdit - Interactive Python code editor with inline execution results.
 """
 
 from .executor import (
