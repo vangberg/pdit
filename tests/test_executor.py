@@ -1164,6 +1164,41 @@ b = 2
         # Should be treated as multiple statements
         assert len(results) == 3
 
+    def test_sys_argv_is_empty(self):
+        """Test that sys.argv is set to [''] during execution (notebook environment)."""
+        script = """
+import sys
+sys.argv
+"""
+        results = list(self.executor.execute_script(script))
+
+        # sys.argv should be [''] in notebook environment, not CLI args
+        assert results[-1].output[0].content.strip() == "['']"
+
+    def test_sys_argv_len(self):
+        """Test that len(sys.argv) is 1 with empty string."""
+        script = """
+import sys
+len(sys.argv)
+"""
+        results = list(self.executor.execute_script(script))
+
+        assert results[-1].output[0].content.strip() == "1"
+
+    def test_sys_argv_restored_after_execution(self):
+        """Test that sys.argv is restored after execution completes."""
+        import sys
+
+        # Save original sys.argv
+        original_argv = sys.argv.copy()
+
+        # Execute script
+        script = "import sys\nsys.argv"
+        results = list(self.executor.execute_script(script))
+
+        # sys.argv should be restored to original value
+        assert sys.argv == original_argv
+
 
 if __name__ == "__main__":
     """Run tests without pytest for development."""

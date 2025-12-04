@@ -400,6 +400,11 @@ class PythonExecutor:
         stdout_buffer = io.StringIO()
         stderr_buffer = io.StringIO()
 
+        # Save and replace sys.argv to hide CLI arguments from executed code
+        # (notebook environment should not expose script filename as argv)
+        original_argv = sys.argv
+        sys.argv = ['']
+
         try:
             with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
                 # Always use eval() - works for both exec and eval compiled code
@@ -434,6 +439,10 @@ class PythonExecutor:
             # Print error to stderr in verbose mode
             if _verbose_mode:
                 print(error_content, file=sys.stderr, end='')
+
+        finally:
+            # Restore original sys.argv
+            sys.argv = original_argv
 
         # Capture stdout output
         stdout_content = stdout_buffer.getvalue()
