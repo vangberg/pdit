@@ -1,6 +1,6 @@
 # pdit
 
-An interactive Python code editor with inline execution results.
+Pythonic live scripting.
 
 ## Features
 
