@@ -9,6 +9,7 @@ import { TopBar } from "./TopBar";
 import { useResults } from "./results";
 import { useScriptFile } from "./use-script-file";
 import { LineGroupLayout } from "./line-group-layout";
+import { adjustLineGroupsForDiff } from "./diff-line-groups";
 
 const DEFAULT_CODE = ``;
 
@@ -18,9 +19,11 @@ function App() {
   const [hasConflict, setHasConflict] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [doc, setDoc] = useState<Text>();
+  const [changedFromDiskLines, setChangedFromDiskLines] = useState<Set<number>>(new Set());
   const isProgrammaticUpdate = useRef(false);
 
   const editorRef = useRef<EditorHandles | null>(null);
+  const lineGroupsRef = useRef<LineGroup[]>([]);
 
   const handleFileChange = useCallback(
     (newContent: string) => {
@@ -29,17 +32,29 @@ function App() {
         setHasConflict(true);
       } else {
         // No local edits → check if content actually changed
-        if (doc && doc.toString() === newContent) {
+        const oldContent = doc?.toString() ?? "";
+        if (oldContent === newContent) {
           // Content is the same, don't reload (preserves line groups)
           return;
         }
-        // Content differs → safe to auto-reload
+
+        // Compute diff and adjust line groups
+        const { lineGroups: adjustedGroups, changedLines } = adjustLineGroupsForDiff(
+          oldContent,
+          newContent,
+          lineGroupsRef.current
+        );
+
+        // Update editor with new content and adjusted line groups
         isProgrammaticUpdate.current = true;
         editorRef.current?.applyExecutionUpdate({
           doc: newContent,
-          lineGroups: [],
+          lineGroups: adjustedGroups,
         });
         isProgrammaticUpdate.current = false;
+
+        // Track changed lines for green highlight
+        setChangedFromDiskLines(changedLines);
       }
     },
     [hasUnsavedChanges, doc]
@@ -92,6 +107,7 @@ function App() {
   const handleLineGroupsChange = useCallback(
     (groups: LineGroup[]) => {
       console.log("App received line groups change:", groups);
+      lineGroupsRef.current = groups;
       setLineGroups(groups);
     },
     [setLineGroups]
@@ -103,6 +119,10 @@ function App() {
       Array.from(layouts.entries()).slice(0, 5)
     );
     setLineGroupLayouts(layouts);
+  }, []);
+
+  const handleChangedFromDiskLinesChange = useCallback((lines: Set<number>) => {
+    setChangedFromDiskLines(lines);
   }, []);
 
   const handleExecute = useCallback(
@@ -277,6 +297,8 @@ function App() {
             onLineGroupsChange={handleLineGroupsChange}
             onLineGroupLayoutChange={handleLineGroupLayoutChange}
             lineGroupHeights={lineGroupHeights}
+            changedFromDiskLines={changedFromDiskLines}
+            onChangedFromDiskLinesChange={handleChangedFromDiskLinesChange}
           />
         </div>
         <div className="output-half">

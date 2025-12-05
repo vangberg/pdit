@@ -53,6 +53,19 @@ import {
   debugPanelExtension,
   toggleDebugPanelCommand,
 } from "./codemirror-debug-panel";
+import {
+  changedFromDiskExtension,
+  setChangedFromDiskLines,
+  changedFromDiskField,
+} from "./changed-from-disk-plugin";
+
+function setsEqual<T>(a: Set<T>, b: Set<T>): boolean {
+  if (a.size !== b.size) return false;
+  for (const item of a) {
+    if (!b.has(item)) return false;
+  }
+  return true;
+}
 
 export interface EditorHandles {
   applyExecutionUpdate: (update: {
@@ -77,6 +90,8 @@ interface EditorProps {
   onLineGroupsChange?: (groups: LineGroup[]) => void;
   onLineGroupLayoutChange?: (layouts: Map<string, LineGroupLayout>) => void;
   lineGroupHeights?: Map<string, number>;
+  changedFromDiskLines?: Set<number>;
+  onChangedFromDiskLinesChange?: (lines: Set<number>) => void;
   ref?: React.Ref<EditorHandles>;
 }
 
@@ -89,6 +104,8 @@ export function Editor({
   onLineGroupsChange,
   onLineGroupLayoutChange,
   lineGroupHeights,
+  changedFromDiskLines,
+  onChangedFromDiskLinesChange,
   ref: externalRef,
 }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -99,6 +116,7 @@ export function Editor({
   const onInitialDocumentLoadRef = useRef(onInitialDocumentLoad);
   const onDocumentChangeRef = useRef(onDocumentChange);
   const onLineGroupsChangeRef = useRef(onLineGroupsChange);
+  const onChangedFromDiskLinesChangeRef = useRef(onChangedFromDiskLinesChange);
   const lineGroupLayoutCallbackCompartment = useMemo(() => new Compartment(), []);
 
   // Mirror the latest callbacks so long-lived view listeners stay up to date
@@ -121,6 +139,10 @@ export function Editor({
   useEffect(() => {
     onLineGroupsChangeRef.current = onLineGroupsChange;
   }, [onLineGroupsChange]);
+
+  useEffect(() => {
+    onChangedFromDiskLinesChangeRef.current = onChangedFromDiskLinesChange;
+  }, [onChangedFromDiskLinesChange]);
 
   const executeCurrentSelection = useCallback((view: EditorView) => {
     const selection = view.state.selection.main;
@@ -210,6 +232,7 @@ export function Editor({
         python(),
         resultGroupingExtension,
         lineGroupLayoutExtension,
+        changedFromDiskExtension,
         debugPanelExtension(),
         lineGroupLayoutCallbackCompartment.of(
           lineGroupLayoutChangeFacet.of(onLineGroupLayoutChange ?? null)
@@ -225,6 +248,18 @@ export function Editor({
 
           if (groupsChanged) {
             onLineGroupsChangeRef.current?.(nextGroups);
+          }
+
+          // Notify when changed-from-disk lines are updated
+          const previousChangedRanges = update.startState.field(changedFromDiskField);
+          const nextChangedRanges = update.state.field(changedFromDiskField);
+          if (previousChangedRanges !== nextChangedRanges) {
+            // Convert RangeSet positions back to line numbers
+            const lineNums = new Set<number>();
+            nextChangedRanges.between(0, update.state.doc.length, (from) => {
+              lineNums.add(update.state.doc.lineAt(from).number);
+            });
+            onChangedFromDiskLinesChangeRef.current?.(lineNums);
           }
         }),
         EditorView.theme({
@@ -355,6 +390,31 @@ export function Editor({
       ),
     });
   }, [onLineGroupLayoutChange, lineGroupLayoutCallbackCompartment]);
+
+  // Sync changedFromDiskLines prop with editor state
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) {
+      return;
+    }
+
+    const newLines = changedFromDiskLines ?? new Set<number>();
+
+    // Convert current RangeSet to line numbers for comparison
+    const currentRanges = view.state.field(changedFromDiskField);
+    const currentLines = new Set<number>();
+    currentRanges.between(0, view.state.doc.length, (from) => {
+      currentLines.add(view.state.doc.lineAt(from).number);
+    });
+
+    // Only dispatch if the sets are different
+    if (!setsEqual(currentLines, newLines)) {
+      view.dispatch({
+        effects: setChangedFromDiskLines.of(newLines),
+        annotations: Transaction.addToHistory.of(false),
+      });
+    }
+  }, [changedFromDiskLines]);
 
   return <div id="editor" ref={editorRef} />;
 }

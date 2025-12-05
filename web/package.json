@@ -13,6 +13,7 @@
   },
   "devDependencies": {
     "@ladle/react": "^5.1.1",
+    "@types/diff": "^7.0.2",
     "@types/node": "^20.14.9",
     "@vitest/browser": "^4.0.8",
     "@vitest/browser-playwright": "^4.0.8",
@@ -24,6 +25,7 @@
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.2",
     "@codemirror/lang-python": "^6.1.6",
+    "@codemirror/merge": "^6.11.2",
     "@codemirror/state": "^6.4.1",
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.28.4",
@@ -32,6 +34,7 @@
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.2",
     "codemirror": "^6.0.1",
+    "diff": "^8.0.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-markdown": "^10.1.0"

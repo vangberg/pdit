@@ -449,10 +449,9 @@ const groupTheme = EditorView.theme({
     borderLeft: "3px solid #9ca3af",
     backgroundColor: "rgba(156, 163, 175, 0.1)",
   },
-  // Executing state (green)
+  // Executing state (green border only, no background to avoid conflict with changed-from-disk)
   ".cm-line-group-executing": {
     borderLeft: "3px solid #22c55e",
-    backgroundColor: "rgba(34, 197, 94, 0.1)",
   },
   ".cm-preview-spacer": {
     backgroundColor: "rgba(225, 239, 254, 0.3)",
@@ -467,7 +466,6 @@ const groupTheme = EditorView.theme({
   },
   ".cm-preview-spacer-executing": {
     borderLeft: "3px solid #22c55e",
-    backgroundColor: "rgba(34, 197, 94, 0.1)",
   },
   // Make selections more visible on colored backgrounds
   ".cm-selectionBackground, ::selection": {
