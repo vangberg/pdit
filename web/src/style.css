@@ -204,7 +204,6 @@ body {
   display: flex;
   flex: 0 0 50%;
   min-width: 0;
-  border-left: 3px solid #d1d5db;
 }
 
 .editor-half,
@@ -252,28 +251,29 @@ h1 {
 }
 
 #output {
-  font-size: 14px;
+  font-size: 13px;
   font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   width: 100%;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  background: #fafafa;
+  background: #f8f8f8;
+  border-left: 1px solid #e0e0e0;
 }
 
 .output-content {
   display: flex;
   flex-direction: column;
   position: relative;
-  padding: 8px 0;
+  padding: 2px 0;
 }
 
 .output-group {
   background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  padding: 8px 12px;
+  border-left: 2px solid #d0d0d0;
+  margin: 1px 6px;
+  padding: 4px 8px;
+  border-radius: 0 3px 3px 0;
 }
 
 .output-group-invisible {
@@ -288,8 +288,7 @@ h1 {
 }
 
 .output-container {
-  padding: 0.5rem;
-  padding-left: 0.75rem;
+  padding: 2px 0;
 }
 
 .output-container-invisible {
@@ -313,26 +312,82 @@ h1 {
 
 .output-item {
   color: #374151;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
 }
 
-.output-item.output-stdout {
+.output-type-badge {
+  font-size: 9px;
+  font-weight: 500;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  flex-shrink: 0;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.output-type-result {
+  color: #fff;
+  background: #16a34a;
+}
+
+.output-type-stdout {
+  color: #fff;
+  background: #6366f1;
+}
+
+.output-type-stderr {
+  color: #fff;
+  background: #dc2626;
+}
+
+.output-type-error {
+  color: #fff;
+  background: #dc2626;
+}
+
+.output-type-dataframe {
+  color: #fff;
+  background: #0891b2;
+}
+
+.output-type-image {
+  color: #fff;
+  background: #c026d3;
+}
+
+.output-type-markdown {
+  color: #fff;
+  background: #78716c;
+}
+
+.output-content-wrapper {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.output-item.output-stdout .output-content-wrapper {
   color: #4b5563;
 }
 
-.output-item.output-stderr {
+.output-item.output-stderr .output-content-wrapper {
   color: #dc2626;
   font-weight: 500;
 }
 
-.output-item.output-error {
+.output-item.output-error .output-content-wrapper {
   color: #dc2626;
 }
 
-.output-item.output-warning {
+.output-item.output-warning .output-content-wrapper {
   color: #9ca3af;
 }
 
-.output-item.output-message {
+.output-item.output-message .output-content-wrapper {
   color: #4b5563;
 }
 

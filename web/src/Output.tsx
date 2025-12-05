@@ -58,6 +58,20 @@ const ImageOutput: React.FC<{ dataUrl: string }> = ({ dataUrl }) => {
   );
 };
 
+// Get a fun type label for output items
+const getTypeLabel = (type: string): string => {
+  switch (type) {
+    case 'result': return 'out';
+    case 'stdout': return '>>>';
+    case 'stderr': return 'err';
+    case 'error': return '!!!';
+    case 'dataframe': return 'df';
+    case 'image': return 'fig';
+    case 'markdown': return 'md';
+    default: return '~~~';
+  }
+};
+
 export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible }) => {
   const elementRef = useRef<HTMLDivElement | null>(null);
 
@@ -76,15 +90,20 @@ export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible })
             key={i}
             className={`output-item output-${item.type}`}
           >
-            {item.type === 'markdown' ? (
-              <Markdown>{item.content}</Markdown>
-            ) : item.type === 'dataframe' ? (
-              <DataframeTable jsonData={item.content} />
-            ) : item.type === 'image' ? (
-              <ImageOutput dataUrl={item.content} />
-            ) : (
-              <pre>{item.content}</pre>
-            )}
+            <span className={`output-type-badge output-type-${item.type}`}>
+              {getTypeLabel(item.type)}
+            </span>
+            <div className="output-content-wrapper">
+              {item.type === 'markdown' ? (
+                <Markdown>{item.content}</Markdown>
+              ) : item.type === 'dataframe' ? (
+                <DataframeTable jsonData={item.content} />
+              ) : item.type === 'image' ? (
+                <ImageOutput dataUrl={item.content} />
+              ) : (
+                <pre>{item.content}</pre>
+              )}
+            </div>
           </div>
         ))}
       </div>
