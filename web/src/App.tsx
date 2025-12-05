@@ -1,7 +1,7 @@
 import "./style.css";
 import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
-import { executeScript, Expression } from "./execution-python";
+import { executeScript } from "./execution-python";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { LineGroup } from "./compute-line-groups";
@@ -53,8 +53,13 @@ function App() {
   } = useScriptFile(scriptPath, DEFAULT_CODE, {
     onFileChange: handleFileChange,
   });
-  const { expressions, lineGroups, setLineGroups, addExpressions } =
-    useResults();
+  const {
+    expressions,
+    lineGroups,
+    setLineGroups,
+    handleExecutionEvent,
+    resetExecutionState,
+  } = useResults();
   const [lineGroupHeights, setLineGroupHeights] = useState<Map<string, number>>(
     new Map()
   );
@@ -105,35 +110,34 @@ function App() {
       script: string,
       options?: { lineRange?: { from: number; to: number } }
     ) => {
+      // Extract script name from path (just the filename)
+      const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
+
       try {
-        const allExpressions: Expression[] = [];
-
-        // Extract script name from path (just the filename)
-        const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
-
-        for await (const expression of executeScript(script, {
+        for await (const event of executeScript(script, {
           ...options,
-          scriptName
+          scriptName,
         })) {
-          console.log("Execute expression:", expression);
+          console.log("Execute event:", event);
 
-          allExpressions.push(expression);
-
-          const { lineGroups } = addExpressions(allExpressions, {
-            lineRange: options?.lineRange,
-          });
+          const { lineGroups: newLineGroups, doneIds } = handleExecutionEvent(
+            event,
+            options
+          );
 
           editorRef.current?.applyExecutionUpdate({
             doc: script,
-            lineGroups,
-            lastExecutedResultIds: allExpressions.map((expr) => expr.id),
+            lineGroups: newLineGroups,
+            lastExecutedResultIds: doneIds,
           });
         }
       } catch (error) {
         console.error("Execution error:", error);
+      } finally {
+        resetExecutionState();
       }
     },
-    [addExpressions, scriptPath]
+    [handleExecutionEvent, resetExecutionState, scriptPath]
   );
 
   const handleExecuteCurrent = useCallback(

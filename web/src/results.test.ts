@@ -3,13 +3,20 @@ import { processExecutionResults } from './results';
 import { Expression } from './execution-python';
 import { LineGroup } from './compute-line-groups';
 
+// Helper to create expression with required fields
+function expr(id: number, lineStart: number, lineEnd: number): Expression {
+  return { id, lineStart, lineEnd, state: 'done', result: { output: [] } };
+}
+
+// Helper to create line group with required fields
+function lg(id: string, resultIds: number[], lineStart: number, lineEnd: number): LineGroup {
+  return { id, resultIds, lineStart, lineEnd, state: 'done' };
+}
+
 describe('processExecutionResults', () => {
   it('computes line groups from new expressions without options', () => {
     const store = new Map<number, Expression>();
-    const newExpressions: Expression[] = [
-      { id: 1, lineStart: 1, lineEnd: 1, result: { output: [] } },
-      { id: 2, lineStart: 3, lineEnd: 3, result: { output: [] } },
-    ];
+    const newExpressions: Expression[] = [expr(1, 1, 1), expr(2, 3, 3)];
 
     const { newStore, groups } = processExecutionResults(store, newExpressions);
 
@@ -23,19 +30,17 @@ describe('processExecutionResults', () => {
 
   it('preserves non-overlapping groups during partial execution', () => {
     const store = new Map<number, Expression>();
-    store.set(1, { id: 1, lineStart: 1, lineEnd: 1, result: { output: [] } });
-    store.set(2, { id: 2, lineStart: 3, lineEnd: 3, result: { output: [] } });
-    store.set(3, { id: 3, lineStart: 5, lineEnd: 5, result: { output: [] } });
+    store.set(1, expr(1, 1, 1));
+    store.set(2, expr(2, 3, 3));
+    store.set(3, expr(3, 5, 5));
 
     const currentLineGroups: LineGroup[] = [
-      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 1 },
-      { id: 'g2', resultIds: [2], lineStart: 3, lineEnd: 3 },
-      { id: 'g3', resultIds: [3], lineStart: 5, lineEnd: 5 },
+      lg('g1', [1], 1, 1),
+      lg('g2', [2], 3, 3),
+      lg('g3', [3], 5, 5),
     ];
 
-    const newExpressions: Expression[] = [
-      { id: 4, lineStart: 3, lineEnd: 3, result: { output: [] } },
-    ];
+    const newExpressions: Expression[] = [expr(4, 3, 3)];
 
     const { newStore, groups } = processExecutionResults(store, newExpressions, {
       currentLineGroups,
@@ -55,13 +60,11 @@ describe('processExecutionResults', () => {
   it('removes overlapping group when lineEnd < from', () => {
     const store = new Map<number, Expression>();
     const currentLineGroups: LineGroup[] = [
-      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 2 },
-      { id: 'g2', resultIds: [2], lineStart: 5, lineEnd: 6 },
+      lg('g1', [1], 1, 2),
+      lg('g2', [2], 5, 6),
     ];
 
-    const newExpressions: Expression[] = [
-      { id: 3, lineStart: 1, lineEnd: 1, result: { output: [] } },
-    ];
+    const newExpressions: Expression[] = [expr(3, 1, 1)];
 
     const { groups } = processExecutionResults(store, newExpressions, {
       currentLineGroups,
@@ -78,13 +81,11 @@ describe('processExecutionResults', () => {
   it('removes overlapping group when lineStart > to', () => {
     const store = new Map<number, Expression>();
     const currentLineGroups: LineGroup[] = [
-      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 2 },
-      { id: 'g2', resultIds: [2], lineStart: 5, lineEnd: 6 },
+      lg('g1', [1], 1, 2),
+      lg('g2', [2], 5, 6),
     ];
 
-    const newExpressions: Expression[] = [
-      { id: 3, lineStart: 5, lineEnd: 5, result: { output: [] } },
-    ];
+    const newExpressions: Expression[] = [expr(3, 5, 5)];
 
     const { groups } = processExecutionResults(store, newExpressions, {
       currentLineGroups,
@@ -101,15 +102,13 @@ describe('processExecutionResults', () => {
   it('removes multiple overlapping groups', () => {
     const store = new Map<number, Expression>();
     const currentLineGroups: LineGroup[] = [
-      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 2 },
-      { id: 'g2', resultIds: [2], lineStart: 3, lineEnd: 4 },
-      { id: 'g3', resultIds: [3], lineStart: 5, lineEnd: 6 },
-      { id: 'g4', resultIds: [4], lineStart: 10, lineEnd: 11 },
+      lg('g1', [1], 1, 2),
+      lg('g2', [2], 3, 4),
+      lg('g3', [3], 5, 6),
+      lg('g4', [4], 10, 11),
     ];
 
-    const newExpressions: Expression[] = [
-      { id: 5, lineStart: 3, lineEnd: 5, result: { output: [] } },
-    ];
+    const newExpressions: Expression[] = [expr(5, 3, 5)];
 
     const { groups } = processExecutionResults(store, newExpressions, {
       currentLineGroups,
@@ -128,13 +127,11 @@ describe('processExecutionResults', () => {
   it('sorts merged groups by lineStart', () => {
     const store = new Map<number, Expression>();
     const currentLineGroups: LineGroup[] = [
-      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 2 },
-      { id: 'g2', resultIds: [2], lineStart: 10, lineEnd: 11 },
+      lg('g1', [1], 1, 2),
+      lg('g2', [2], 10, 11),
     ];
 
-    const newExpressions: Expression[] = [
-      { id: 3, lineStart: 5, lineEnd: 5, result: { output: [] } },
-    ];
+    const newExpressions: Expression[] = [expr(3, 5, 5)];
 
     const { groups } = processExecutionResults(store, newExpressions, {
       currentLineGroups,
@@ -150,8 +147,8 @@ describe('processExecutionResults', () => {
   it('handles empty new results with partial execution', () => {
     const store = new Map<number, Expression>();
     const currentLineGroups: LineGroup[] = [
-      { id: 'g1', resultIds: [1], lineStart: 1, lineEnd: 2 },
-      { id: 'g2', resultIds: [2], lineStart: 5, lineEnd: 6 },
+      lg('g1', [1], 1, 2),
+      lg('g2', [2], 5, 6),
     ];
 
     const newExpressions: Expression[] = [];
@@ -169,13 +166,11 @@ describe('processExecutionResults', () => {
   it('replaces all groups when lineRange covers everything', () => {
     const store = new Map<number, Expression>();
     const currentLineGroups: LineGroup[] = [
-      { id: 'g1', resultIds: [1], lineStart: 2, lineEnd: 3 },
-      { id: 'g2', resultIds: [2], lineStart: 5, lineEnd: 6 },
+      lg('g1', [1], 2, 3),
+      lg('g2', [2], 5, 6),
     ];
 
-    const newExpressions: Expression[] = [
-      { id: 3, lineStart: 1, lineEnd: 1, result: { output: [] } },
-    ];
+    const newExpressions: Expression[] = [expr(3, 1, 1)];
 
     const { groups } = processExecutionResults(store, newExpressions, {
       currentLineGroups,

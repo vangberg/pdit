@@ -1,5 +1,7 @@
 import { Expression } from "./execution";
 
+export type LineGroupState = 'pending' | 'executing' | 'done';
+
 export interface LineGroup {
   id: string;
   resultIds: number[];
@@ -7,6 +9,7 @@ export interface LineGroup {
   lineStart: number;
   lineEnd: number;
   allInvisible?: boolean;
+  state: LineGroupState;
 }
 
 let lineGroupIdCounter = 0;
@@ -92,12 +95,28 @@ export function computeLineGroups(results: Expression[]): LineGroup[] {
         (result) => result.result?.isInvisible === true
       );
 
+      // Compute group state from expression states:
+      // - Any executing → executing
+      // - All done → done
+      // - Otherwise → pending
+      let groupState: LineGroupState = 'done';
+      for (const result of groupResults) {
+        if (result.state === 'executing') {
+          groupState = 'executing';
+          break;
+        }
+        if (result.state === 'pending') {
+          groupState = 'pending';
+        }
+      }
+
       groups.push({
         id: `lg-${lineGroupIdCounter++}`,
         resultIds: [...resultIds].sort((a, b) => a - b),
         lineStart: minLine,
         lineEnd: maxLine,
         allInvisible,
+        state: groupState,
       });
     }
   }

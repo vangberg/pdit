@@ -89,6 +89,17 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
         style={minHeight ? { minHeight: `${minHeight}px` } : undefined}
       >
         {lineGroups.map((group) => {
+          // Check if any expression in this group has output to display
+          const hasOutput = group.resultIds.some((resultId) => {
+            const expr = expressions.find((e) => e.id === resultId);
+            return expr?.result && expr.result.output.length > 0;
+          });
+
+          // Don't render empty output boxes
+          if (!hasOutput) {
+            return null;
+          }
+
           const layout = lineGroupLayouts?.get(group.id);
           const groupClassName = group.allInvisible
             ? "output-group output-group-invisible"

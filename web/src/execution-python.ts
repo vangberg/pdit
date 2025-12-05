@@ -6,7 +6,7 @@
 import { PythonServerBackend } from './execution-backend-python';
 
 // Re-export types from backend
-export type { OutputItem, Expression, ExpressionResult } from './execution-backend-python';
+export type { OutputItem, Expression, ExpressionResult, ExecutionEvent, ExpressionState } from './execution-backend-python';
 
 let pythonServerBackend: PythonServerBackend | null = null;
 

@@ -8,10 +8,13 @@ export interface OutputItem {
   content: string;
 }
 
+export type ExpressionState = 'pending' | 'executing' | 'done';
+
 export interface Expression {
   id: number;
   lineStart: number;
   lineEnd: number;
+  state: ExpressionState;
   result?: ExpressionResult;
 }
 
@@ -19,6 +22,11 @@ export interface ExpressionResult {
   output: OutputItem[];
   isInvisible?: boolean;
 }
+
+// Events yielded by executeScript
+export type ExecutionEvent =
+  | { type: 'expressions'; expressions: Expression[] }
+  | { type: 'done'; expression: Expression };
 
 // Global counter for expression IDs
 let globalIdCounter = 1;
@@ -32,7 +40,7 @@ export class PythonServerBackend {
 
   /**
    * Execute a Python script with SSE streaming.
-   * Yields results as each statement completes.
+   * Yields events as execution progresses: pending, executing, done.
    */
   async *executeScript(
     script: string,
@@ -40,7 +48,7 @@ export class PythonServerBackend {
       lineRange?: { from: number; to: number };
       scriptName?: string;
     }
-  ): AsyncGenerator<Expression, void, unknown> {
+  ): AsyncGenerator<ExecutionEvent, void, unknown> {
     // Use Fetch API with POST (EventSource only supports GET)
     const response = await fetch(`${this.baseUrl}/api/execute-script`, {
       method: 'POST',
@@ -67,6 +75,10 @@ export class PythonServerBackend {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+
+    // Track expressions by their order for correlating results
+    const expressionList: Expression[] = [];
+    let nextResultIndex = 0;
 
     try {
       while (true) {
@@ -99,14 +111,39 @@ export class PythonServerBackend {
             throw new Error(data.message);
           }
 
-          // Handle result event (statement execution result)
+          // Handle expressions list (first event from backend)
+          if (data.type === 'expressions') {
+            const expressions: Expression[] = data.expressions.map(
+              (expr: { lineStart: number; lineEnd: number }) => {
+                const id = globalIdCounter++;
+                return {
+                  id,
+                  lineStart: expr.lineStart,
+                  lineEnd: expr.lineEnd,
+                  state: 'pending' as const,
+                };
+              }
+            );
+            expressionList.push(...expressions);
+            yield { type: 'expressions', expressions };
+            continue;
+          }
+
+          // Handle result event (statement execution complete)
+          // Results arrive in order, so use array index to correlate
+          const expr = expressionList[nextResultIndex++];
+          const id = expr?.id ?? globalIdCounter++;
           yield {
-            id: globalIdCounter++,
-            lineStart: data.lineStart,
-            lineEnd: data.lineEnd,
-            result: {
-              output: data.output,
-              isInvisible: data.isInvisible,
+            type: 'done',
+            expression: {
+              id,
+              lineStart: data.lineStart,
+              lineEnd: data.lineEnd,
+              state: 'done' as const,
+              result: {
+                output: data.output,
+                isInvisible: data.isInvisible,
+              },
             },
           };
         }

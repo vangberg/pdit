@@ -1,7 +1,7 @@
 import {EditorView, Decoration, WidgetType, DecorationSet} from "@codemirror/view"
 import {StateField, StateEffect, RangeSetBuilder, Facet, Text} from "@codemirror/state"
 import { lineGroupsField, lastExecutedIdsField } from "./result-grouping-plugin"
-import { LineGroup } from "./compute-line-groups"
+import { LineGroup, LineGroupState } from "./compute-line-groups"
 
 // ============================================================================
 // Types
@@ -19,24 +19,40 @@ export type LineGroupLayoutChange = (layouts: Map<string, LineGroupLayout>) => v
 // ============================================================================
 
 class Spacer extends WidgetType {
-  constructor(readonly height: number, readonly lineNumber: number, readonly isRecent: boolean) { super() }
+  constructor(
+    readonly height: number,
+    readonly lineNumber: number,
+    readonly isRecent: boolean,
+    readonly state: LineGroupState
+  ) { super() }
 
-  eq(other: Spacer) { return this.height == other.height && this.lineNumber == other.lineNumber && this.isRecent == other.isRecent }
+  eq(other: Spacer) {
+    return this.height == other.height &&
+           this.lineNumber == other.lineNumber &&
+           this.isRecent == other.isRecent &&
+           this.state == other.state
+  }
+
+  private getClassName(): string {
+    if (this.state === 'pending') {
+      return 'cm-preview-spacer cm-preview-spacer-pending'
+    } else if (this.state === 'executing') {
+      return 'cm-preview-spacer cm-preview-spacer-executing'
+    } else {
+      return this.isRecent ? 'cm-preview-spacer cm-preview-spacer-recent' : 'cm-preview-spacer'
+    }
+  }
 
   toDOM() {
     let elt = document.createElement("div")
     elt.style.height = this.height + "px"
-
-    const classes = this.isRecent ? 'cm-preview-spacer cm-preview-spacer-recent' : 'cm-preview-spacer'
-    elt.className = classes
+    elt.className = this.getClassName()
     return elt
   }
 
   updateDOM(dom: HTMLElement) {
     dom.style.height = this.height + "px"
-
-    const classes = this.isRecent ? 'cm-preview-spacer cm-preview-spacer-recent' : 'cm-preview-spacer'
-    dom.className = classes
+    dom.className = this.getClassName()
     return true
   }
 
@@ -146,7 +162,7 @@ function computeSpacers(
         const endLine = doc.line(group.lineEnd)
         const isRecent = group.resultIds.some(id => lastExecutedIds.has(id))
         builder.add(endLine.to, endLine.to, Decoration.widget({
-          widget: new Spacer(diff, group.lineEnd, isRecent),
+          widget: new Spacer(diff, group.lineEnd, isRecent, group.state),
           block: true,
           side: 1
         }))
@@ -165,7 +181,8 @@ function compareSpacers(a: DecorationSet, b: DecorationSet): boolean {
     const spacerB = iB.value!.spec.widget as Spacer
     if (iA.from != iB.from ||
         Math.abs(spacerA.height - spacerB.height) > 1 ||
-        spacerA.isRecent !== spacerB.isRecent)
+        spacerA.isRecent !== spacerB.isRecent ||
+        spacerA.state !== spacerB.state)
       return false
     iA.next(); iB.next()
   }

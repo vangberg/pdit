@@ -1,6 +1,14 @@
 import polars as pl
 import matplotlib.pyplot as plt
 
+import time
+
+1
+if True:
+  time.sleep(2)
+  print(time.time())
+2
+
 # Load iris dataset (150 rows) and repeat to get ~500 rows
 df = pl.read_csv("https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv")
 df = pl.concat([df] * 4)  # Repeat 4 times for 600 rows

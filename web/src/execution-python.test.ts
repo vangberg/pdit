@@ -1,15 +1,24 @@
 import { describe, it, expect } from 'vitest';
-import { executeScript, Expression } from './execution-python';
+import { executeScript, Expression, ExecutionEvent } from './execution-python';
+
+// Helper to collect done expressions from execution events
+async function collectExpressions(
+  script: string,
+  options?: { lineRange?: { from: number; to: number }; scriptName?: string }
+): Promise<Expression[]> {
+  const results: Expression[] = [];
+  for await (const event of executeScript(script, options)) {
+    if (event.type === 'done') {
+      results.push(event.expression);
+    }
+  }
+  return results;
+}
 
 describe('executeScript', () => {
 
   it('executes a simple expression and returns result', async () => {
-    const script = '2 + 2';
-    const results: Expression[] = [];
-
-    for await (const expr of executeScript(script)) {
-      results.push(expr);
-    }
+    const results = await collectExpressions('2 + 2');
 
     expect(results).toHaveLength(1);
     expect(results[0].lineStart).toBe(1);
@@ -20,12 +29,7 @@ describe('executeScript', () => {
   });
 
   it('executes an assignment statement with no visible output', async () => {
-    const script = 'x = 10';
-    const results: Expression[] = [];
-
-    for await (const expr of executeScript(script)) {
-      results.push(expr);
-    }
+    const results = await collectExpressions('x = 10');
 
     expect(results).toHaveLength(1);
     expect(results[0].result?.output).toHaveLength(0);
@@ -33,12 +37,7 @@ describe('executeScript', () => {
   });
 
   it('captures print statement output', async () => {
-    const script = 'print("Hello, World!")';
-    const results: Expression[] = [];
-
-    for await (const expr of executeScript(script)) {
-      results.push(expr);
-    }
+    const results = await collectExpressions('print("Hello, World!")');
 
     expect(results).toHaveLength(1);
     expect(results[0].result?.output).toHaveLength(1);
@@ -50,11 +49,7 @@ describe('executeScript', () => {
     const script = `x = 5
 y = 10
 x + y`;
-    const results: Expression[] = [];
-
-    for await (const expr of executeScript(script)) {
-      results.push(expr);
-    }
+    const results = await collectExpressions(script);
 
     expect(results).toHaveLength(3);
     expect(results[0].lineStart).toBe(1);
@@ -71,12 +66,7 @@ x + y`;
   });
 
   it('captures error messages', async () => {
-    const script = '1 / 0';
-    const results: Expression[] = [];
-
-    for await (const expr of executeScript(script)) {
-      results.push(expr);
-    }
+    const results = await collectExpressions('1 / 0');
 
     expect(results).toHaveLength(1);
     // Should have at least one output (error, and/or stderr traceback)
@@ -88,12 +78,7 @@ x + y`;
   });
 
   it('handles syntax errors gracefully', async () => {
-    const script = 'if True\n  print("missing colon")';
-    const results: Expression[] = [];
-
-    for await (const expr of executeScript(script)) {
-      results.push(expr);
-    }
+    const results = await collectExpressions('if True\n  print("missing colon")');
 
     // Syntax errors result in a single expression being returned
     // The exact error handling behavior may vary, but at minimum
@@ -107,11 +92,7 @@ x + y`;
 y = 2
 z = 3
 x + y + z`;
-    const results: Expression[] = [];
-
-    for await (const expr of executeScript(script, { lineRange: { from: 2, to: 3 } })) {
-      results.push(expr);
-    }
+    const results = await collectExpressions(script, { lineRange: { from: 2, to: 3 } });
 
     expect(results).toHaveLength(2);
     expect(results[0].lineStart).toBe(2);
@@ -122,11 +103,7 @@ x + y + z`;
     const script = `x = 5
 x = x * 2
 x`;
-    const results: Expression[] = [];
-
-    for await (const expr of executeScript(script)) {
-      results.push(expr);
-    }
+    const results = await collectExpressions(script);
 
     expect(results).toHaveLength(3);
     expect(results[2].result?.output[0].content).toBe('10\n');
@@ -137,11 +114,7 @@ x`;
     return f"Hello, {name}!"
 
 greet("Python")`;
-    const results: Expression[] = [];
-
-    for await (const expr of executeScript(script)) {
-      results.push(expr);
-    }
+    const results = await collectExpressions(script);
 
     expect(results).toHaveLength(2);
     expect(results[0].lineStart).toBe(1);
@@ -154,24 +127,14 @@ greet("Python")`;
   });
 
   it('handles list comprehensions', async () => {
-    const script = '[i**2 for i in range(5)]';
-    const results: Expression[] = [];
-
-    for await (const expr of executeScript(script)) {
-      results.push(expr);
-    }
+    const results = await collectExpressions('[i**2 for i in range(5)]');
 
     expect(results).toHaveLength(1);
     expect(results[0].result?.output[0].content).toBe('[0, 1, 4, 9, 16]\n');
   });
 
   it('handles expressions that return None', async () => {
-    const script = 'None';
-    const results: Expression[] = [];
-
-    for await (const expr of executeScript(script)) {
-      results.push(expr);
-    }
+    const results = await collectExpressions('None');
 
     expect(results).toHaveLength(1);
     expect(results[0].result?.output).toHaveLength(0);
@@ -182,11 +145,7 @@ greet("Python")`;
     const script = `1
 2
 3`;
-    const results: Expression[] = [];
-
-    for await (const expr of executeScript(script)) {
-      results.push(expr);
-    }
+    const results = await collectExpressions(script);
 
     expect(results).toHaveLength(3);
     expect(results[0].id).toBeDefined();
@@ -199,11 +158,7 @@ greet("Python")`;
   it('handles import statements', async () => {
     const script = `import math
 math.pi`;
-    const results: Expression[] = [];
-
-    for await (const expr of executeScript(script)) {
-      results.push(expr);
-    }
+    const results = await collectExpressions(script);
 
     expect(results).toHaveLength(2);
     expect(results[0].result?.isInvisible).toBe(true);
@@ -215,16 +170,48 @@ math.pi`;
 x = 5 + 3
 print("Result:")
 x`;
-    const results: Expression[] = [];
-
-    for await (const expr of executeScript(script)) {
-      results.push(expr);
-    }
+    const results = await collectExpressions(script);
 
     expect(results).toHaveLength(4);
     expect(results[0].result?.output[0].content).toBe('Starting\n');
     expect(results[1].result?.isInvisible).toBe(true);
     expect(results[2].result?.output[0].content).toBe('Result:\n');
     expect(results[3].result?.output[0].content).toBe('8\n');
+  });
+
+  it('emits expressions event before results', async () => {
+    const script = `x = 1
+y = 2`;
+    const events: ExecutionEvent[] = [];
+    for await (const event of executeScript(script)) {
+      events.push(event);
+    }
+
+    // First event should be expressions with all pending expressions
+    expect(events[0].type).toBe('expressions');
+    if (events[0].type === 'expressions') {
+      expect(events[0].expressions).toHaveLength(2);
+      expect(events[0].expressions[0].state).toBe('pending');
+      expect(events[0].expressions[1].state).toBe('pending');
+    }
+    // Followed by done events for each expression
+    expect(events.filter(e => e.type === 'done')).toHaveLength(2);
+  });
+
+  it('expressions event only includes filtered expressions', async () => {
+    const script = `x = 1
+y = 2
+z = 3`;
+    const events: ExecutionEvent[] = [];
+    for await (const event of executeScript(script, { lineRange: { from: 2, to: 2 } })) {
+      events.push(event);
+    }
+
+    expect(events[0].type).toBe('expressions');
+    if (events[0].type === 'expressions') {
+      // Only y = 2 should be included
+      expect(events[0].expressions).toHaveLength(1);
+      expect(events[0].expressions[0].lineStart).toBe(2);
+    }
   });
 });
