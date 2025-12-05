@@ -1,4 +1,4 @@
-import React, { useImperativeHandle, useRef, useEffect } from "react";
+import React, { useImperativeHandle, useRef } from "react";
 import Markdown from "react-markdown";
 import { Expression } from "./execution";
 import { DataframeTable } from "./DataframeTable";
@@ -12,50 +12,7 @@ interface OutputProps {
 
 // Component for rendering a single image output item
 const ImageOutput: React.FC<{ dataUrl: string }> = ({ dataUrl }) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [dimensions, setDimensions] = React.useState({ width: 800, height: 600 });
-  const imageBitmapRef = useRef<ImageBitmap | null>(null);
-
-  useEffect(() => {
-    const loadImage = async () => {
-      try {
-        // Convert data URL to Blob
-        const response = await fetch(dataUrl);
-        const blob = await response.blob();
-        // Convert Blob to ImageBitmap
-        const imageBitmap = await createImageBitmap(blob);
-
-        // Store the bitmap for later drawing
-        imageBitmapRef.current = imageBitmap;
-
-        // Update dimensions (this will trigger a re-render and another useEffect)
-        setDimensions({ width: imageBitmap.width, height: imageBitmap.height });
-      } catch (error) {
-        console.error('Failed to load image:', error);
-      }
-    };
-
-    loadImage();
-  }, [dataUrl]);
-
-  // Draw the image whenever dimensions change or canvas ref updates
-  useEffect(() => {
-    if (canvasRef.current && imageBitmapRef.current) {
-      const ctx = canvasRef.current.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, dimensions.width, dimensions.height);
-        ctx.drawImage(imageBitmapRef.current, 0, 0);
-      }
-    }
-  }, [dimensions]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      width={dimensions.width}
-      height={dimensions.height}
-    />
-  );
+  return <img src={dataUrl} className="output-image" alt="Plot output" />;
 };
 
 // Get a fun type label for output items
