@@ -32,7 +32,6 @@ class OutputItem(BaseModel):
 
 class ExpressionResult(BaseModel):
     """Result of executing a single statement."""
-    nodeIndex: int
     lineStart: int
     lineEnd: int
     output: List[OutputItem]
@@ -131,7 +130,6 @@ async def execute_script(request: ExecuteScriptRequest):
                         "type": "expressions",
                         "expressions": [
                             {
-                                "nodeIndex": expr.node_index,
                                 "lineStart": expr.line_start,
                                 "lineEnd": expr.line_end
                             }
@@ -141,7 +139,6 @@ async def execute_script(request: ExecuteScriptRequest):
                 # Subsequent events are execution results
                 elif isinstance(event, ExecutionResult):
                     expr_result = ExpressionResult(
-                        nodeIndex=event.node_index,
                         lineStart=event.line_start,
                         lineEnd=event.line_end,
                         output=[

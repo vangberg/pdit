@@ -12,7 +12,6 @@ export type ExpressionState = 'pending' | 'executing' | 'done';
 
 export interface Expression {
   id: number;
-  nodeIndex: number;
   lineStart: number;
   lineEnd: number;
   state: ExpressionState;
@@ -77,8 +76,9 @@ export class PythonServerBackend {
     const decoder = new TextDecoder();
     let buffer = '';
 
-    // Map nodeIndex to expression ID for correlation
-    const nodeIndexToId = new Map<number, number>();
+    // Track expressions by their order for correlating results
+    const expressionList: Expression[] = [];
+    let nextResultIndex = 0;
 
     try {
       while (true) {
@@ -114,29 +114,29 @@ export class PythonServerBackend {
           // Handle expressions list (first event from backend)
           if (data.type === 'expressions') {
             const expressions: Expression[] = data.expressions.map(
-              (expr: { nodeIndex: number; lineStart: number; lineEnd: number }) => {
+              (expr: { lineStart: number; lineEnd: number }) => {
                 const id = globalIdCounter++;
-                nodeIndexToId.set(expr.nodeIndex, id);
                 return {
                   id,
-                  nodeIndex: expr.nodeIndex,
                   lineStart: expr.lineStart,
                   lineEnd: expr.lineEnd,
                   state: 'pending' as const,
                 };
               }
             );
+            expressionList.push(...expressions);
             yield { type: 'expressions', expressions };
             continue;
           }
 
           // Handle result event (statement execution complete)
-          const id = nodeIndexToId.get(data.nodeIndex) ?? globalIdCounter++;
+          // Results arrive in order, so use array index to correlate
+          const expr = expressionList[nextResultIndex++];
+          const id = expr?.id ?? globalIdCounter++;
           yield {
             type: 'done',
             expression: {
               id,
-              nodeIndex: data.nodeIndex,
               lineStart: data.lineStart,
               lineEnd: data.lineEnd,
               state: 'done' as const,

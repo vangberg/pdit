@@ -4,7 +4,7 @@ import { Expression } from './execution';
 
 // Helper to create expression with required fields
 function expr(id: number, lineStart: number, lineEnd: number): Expression {
-  return { id, nodeIndex: id, lineStart, lineEnd, state: 'done', result: { output: [] } };
+  return { id, lineStart, lineEnd, state: 'done', result: { output: [] } };
 }
 
 describe('computeLineGroups', () => {
