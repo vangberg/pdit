@@ -88,6 +88,8 @@ interface ExecutionState {
   expressionsByRange: Map<string, Expression>;
   /** Line range being executed (for partial execution) */
   lineRange?: { from: number; to: number };
+  /** Current line groups - tracked here to avoid stale closure issues */
+  currentLineGroups: LineGroup[];
 }
 
 /**
@@ -167,6 +169,8 @@ export function useResults() {
         executionStateRef.current = {
           expressionsByRange: new Map(),
           lineRange: options?.lineRange,
+          // Initialize from current state to enable ID reuse
+          currentLineGroups: lineGroups,
         };
       }
 
@@ -181,15 +185,18 @@ export function useResults() {
       // Get all expressions as array
       const allExpressions = Array.from(state.expressionsByRange.values());
 
-      // Compute line groups
+      // Compute line groups - use state.currentLineGroups to avoid stale closure
       const { newStore, groups } = processExecutionResults(
         expressions,
         allExpressions,
         {
-          currentLineGroups: lineGroups,
+          currentLineGroups: state.currentLineGroups,
           lineRange: state.lineRange,
         }
       );
+
+      // Update the ref with new groups for subsequent events
+      state.currentLineGroups = groups;
 
       setExpressions(newStore);
       setLineGroups(groups);
