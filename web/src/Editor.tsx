@@ -17,7 +17,7 @@ import {
   highlightActiveLineGutter,
   ViewUpdate,
 } from "@codemirror/view";
-import { Compartment, EditorState, Text } from "@codemirror/state";
+import { Compartment, EditorState, Text, Transaction } from "@codemirror/state";
 import {
   defaultHighlightStyle,
   syntaxHighlighting,
@@ -286,6 +286,8 @@ export function Editor({
 
         const transaction: any = {
           effects,
+          // Don't add execution state changes to undo history
+          annotations: Transaction.addToHistory.of(false),
         };
 
         if (doc !== view.state.doc.toString()) {

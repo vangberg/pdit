@@ -6,7 +6,7 @@ import time
 1
 if True:
   time.sleep(2)
-  print(123)
+  print(time.time())
 2
 
 # Load iris dataset (150 rows) and repeat to get ~500 rows

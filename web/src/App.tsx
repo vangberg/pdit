@@ -1,7 +1,7 @@
 import "./style.css";
 import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
-import { executeScript, Expression } from "./execution-python";
+import { executeScript } from "./execution-python";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { LineGroup } from "./compute-line-groups";
@@ -53,8 +53,13 @@ function App() {
   } = useScriptFile(scriptPath, DEFAULT_CODE, {
     onFileChange: handleFileChange,
   });
-  const { expressions, lineGroups, setLineGroups, addExpressions } =
-    useResults();
+  const {
+    expressions,
+    lineGroups,
+    setLineGroups,
+    handleExecutionEvent,
+    resetExecutionState,
+  } = useResults();
   const [lineGroupHeights, setLineGroupHeights] = useState<Map<string, number>>(
     new Map()
   );
@@ -105,65 +110,20 @@ function App() {
       script: string,
       options?: { lineRange?: { from: number; to: number } }
     ) => {
+      // Extract script name from path (just the filename)
+      const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
+
       try {
-        // Track expressions by line range key for matching
-        const expressionsByLineRange = new Map<string, Expression>();
-
-        // Extract script name from path (just the filename)
-        const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
-
         for await (const event of executeScript(script, {
           ...options,
-          scriptName
+          scriptName,
         })) {
           console.log("Execute event:", event);
 
-          if (event.type === 'expressions') {
-            // Backend sent all expressions that will be executed
-            // First one is executing, rest are pending
-            for (let i = 0; i < event.expressions.length; i++) {
-              const expr = event.expressions[i];
-              const key = `${expr.lineStart}-${expr.lineEnd}`;
-              const state = i === 0 ? 'executing' : 'pending';
-
-              // Look for existing expression with same line range
-              const existingExpr = Array.from(expressions.values()).find(
-                e => e.lineStart === expr.lineStart && e.lineEnd === expr.lineEnd
-              );
-
-              if (existingExpr?.result) {
-                // Keep old result while pending/executing
-                expressionsByLineRange.set(key, { ...expr, state, result: existingExpr.result });
-              } else {
-                expressionsByLineRange.set(key, { ...expr, state });
-              }
-            }
-          } else if (event.type === 'done') {
-            // Update/replace expression with new result
-            const key = `${event.expression.lineStart}-${event.expression.lineEnd}`;
-            expressionsByLineRange.set(key, event.expression);
-
-            // Find first pending expression and mark it as executing
-            for (const [k, expr] of expressionsByLineRange) {
-              if (expr.state === 'pending') {
-                expressionsByLineRange.set(k, { ...expr, state: 'executing' });
-                break;
-              }
-            }
-          }
-
-          // Get all expressions as array
-          const allExpressions = Array.from(expressionsByLineRange.values());
-
-          // Compute line groups and update editor
-          const { lineGroups: newLineGroups } = addExpressions(allExpressions, {
-            lineRange: options?.lineRange,
-          });
-
-          // Only include done expressions in lastExecutedResultIds
-          const doneIds = allExpressions
-            .filter(expr => expr.state === 'done')
-            .map(expr => expr.id);
+          const { lineGroups: newLineGroups, doneIds } = handleExecutionEvent(
+            event,
+            options
+          );
 
           editorRef.current?.applyExecutionUpdate({
             doc: script,
@@ -173,9 +133,11 @@ function App() {
         }
       } catch (error) {
         console.error("Execution error:", error);
+      } finally {
+        resetExecutionState();
       }
     },
-    [addExpressions, scriptPath, expressions, lineGroups]
+    [handleExecutionEvent, resetExecutionState, scriptPath]
   );
 
   const handleExecuteCurrent = useCallback(
