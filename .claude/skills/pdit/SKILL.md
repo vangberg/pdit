@@ -1,6 +1,6 @@
 ---
 name: pdit
-description: Collaborate with users running pdit, an interactive Python editor with inline execution results. Use when user mentions pdit, runs `uv pdit`, or is doing collaborative Python development where they see live execution output in a browser.
+description: Collaborate with users running pdit, an interactive Python editor with inline execution results. Use when user mentions pdit, runs `uv run pdit`, or is doing collaborative Python development where they see live execution output in a browser.
 ---
 
 # pdit Collaboration
@@ -15,12 +15,14 @@ split-pane interface: code editor (left) and streaming execution results (right)
 pdit runs from the local uv environment so dependencies work seamlessly.
 
 If pyproject.toml exists, just add pdit and run:
+
 ```bash
 uv add git+https://github.com/vangberg/pdit@dist
 uv run pdit script.py --verbose
 ```
 
 If starting fresh:
+
 ```bash
 uv init
 uv add git+https://github.com/vangberg/pdit@dist
@@ -32,15 +34,17 @@ uv run pdit script.py --verbose
 **Upgrading pdit:**
 
 To upgrade to the latest version of pdit:
+
 ```bash
 uv lock --upgrade-package pdit
 ```
 
-Run with `run_in_background: true` in the Bash tool so you can continue editing.
+**IMPORTANT: Run with `run_in_background: true` in the Bash tool so you can continue editing.**
 
 **IMPORTANT: Always use `--verbose` when Claude is running pdit.**
 
 Verbose mode prints all execution output to the console where pdit is running:
+
 - Shows each line being executed (with `>>>` prefix like Python REPL)
 - Displays all stdout/stderr output in real-time
 - Shows script name with `[script.py]` prefix
@@ -48,13 +52,15 @@ Verbose mode prints all execution output to the console where pdit is running:
 - Essential for debugging and validating code changes
 
 Options:
+
 - `--verbose` - Print all computation stdout/stderr to console (REQUIRED for Claude)
 - `--port 9000` - Use different port (default: 8888)
 - `--no-browser` - Don't auto-open browser
 
-Server runs on `127.0.0.1:8888`, browser opens automatically.
+Server runs on `localhost:8888`, browser opens automatically.
 
 **What the user sees:**
+
 - Left pane: CodeMirror Python editor with syntax highlighting
 - Right pane: Execution results grouped by source lines
 - Top bar: RUN CURRENT, RUN ALL, SAVE buttons
@@ -95,21 +101,24 @@ df[df["price"] > 100]
 
 ## Collaboration Workflow
 
-**File watching enabled** (`file-watcher` branch): When you edit the Python file, changes appear
+**File watching enabled**: When you edit the Python file, changes appear
 in the user's editor automatically.
 
 **Validate before the user sees it:**
+
 - Run the script yourself with `uv run script.py` before presenting to user
 - Fix any errors or warnings so output is clean
 - User should see working code, not debug your mistakes
 
 **Recommended workflow:**
+
 1. Write/edit the `.py` file
 2. Run `uv run script.py` to validate - fix any errors
 3. User sees clean code and runs with Cmd+Enter
 4. With `--verbose`, you can see execution output in your console and validate without user feedback
 
 **When user shares output:**
+
 - Results show stdout, stderr, and expression values
 - Errors include full tracebacks
 - Results are associated with specific line ranges
@@ -149,6 +158,7 @@ df.describe()
 ```
 
 **Usage:**
+
 - Start with `# %% [markdown]` on its own line
 - Follow with a triple-quoted docstring (`"""..."""`) containing markdown
 - Content is rendered as markdown in the output pane
@@ -156,7 +166,8 @@ df.describe()
 - Great for documenting analysis steps and explaining results
 
 **Shortcut:**
-- Insert markdown cell: Cmd+M / Ctrl+M (inserts template and positions cursor)
+
+- Insert markdown cell: Cmd+Shift+M / Ctrl+Shift+M (inserts template and positions cursor)
 
 ## Matplotlib Plots
 
@@ -171,6 +182,7 @@ plt.gca()  # ✅ This triggers plot capture
 ```
 
 **IMPORTANT:** Use `plt.gca()` to display plots, NOT `plt.show()`:
+
 - `plt.gca()` returns the Axes object, which pdit captures and renders
 - `plt.show()` is for interactive displays and won't work in pdit
 - Plots appear inline in the output pane automatically
