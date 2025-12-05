@@ -24,7 +24,7 @@ class Server(uvicorn.Server):
     @contextlib.contextmanager
     def run_in_thread(self):
         """Run server in background thread, wait for startup."""
-        thread = threading.Thread(target=self.run)
+        thread = threading.Thread(target=self.run, daemon=True)
         thread.start()
         try:
             # Wait for server to be ready
