@@ -24,6 +24,10 @@ function App() {
 
   const editorRef = useRef<EditorHandles | null>(null);
   const lineGroupsRef = useRef<LineGroup[]>([]);
+  // Baseline content for diffing - tracks content before external changes started
+  const baselineContentRef = useRef<string | null>(null);
+  // Line groups at baseline time, for proper adjustment
+  const baselineLineGroupsRef = useRef<LineGroup[]>([]);
 
   const handleFileChange = useCallback(
     (newContent: string) => {
@@ -32,17 +36,24 @@ function App() {
         setHasConflict(true);
       } else {
         // No local edits → check if content actually changed
-        const oldContent = doc?.toString() ?? "";
-        if (oldContent === newContent) {
+        const currentContent = doc?.toString() ?? "";
+        if (currentContent === newContent) {
           // Content is the same, don't reload (preserves line groups)
           return;
         }
 
-        // Compute diff and adjust line groups
+        // Set baseline if this is the first external change
+        // Baseline tracks the state before any external changes started
+        if (baselineContentRef.current === null) {
+          baselineContentRef.current = currentContent;
+          baselineLineGroupsRef.current = [...lineGroupsRef.current];
+        }
+
+        // Always diff against baseline to accumulate all changes
         const { lineGroups: adjustedGroups, changedLines } = adjustLineGroupsForDiff(
-          oldContent,
+          baselineContentRef.current,
           newContent,
-          lineGroupsRef.current
+          baselineLineGroupsRef.current
         );
 
         // Update editor with new content and adjusted line groups
@@ -53,7 +64,7 @@ function App() {
         });
         isProgrammaticUpdate.current = false;
 
-        // Track changed lines for green highlight
+        // Track changed lines for green highlight (accumulated from baseline)
         setChangedFromDiskLines(changedLines);
       }
     },
@@ -101,6 +112,9 @@ function App() {
     setDoc(doc);
     if (!isProgrammaticUpdate.current) {
       setHasUnsavedChanges(true);
+      // User started editing - reset baseline so next external change starts fresh
+      baselineContentRef.current = null;
+      baselineLineGroupsRef.current = [];
     }
   }, []);
 
@@ -199,11 +213,19 @@ function App() {
       isProgrammaticUpdate.current = false;
       setHasUnsavedChanges(false);
       setHasConflict(false);
+      // Reset baseline - disk content is now the reference point
+      baselineContentRef.current = null;
+      baselineLineGroupsRef.current = [];
+      setChangedFromDiskLines(new Set());
     }
   }, [diskContent]);
 
   const handleKeepLocalChanges = useCallback(() => {
     setHasConflict(false);
+    // User chose to keep local changes - reset baseline and clear highlights
+    baselineContentRef.current = null;
+    baselineLineGroupsRef.current = [];
+    setChangedFromDiskLines(new Set());
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -227,6 +249,10 @@ function App() {
       if (response.ok) {
         setHasUnsavedChanges(false);
         setHasConflict(false);
+        // Reset baseline - saved content is now the reference point
+        baselineContentRef.current = null;
+        baselineLineGroupsRef.current = [];
+        setChangedFromDiskLines(new Set());
       } else {
         console.error("Failed to save file:", await response.text());
       }
