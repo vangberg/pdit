@@ -5,6 +5,7 @@ import { executeScript } from "./execution-python";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { LineGroup } from "./compute-line-groups";
+import { adjustLineGroupsForDiff } from "./diff-line-groups";
 import { TopBar } from "./TopBar";
 import { useResults } from "./results";
 import { useScriptFile } from "./use-script-file";
@@ -21,6 +22,7 @@ function App() {
   const isProgrammaticUpdate = useRef(false);
 
   const editorRef = useRef<EditorHandles | null>(null);
+  const lineGroupsRef = useRef<LineGroup[]>([]);
 
   const handleFileChange = useCallback(
     (newContent: string) => {
@@ -33,11 +35,16 @@ function App() {
           // Content is the same, don't reload (preserves line groups)
           return;
         }
-        // Content differs → safe to auto-reload
+        // Content differs → compute adjusted line groups via diff
+        const adjustedGroups = adjustLineGroupsForDiff(
+          doc?.toString() ?? "",
+          newContent,
+          lineGroupsRef.current
+        );
         isProgrammaticUpdate.current = true;
         editorRef.current?.applyExecutionUpdate({
           doc: newContent,
-          lineGroups: [],
+          lineGroups: adjustedGroups,
         });
         isProgrammaticUpdate.current = false;
       }
@@ -60,6 +67,12 @@ function App() {
     handleExecutionEvent,
     resetExecutionState,
   } = useResults();
+
+  // Keep lineGroupsRef in sync with lineGroups state (avoids stale closure in handleFileChange)
+  useEffect(() => {
+    lineGroupsRef.current = lineGroups;
+  }, [lineGroups]);
+
   const [lineGroupHeights, setLineGroupHeights] = useState<Map<string, number>>(
     new Map()
   );
