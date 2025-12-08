@@ -13,6 +13,7 @@
   },
   "devDependencies": {
     "@ladle/react": "^5.1.1",
+    "@types/diff": "^7.0.2",
     "@types/node": "^20.14.9",
     "@vitest/browser": "^4.0.8",
     "@vitest/browser-playwright": "^4.0.8",
@@ -23,6 +24,7 @@
   },
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.2",
+    "diff": "^8.0.2",
     "@codemirror/lang-python": "^6.1.6",
     "@codemirror/state": "^6.4.1",
     "@codemirror/theme-one-dark": "^6.1.2",
