@@ -10,6 +10,8 @@ Provides HTTP endpoints for:
 """
 
 import os
+import threading
+from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
 from typing import List, Optional
@@ -22,6 +24,14 @@ from pydantic import BaseModel, Field
 from .executor import get_executor, reset_executor, ExecutionResult
 from .sse import format_sse
 from .file_watcher import FileWatcher
+
+# Global shutdown event for SSE connections (threading.Event works across threads)
+shutdown_event = threading.Event()
+
+
+def signal_shutdown():
+    """Signal all SSE connections to close. Called by cli.py before server shutdown."""
+    shutdown_event.set()
 
 
 # Pydantic models for API
@@ -68,11 +78,20 @@ class SaveFileRequest(BaseModel):
     content: str
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage app lifecycle - signal SSE connections to close on shutdown."""
+    yield
+    # Signal all SSE connections to close
+    shutdown_event.set()
+
+
 # FastAPI app
 app = FastAPI(
     title="pdit Python Backend",
     description="Local Python execution server for pdit",
-    version="0.1.0"
+    version="0.1.0",
+    lifespan=lifespan
 )
 
 # Configure CORS origins based on server port
@@ -216,7 +235,7 @@ async def watch_file(path: str):
         - error: Error occurred (closes connection)
     """
     async def generate_events():
-        watcher = FileWatcher(path)
+        watcher = FileWatcher(path, stop_event=shutdown_event)
 
         async for event in watcher.watch_with_initial():
             # Direct serialization using asdict()

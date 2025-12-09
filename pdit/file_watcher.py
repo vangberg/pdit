@@ -5,9 +5,10 @@ Provides a FileWatcher class that monitors a single file for changes
 and streams events through an async queue.
 """
 
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import AsyncGenerator, Union
+from typing import AsyncGenerator, Optional, Union
 from watchfiles import awatch
 import time
 
@@ -64,13 +65,15 @@ class FileWatcher:
                 print("Deleted")
     """
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, stop_event: Optional[threading.Event] = None):
         """Initialize file watcher.
 
         Args:
             file_path: Absolute path to file to watch
+            stop_event: Optional threading.Event to signal watcher to stop
         """
         self.file_path = Path(file_path).resolve()
+        self.stop_event = stop_event
 
     async def watch_with_initial(
         self
@@ -120,7 +123,9 @@ class FileWatcher:
         # Watch for changes in parent directory to detect deletion
         watch_path = self.file_path.parent
 
-        async for changes in awatch(watch_path):
+        # Use rust_timeout to make awatch check stop_event frequently (100ms)
+        # This ensures quick response to server shutdown
+        async for changes in awatch(watch_path, stop_event=self.stop_event, rust_timeout=100):
             for change_type, changed_path in changes:
                 changed_path = Path(changed_path).resolve()
 
