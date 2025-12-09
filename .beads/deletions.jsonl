@@ -64,3 +64,4 @@
 {"id":"rdit-fo2","ts":"2025-12-04T21:56:46.017679+01:00","by":"bd-doctor-hydrate","reason":"Hydrated from git history"}
 {"id":"rdit-yp7","ts":"2025-12-04T21:56:46.017679+01:00","by":"bd-doctor-hydrate","reason":"Hydrated from git history"}
 {"id":"rdit-6fz","ts":"2025-12-04T21:56:46.017679+01:00","by":"bd-doctor-hydrate","reason":"Hydrated from git history"}
+{"id":"pdit-9j7","ts":"2025-12-09T12:35:24.908208Z","by":"git-history-backfill","reason":"recovered from git history (pruned from manifest)"}
