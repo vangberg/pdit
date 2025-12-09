@@ -558,21 +558,3 @@ class PythonExecutor:
         """Reset the execution namespace (clear all variables)."""
         self.namespace.clear()
         self.namespace['__builtins__'] = __builtins__
-
-
-# Singleton executor instance
-_executor: Optional[PythonExecutor] = None
-
-
-def get_executor() -> PythonExecutor:
-    """Get the singleton executor instance."""
-    global _executor
-    if _executor is None:
-        _executor = PythonExecutor()
-    return _executor
-
-
-def reset_executor() -> None:
-    """Reset the singleton executor instance."""
-    executor = get_executor()
-    executor.reset()

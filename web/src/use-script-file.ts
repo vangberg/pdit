@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 
 interface UseScriptFileOptions {
   onFileChange?: (newContent: string) => void; // Callback when file changes (enables watching)
@@ -10,6 +10,7 @@ interface UseScriptFileResult {
   isLoading: boolean; // Loading initial file
   isWatching: boolean; // SSE connection active
   error: Error | null; // Any errors
+  sessionId: string; // Unique session ID for this page load
 }
 
 /**
@@ -31,6 +32,9 @@ export function useScriptFile(
 ): UseScriptFileResult {
   const { onFileChange } = options;
   const watchForChanges = !!onFileChange;
+
+  // Generate stable session ID once on hook init
+  const sessionId = useMemo(() => crypto.randomUUID(), []);
 
   const [code, setCode] = useState<string | null>(null);
   const [diskContent, setDiskContent] = useState<string | null>(null);
@@ -65,7 +69,7 @@ export function useScriptFile(
     try {
       // Create EventSource - handles both initial load AND watching!
       const eventSource = new EventSource(
-        `/api/watch-file?path=${encodeURIComponent(scriptPath)}`
+        `/api/watch-file?path=${encodeURIComponent(scriptPath)}&sessionId=${encodeURIComponent(sessionId)}`
       );
 
       eventSourceRef.current = eventSource;
@@ -138,7 +142,7 @@ export function useScriptFile(
         setIsWatching(false);
       }
     };
-  }, [scriptPath, defaultCode, watchForChanges]);
+  }, [scriptPath, defaultCode, watchForChanges, sessionId]);
 
-  return { code, diskContent, isLoading, isWatching, error };
+  return { code, diskContent, isLoading, isWatching, error, sessionId };
 }

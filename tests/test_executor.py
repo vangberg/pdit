@@ -9,12 +9,23 @@ from pdit.executor import (
     ExecutionResult,
     OutputItem,
     PythonExecutor,
-    get_executor,
-    reset_executor,
     _is_dataframe,
     _serialize_value,
     _serialize_dataframe,
 )
+
+
+def collect_results(executor, script, line_range=None, script_name=None):
+    """Helper to collect just ExecutionResult objects from execute_script.
+
+    execute_script yields an expressions list first, then ExecutionResult objects.
+    This helper filters to just the ExecutionResult objects.
+    """
+    results = []
+    for item in executor.execute_script(script, line_range, script_name):
+        if isinstance(item, ExecutionResult):
+            results.append(item)
+    return results
 
 
 class TestPythonExecutor:
@@ -26,7 +37,7 @@ class TestPythonExecutor:
 
     def test_basic_expression(self):
         """Test executing a simple expression."""
-        results = list(self.executor.execute_script("2 + 2"))
+        results = collect_results(self.executor, "2 + 2")
 
         assert len(results) == 1
         assert results[0].line_start == 1
@@ -38,7 +49,7 @@ class TestPythonExecutor:
 
     def test_basic_statement(self):
         """Test executing a simple statement."""
-        results = list(self.executor.execute_script("x = 10"))
+        results = collect_results(self.executor, "x = 10")
 
         assert len(results) == 1
         assert results[0].is_invisible is True
@@ -47,10 +58,10 @@ class TestPythonExecutor:
     def test_namespace_persistence(self):
         """Test that variables persist across executions."""
         # Set a variable
-        list(self.executor.execute_script("x = 10"))
+        collect_results(self.executor, "x = 10")
 
         # Use it in next execution
-        results = list(self.executor.execute_script("x + 5"))
+        results = collect_results(self.executor, "x + 5")
 
         assert results[0].output[0].content.strip() == "15"
 
@@ -61,7 +72,7 @@ x = 10
 y = 20
 x + y
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 3
         assert results[0].is_invisible is True  # x = 10
@@ -71,7 +82,7 @@ x + y
 
     def test_print_statement(self):
         """Test that print() output is captured."""
-        results = list(self.executor.execute_script('print("Hello, World!")'))
+        results = collect_results(self.executor, 'print("Hello, World!")')
 
         assert len(results[0].output) == 1
         assert results[0].output[0].type == "stdout"
@@ -79,7 +90,7 @@ x + y
 
     def test_error_handling(self):
         """Test that errors are captured properly."""
-        results = list(self.executor.execute_script("1 / 0"))
+        results = collect_results(self.executor, "1 / 0")
 
         assert len(results[0].output) == 1
         assert results[0].output[0].type == "error"
@@ -87,14 +98,14 @@ x + y
 
     def test_undefined_variable_error(self):
         """Test error when using undefined variable."""
-        results = list(self.executor.execute_script("undefined_var"))
+        results = collect_results(self.executor, "undefined_var")
 
         assert results[0].output[0].type == "error"
         assert "NameError" in results[0].output[0].content
 
     def test_syntax_error(self):
         """Test that syntax errors are captured in results."""
-        results = list(self.executor.execute_script("def invalid syntax"))
+        results = collect_results(self.executor, "def invalid syntax")
 
         # Should return one result with error
         assert len(results) == 1
@@ -105,20 +116,20 @@ x + y
     def test_reset_clears_namespace(self):
         """Test that reset() clears all variables."""
         # Set a variable
-        list(self.executor.execute_script("x = 42"))
+        collect_results(self.executor, "x = 42")
 
         # Reset
         self.executor.reset()
 
         # Try to use the variable
-        results = list(self.executor.execute_script("try:\n    x\nexcept NameError:\n    print('cleared')"))
+        results = collect_results(self.executor, "try:\n    x\nexcept NameError:\n    print('cleared')")
 
         assert "cleared" in results[0].output[0].content
 
     def test_line_range_single_line(self):
         """Test filtering by line range - single line."""
         script = "a = 1\nb = 2\nc = 3"
-        results = list(self.executor.execute_script(script, line_range=(2, 2)))
+        results = collect_results(self.executor, script, line_range=(2, 2))
 
         assert len(results) == 1
         assert results[0].line_start == 2
@@ -127,7 +138,7 @@ x + y
     def test_line_range_multiple_lines(self):
         """Test filtering by line range - multiple lines."""
         script = "a = 1\nb = 2\nc = 3\nd = 4"
-        results = list(self.executor.execute_script(script, line_range=(2, 3)))
+        results = collect_results(self.executor, script, line_range=(2, 3))
 
         assert len(results) == 2
         assert results[0].line_start == 2
@@ -136,13 +147,13 @@ x + y
     def test_line_range_outside_script(self):
         """Test line range that doesn't match any statements."""
         script = "a = 1\nb = 2"
-        results = list(self.executor.execute_script(script, line_range=(10, 20)))
+        results = collect_results(self.executor, script, line_range=(10, 20))
 
         assert len(results) == 0
 
     def test_expression_returns_none(self):
         """Test that expressions returning None don't produce output."""
-        results = list(self.executor.execute_script("None"))
+        results = collect_results(self.executor, "None")
 
         assert results[0].is_invisible is True
 
@@ -154,7 +165,7 @@ def add(a, b):
 
 add(5, 3)
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 2
         assert results[0].line_start == 2
@@ -163,14 +174,14 @@ add(5, 3)
 
     def test_import_statement(self):
         """Test importing standard library modules."""
-        results = list(self.executor.execute_script("import math\nmath.pi"))
+        results = collect_results(self.executor, "import math\nmath.pi")
 
         assert len(results) == 2
         assert "3.14" in results[1].output[0].content
 
     def test_list_comprehension(self):
         """Test list comprehension execution."""
-        results = list(self.executor.execute_script("[x * 2 for x in range(5)]"))
+        results = collect_results(self.executor, "[x * 2 for x in range(5)]")
 
         assert results[0].output[0].content.strip() == "[0, 2, 4, 6, 8]"
 
@@ -180,7 +191,7 @@ add(5, 3)
 import sys
 print("error", file=sys.stderr)
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Find stderr output
         stderr_outputs = [o for o in results[-1].output if o.type == "stderr"]
@@ -193,44 +204,13 @@ print("error", file=sys.stderr)
 import sys
 sys.stdout.write("out\\n"); sys.stderr.write("err\\n")
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Last statement should have both stdout and stderr
         assert len(results[-1].output) == 2
         types = {o.type for o in results[-1].output}
         assert "stdout" in types
         assert "stderr" in types
-
-
-class TestSingletonFunctions:
-    """Tests for get_executor and reset_executor functions."""
-
-    def test_get_executor_returns_same_instance(self):
-        """Test that get_executor returns the same instance."""
-        executor1 = get_executor()
-        executor2 = get_executor()
-
-        assert executor1 is executor2
-
-    def test_reset_executor_clears_state(self):
-        """Test that reset_executor clears the global executor state."""
-        executor = get_executor()
-        list(executor.execute_script("global_var = 100"))
-
-        reset_executor()
-
-        results = list(executor.execute_script("try:\n    global_var\nexcept NameError:\n    print('cleared')"))
-        assert "cleared" in results[0].output[0].content
-
-    def test_namespace_persists_across_calls(self):
-        """Test that namespace persists when using singleton."""
-        executor1 = get_executor()
-        list(executor1.execute_script("persistent = 42"))
-
-        executor2 = get_executor()
-        results = list(executor2.execute_script("persistent"))
-
-        assert results[0].output[0].content.strip() == "42"
 
 
 class TestDataClasses:
@@ -274,7 +254,7 @@ class TestMarkdownCells:
 
 This is a markdown cell.
 """'''
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 1
         assert len(results[0].output) == 1
@@ -287,7 +267,7 @@ This is a markdown cell.
         """Test markdown marker exactly one line before the expression."""
         script = '''# %% [markdown]
 "# Markdown content"'''
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
@@ -298,7 +278,7 @@ This is a markdown cell.
         script = '''# %% [markdown]
 
 "# Markdown content"'''
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
@@ -310,7 +290,7 @@ This is a markdown cell.
 
 
 "# Markdown content"'''
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
@@ -324,7 +304,7 @@ This is a markdown cell.
 
 
 "# This should be regular code"'''
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Should be treated as regular expression, not markdown
         assert len(results) == 1
@@ -335,7 +315,7 @@ This is a markdown cell.
     def test_no_markdown_marker(self):
         """Test string expression without markdown marker."""
         script = '"Just a regular string"'
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 1
         assert results[0].output[0].type == "stdout"
@@ -346,7 +326,7 @@ This is a markdown cell.
         """Test that markdown marker is case-insensitive."""
         script = '''# %% [MARKDOWN]
 "# Uppercase works too"'''
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
@@ -356,7 +336,7 @@ This is a markdown cell.
         """Test markdown marker with various whitespace."""
         script = '''#  %%  [markdown]
 "# Extra spaces work"'''
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
@@ -370,7 +350,7 @@ This is a markdown cell.
   # Title with spaces
 
 """'''
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
@@ -387,7 +367,7 @@ This is a markdown cell.
 
 # %% [markdown]
 "# Third markdown cell"'''
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 3
         assert all(r.output[0].type == "markdown" for r in results)
@@ -406,7 +386,7 @@ x = 42
 "The answer is shown below:"
 
 x'''
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 4
         assert results[0].output[0].type == "markdown"
@@ -427,7 +407,7 @@ x'''
 x = 1 + 2
 ```
 """'''
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
@@ -446,7 +426,7 @@ multiple lines.
 - Item 1
 - Item 2
 """'''
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
@@ -461,7 +441,7 @@ multiple lines.
         """Test markdown cell with empty string."""
         script = '''# %% [markdown]
 ""'''
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
@@ -471,7 +451,7 @@ multiple lines.
         """Test markdown cell with single-quoted string."""
         script = """# %% [markdown]
 '# Single quoted markdown'"""
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
@@ -481,7 +461,7 @@ multiple lines.
         """Test that non-string expressions after marker are not markdown."""
         script = '''# %% [markdown]
 42'''
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Should be regular expression output, not markdown
         assert len(results) == 1
@@ -498,7 +478,7 @@ multiple lines.
 
 # %% [markdown]
 "# Third cell"'''
-        results = list(self.executor.execute_script(script, line_range=(4, 5)))
+        results = collect_results(self.executor, script, line_range=(4, 5))
 
         # Should only get the second markdown cell
         assert len(results) == 1
@@ -511,7 +491,7 @@ multiple lines.
 # Another comment
 # %% [markdown]
 "# This is markdown"'''
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 1
         assert results[0].output[0].type == "markdown"
@@ -522,7 +502,7 @@ multiple lines.
         script = '''x = 42
 # %% [markdown]
 f"# The value is {x}"'''
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 2
         # F-strings are ast.JoinedStr, not ast.Constant, so they're not detected as markdown
@@ -605,7 +585,7 @@ import pandas as pd
 df = pd.DataFrame({'col1': [1, 2, 3], 'col2': ['a', 'b', 'c']})
 df
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Should get 3 results: import, assignment, df expression
         assert len(results) == 3
@@ -628,7 +608,7 @@ import numpy as np
 df = pd.DataFrame({'a': [1, np.nan, 3], 'b': [4, 5, np.nan]})
 df
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         import json
         data = json.loads(results[-1].output[0].content)
@@ -643,7 +623,7 @@ import pandas as pd
 df = pd.DataFrame({'date': pd.date_range('2025-01-01', periods=3), 'value': [1, 2, 3]})
 df
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         import json
         data = json.loads(results[-1].output[0].content)
@@ -659,7 +639,7 @@ import pandas as pd
 df = pd.DataFrame()
 df
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         import json
         data = json.loads(results[-1].output[0].content)
@@ -673,7 +653,7 @@ import polars as pl
 df = pl.DataFrame({'col1': [1, 2, 3], 'col2': ['a', 'b', 'c']})
 df
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results) == 3
         assert results[2].output[0].type == "dataframe"
@@ -693,7 +673,7 @@ import polars as pl
 df = pl.DataFrame({'a': [1, None, 3], 'b': [4, 5, None]})
 df
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         import json
         data = json.loads(results[-1].output[0].content)
@@ -709,7 +689,7 @@ from datetime import date
 df = pl.DataFrame({'date': [date(2025, 1, 1), date(2025, 1, 2), date(2025, 1, 3)], 'value': [1, 2, 3]})
 df
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         import json
         data = json.loads(results[-1].output[0].content)
@@ -724,7 +704,7 @@ df
 import pandas as pd
 df = pd.DataFrame({'a': [1, 2, 3]})
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Should get 2 results: import and assignment
         # The assignment should be invisible (no dataframe output)
@@ -738,7 +718,7 @@ df = pd.DataFrame({'a': [1, 2, 3]})
 import pandas as pd
 pd.DataFrame({'a': [1, 2, 3]})
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Should get 2 results: import and expression
         assert len(results) == 2
@@ -753,7 +733,7 @@ df1
 df2 = pd.DataFrame({'b': [3, 4]})
 df2
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Should have dataframe outputs for df1 and df2
         dataframe_results = [r for r in results if r.output and r.output[0].type == "dataframe"]
@@ -817,7 +797,7 @@ all_data = pd.DataFrame({
 result = all_data.groupby("condition")[["Axis", "Dia"]].describe()
 result
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Should have dataframe output
         dataframe_result = [r for r in results if r.output and r.output[0].type == "dataframe"]
@@ -863,7 +843,7 @@ import matplotlib.pyplot as plt
 plt.plot([1, 2, 3, 4], [1, 4, 2, 3])
 plt.gca()
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Should get 3 results: import, plot, gca
         assert len(results) == 3
@@ -897,7 +877,7 @@ plt.plot([1, 2, 3])
 plt.title("Test Plot")
 plt.gca()
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # The gca() call should have image output
         gca_result = results[-1]
@@ -914,7 +894,7 @@ plt.figure()
 plt.plot([4, 5, 6])
 plt.gca()
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Only gca() calls return Axes and trigger capture
         # plt.plot() returns Line2D (not captured)
@@ -933,7 +913,7 @@ plt.gca()
 import matplotlib.pyplot as plt
 plt.plot([1, 2, 3])
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Should only have stdout output (Line2D object), no images
         plot_result = results[-1]
@@ -957,7 +937,7 @@ plt.xlabel("X Axis")
 plt.ylabel("Y Axis")
 plt.gca()
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Last statement should have image
         gca_result = results[-1]
@@ -971,7 +951,7 @@ import matplotlib.pyplot as plt
 plt.figure()
 plt.gca()
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Should still have some output, but implementation captures figures with axes
         assert len(results) > 0
@@ -985,7 +965,7 @@ ax1.plot([1, 2, 3])
 ax2.plot([3, 2, 1])
 plt.gca()
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Should capture the figure with both subplots
         image_outputs = [
@@ -1008,7 +988,7 @@ plt.gca()
 figs_after = len(plt.get_fignums())
 figs_after
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # The gca() expression should have triggered capture and closed the figure
         # So figs_after should be 0
@@ -1022,7 +1002,7 @@ import matplotlib.pyplot as plt
 plt.plot([1, 2, 3])
 plt.gca()
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         image_outputs = [o for r in results for o in r.output if o.type == "image"]
         assert len(image_outputs) > 0
@@ -1047,7 +1027,7 @@ plt.plot([1, 2, 3])
 plt.gca()
 1 / 0
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Should have image from successful plot
         image_outputs = [o for r in results for o in r.output if o.type == "image"]
@@ -1064,7 +1044,7 @@ import matplotlib.pyplot as plt
 plt.scatter([1, 2, 3, 4], [1, 4, 2, 3])
 plt.gca()
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         image_outputs = [o for r in results for o in r.output if o.type == "image"]
         assert len(image_outputs) > 0
@@ -1076,7 +1056,7 @@ import matplotlib.pyplot as plt
 plt.bar(['A', 'B', 'C'], [1, 2, 3])
 plt.gca()
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         image_outputs = [o for r in results for o in r.output if o.type == "image"]
         assert len(image_outputs) > 0
@@ -1091,26 +1071,26 @@ class TestEdgeCases:
 
     def test_empty_script(self):
         """Test executing an empty script."""
-        results = list(self.executor.execute_script(""))
+        results = collect_results(self.executor, "")
 
         assert len(results) == 0
 
     def test_whitespace_only_script(self):
         """Test executing script with only whitespace."""
-        results = list(self.executor.execute_script("   \n\n   "))
+        results = collect_results(self.executor, "   \n\n   ")
 
         assert len(results) == 0
 
     def test_comment_only_script(self):
         """Test executing script with only comments."""
-        results = list(self.executor.execute_script("# This is a comment"))
+        results = collect_results(self.executor, "# This is a comment")
 
         assert len(results) == 0
 
     def test_long_output(self):
         """Test that long output is captured completely."""
         script = "print('x' * 10000)"
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert len(results[0].output[0].content) > 10000
 
@@ -1124,7 +1104,7 @@ def factorial(n):
 
 factorial(5)
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert results[-1].output[0].content.strip() == "120"
 
@@ -1135,7 +1115,7 @@ a = 1
 1 / 0
 b = 2
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # First statement succeeds
         assert results[0].is_invisible is True
@@ -1146,20 +1126,20 @@ b = 2
 
     def test_builtin_functions_available(self):
         """Test that builtin functions are available."""
-        results = list(self.executor.execute_script("len([1, 2, 3])"))
+        results = collect_results(self.executor, "len([1, 2, 3])")
 
         assert results[0].output[0].content.strip() == "3"
 
     def test_lambda_expression(self):
         """Test lambda expressions."""
-        results = list(self.executor.execute_script("(lambda x: x * 2)(5)"))
+        results = collect_results(self.executor, "(lambda x: x * 2)(5)")
 
         assert results[0].output[0].content.strip() == "10"
 
     def test_multiple_print_statements(self):
         """Test multiple print statements in one line."""
         script = "print('a'); print('b'); print('c')"
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # Should be treated as multiple statements
         assert len(results) == 3
@@ -1170,7 +1150,7 @@ b = 2
 import sys
 sys.argv
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # sys.argv should be [''] in notebook environment, not CLI args
         assert results[-1].output[0].content.strip() == "['']"
@@ -1181,7 +1161,7 @@ sys.argv
 import sys
 len(sys.argv)
 """
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         assert results[-1].output[0].content.strip() == "1"
 
@@ -1194,7 +1174,7 @@ len(sys.argv)
 
         # Execute script
         script = "import sys\nsys.argv"
-        results = list(self.executor.execute_script(script))
+        results = collect_results(self.executor, script)
 
         # sys.argv should be restored to original value
         assert sys.argv == original_argv
@@ -1213,7 +1193,6 @@ if __name__ == "__main__":
 
         test_classes = [
             TestPythonExecutor,
-            TestSingletonFunctions,
             TestDataClasses,
             TestMarkdownCells,
             TestDataFrameRendering,

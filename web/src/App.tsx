@@ -57,6 +57,7 @@ function App() {
     diskContent,
     isLoading: isLoadingScript,
     error: scriptError,
+    sessionId,
   } = useScriptFile(scriptPath, DEFAULT_CODE, {
     onFileChange: handleFileChange,
   });
@@ -128,6 +129,7 @@ function App() {
 
       try {
         for await (const event of executeScript(script, {
+          sessionId,
           ...options,
           scriptName,
         })) {
@@ -150,7 +152,7 @@ function App() {
         resetExecutionState();
       }
     },
-    [handleExecutionEvent, resetExecutionState, scriptPath]
+    [handleExecutionEvent, resetExecutionState, scriptPath, sessionId]
   );
 
   const handleExecuteCurrent = useCallback(

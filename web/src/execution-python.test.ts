@@ -1,13 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { executeScript, Expression, ExecutionEvent } from './execution-python';
 
+// Test session ID - each test file uses a unique session
+const TEST_SESSION_ID = 'test-session-execution-python';
+
 // Helper to collect done expressions from execution events
 async function collectExpressions(
   script: string,
   options?: { lineRange?: { from: number; to: number }; scriptName?: string }
 ): Promise<Expression[]> {
   const results: Expression[] = [];
-  for await (const event of executeScript(script, options)) {
+  for await (const event of executeScript(script, { sessionId: TEST_SESSION_ID, ...options })) {
     if (event.type === 'done') {
       results.push(event.expression);
     }
@@ -183,7 +186,7 @@ x`;
     const script = `x = 1
 y = 2`;
     const events: ExecutionEvent[] = [];
-    for await (const event of executeScript(script)) {
+    for await (const event of executeScript(script, { sessionId: TEST_SESSION_ID })) {
       events.push(event);
     }
 
@@ -203,7 +206,7 @@ y = 2`;
 y = 2
 z = 3`;
     const events: ExecutionEvent[] = [];
-    for await (const event of executeScript(script, { lineRange: { from: 2, to: 2 } })) {
+    for await (const event of executeScript(script, { sessionId: TEST_SESSION_ID, lineRange: { from: 2, to: 2 } })) {
       events.push(event);
     }
 

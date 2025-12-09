@@ -44,7 +44,8 @@ export class PythonServerBackend {
    */
   async *executeScript(
     script: string,
-    options?: {
+    options: {
+      sessionId: string;
       lineRange?: { from: number; to: number };
       scriptName?: string;
     }
@@ -58,8 +59,9 @@ export class PythonServerBackend {
       },
       body: JSON.stringify({
         script,
-        scriptName: options?.scriptName,
-        lineRange: options?.lineRange,
+        sessionId: options.sessionId,
+        scriptName: options.scriptName,
+        lineRange: options.lineRange,
       }),
     });
 
