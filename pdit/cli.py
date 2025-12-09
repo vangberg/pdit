@@ -5,6 +5,7 @@ Provides the `pdit` command to start the server and open the web interface.
 """
 
 import contextlib
+import signal
 import socket
 import sys
 import time
@@ -13,6 +14,10 @@ import webbrowser
 from pathlib import Path
 import click
 import uvicorn
+
+
+# Flag for graceful shutdown on SIGTERM
+_shutdown_requested = False
 
 
 def find_available_port(start_port=8888, max_tries=100):
@@ -31,6 +36,8 @@ def find_available_port(start_port=8888, max_tries=100):
     for port in range(start_port, start_port + max_tries):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                # Allow reuse of ports in TIME_WAIT state
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 s.bind(("127.0.0.1", port))
                 return port
         except OSError:
@@ -56,9 +63,20 @@ class Server(uvicorn.Server):
                 time.sleep(1e-3)
             yield
         finally:
+            # Signal SSE connections to close before shutting down server
+            from .server import signal_shutdown
+            signal_shutdown()
+
+            # Give SSE connections a moment to close
+            time.sleep(0.2)
+
             # Clean shutdown
             self.should_exit = True
-            thread.join(timeout=1.0)
+            thread.join(timeout=3.0)
+            if thread.is_alive():
+                # Force exit if shutdown takes too long
+                import sys
+                sys.exit(1)
 
 
 @click.command()
@@ -101,6 +119,8 @@ def main(script, port, host, no_browser, verbose):
         # Port explicitly specified: use it or fail
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                # Allow reuse of ports in TIME_WAIT state
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 s.bind((host, port))
                 actual_port = port
         except OSError:
@@ -134,10 +154,18 @@ def main(script, port, host, no_browser, verbose):
             webbrowser.open(url)
             click.echo(f"Opening browser to {url}")
 
+        # Set up SIGTERM handler for graceful shutdown
+        def handle_sigterm(signum, frame):
+            global _shutdown_requested
+            _shutdown_requested = True
+
+        signal.signal(signal.SIGTERM, handle_sigterm)
+
         # Keep server running
         try:
-            while True:
-                time.sleep(1)
+            while not _shutdown_requested:
+                time.sleep(0.1)  # Check more frequently for shutdown
+            click.echo("\nShutting down...")
         except KeyboardInterrupt:
             click.echo("\nShutting down...")
 
