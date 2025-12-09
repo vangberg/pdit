@@ -114,6 +114,10 @@ def main(script, port, host, no_browser, verbose):
 
     click.echo(f"Starting pdit server on {host}:{actual_port}")
 
+    # Pass port to server via environment variable for CORS configuration
+    import os
+    os.environ["PDIT_PORT"] = str(actual_port)
+
     # Configure and create server
     config = uvicorn.Config(
         "pdit.server:app",

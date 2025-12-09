@@ -9,6 +9,7 @@ Provides HTTP endpoints for:
 - Serving static frontend files
 """
 
+import os
 from dataclasses import asdict
 from pathlib import Path
 from typing import List, Optional
@@ -74,10 +75,20 @@ app = FastAPI(
     version="0.1.0"
 )
 
+# Configure CORS origins based on server port
+# Environment variable is set by cli.py before server starts
+port = os.environ.get("PDIT_PORT", "8888")
+
+# Allow localhost on the selected port (handles both localhost and 127.0.0.1)
+allowed_origins = [
+    f"http://localhost:{port}",
+    f"http://127.0.0.1:{port}",
+]
+
 # Enable CORS for browser access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Restrict in production
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
