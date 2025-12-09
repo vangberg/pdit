@@ -21,12 +21,28 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from .executor import get_executor, reset_executor, ExecutionResult
+from .executor import PythonExecutor, ExecutionResult
 from .sse import format_sse
 from .file_watcher import FileWatcher
 
 # Global shutdown event for SSE connections (threading.Event works across threads)
 shutdown_event = threading.Event()
+
+# Session registry: maps session_id -> PythonExecutor
+_sessions: dict[str, PythonExecutor] = {}
+
+
+def get_or_create_session(session_id: str) -> PythonExecutor:
+    """Get existing session or create a new one lazily."""
+    if session_id not in _sessions:
+        _sessions[session_id] = PythonExecutor()
+    return _sessions[session_id]
+
+
+def delete_session(session_id: str) -> None:
+    """Delete a session if it exists."""
+    if session_id in _sessions:
+        del _sessions[session_id]
 
 
 def signal_shutdown():
@@ -58,6 +74,7 @@ class LineRange(BaseModel):
 class ExecuteScriptRequest(BaseModel):
     """Request to execute a Python script."""
     script: str
+    sessionId: str
     scriptName: Optional[str] = None
     lineRange: Optional[LineRange] = None
 
@@ -76,6 +93,11 @@ class SaveFileRequest(BaseModel):
     """Request to save a file."""
     path: str
     content: str
+
+
+class ResetRequest(BaseModel):
+    """Request to reset execution namespace."""
+    sessionId: str
 
 
 @asynccontextmanager
@@ -142,7 +164,7 @@ async def execute_script(request: ExecuteScriptRequest):
     async def generate_events():
         import asyncio
 
-        executor = get_executor()
+        executor = get_or_create_session(request.sessionId)
 
         # Convert line range if provided
         line_range = None
@@ -203,7 +225,7 @@ async def execute_script(request: ExecuteScriptRequest):
 
 
 @app.post("/api/reset")
-async def reset():
+async def reset(request: ResetRequest):
     """Reset the execution namespace.
 
     Clears all variables and imported modules from the execution state.
@@ -211,19 +233,22 @@ async def reset():
     Returns:
         Status OK
     """
-    reset_executor()
+    executor = get_or_create_session(request.sessionId)
+    executor.reset()
     return {"status": "ok"}
 
 
 @app.get("/api/watch-file")
-async def watch_file(path: str):
+async def watch_file(path: str, sessionId: str):
     """Watch a file and stream initial content + changes via SSE.
 
     This unified endpoint eliminates the need for separate /api/read-file.
     It sends an initial event with file content, then streams change events.
+    When the SSE connection closes, the associated session is cleaned up.
 
     Args:
         path: Absolute path to the file to watch
+        sessionId: Session ID for cleanup on disconnect
 
     Returns:
         StreamingResponse with text/event-stream media type
@@ -237,13 +262,17 @@ async def watch_file(path: str):
     async def generate_events():
         watcher = FileWatcher(path, stop_event=shutdown_event)
 
-        async for event in watcher.watch_with_initial():
-            # Direct serialization using asdict()
-            yield format_sse(asdict(event))
+        try:
+            async for event in watcher.watch_with_initial():
+                # Direct serialization using asdict()
+                yield format_sse(asdict(event))
 
-            # Stop after terminal events
-            if event.type in ("fileDeleted", "error"):
-                break
+                # Stop after terminal events
+                if event.type in ("fileDeleted", "error"):
+                    break
+        finally:
+            # Clean up session when SSE connection closes
+            delete_session(sessionId)
 
     return StreamingResponse(
         generate_events(),

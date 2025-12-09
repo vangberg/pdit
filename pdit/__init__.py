@@ -7,8 +7,6 @@ from .executor import (
     OutputItem,
     PythonExecutor,
     Statement,
-    get_executor,
-    reset_executor,
 )
 
 __version__ = "0.1.0"
@@ -18,6 +16,4 @@ __all__ = [
     "OutputItem",
     "PythonExecutor",
     "Statement",
-    "get_executor",
-    "reset_executor",
 ]

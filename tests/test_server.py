@@ -1,6 +1,7 @@
 """Tests for the FastAPI server."""
 
 import json
+import uuid
 
 try:
     import pytest
@@ -9,12 +10,10 @@ except ImportError:
 
 try:
     from fastapi.testclient import TestClient
-    from pdit.server import app
+    from pdit.server import app, delete_session
     HAS_FASTAPI = True
 except ImportError:
     HAS_FASTAPI = False
-
-from pdit.executor import reset_executor
 
 
 if HAS_FASTAPI:
@@ -23,11 +22,6 @@ if HAS_FASTAPI:
 
 class TestHealthEndpoint:
     """Tests for /health endpoint."""
-
-    def setup_method(self):
-        """Reset executor before each test."""
-        if HAS_FASTAPI:
-            reset_executor()
 
     def test_health_check(self):
         """Test that health endpoint returns OK."""
@@ -44,9 +38,13 @@ class TestResetEndpoint:
     """Tests for /reset endpoint."""
 
     def setup_method(self):
-        """Reset executor before each test."""
+        """Create a fresh session ID for each test."""
+        self.session_id = str(uuid.uuid4())
+
+    def teardown_method(self):
+        """Clean up the session after each test."""
         if HAS_FASTAPI:
-            reset_executor()
+            delete_session(self.session_id)
 
     def _parse_sse_response(self, response):
         """Parse SSE response into list of results."""
@@ -70,17 +68,18 @@ class TestResetEndpoint:
             return  # Skip if FastAPI not installed
 
         # Set a variable first
-        client.post("/api/execute-script", json={"script": "x = 42"})
+        client.post("/api/execute-script", json={"script": "x = 42", "sessionId": self.session_id})
 
         # Reset
-        response = client.post("/api/reset")
+        response = client.post("/api/reset", json={"sessionId": self.session_id})
 
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
 
         # Try to use the variable - should fail
         response = client.post("/api/execute-script", json={
-            "script": "try:\n    x\nexcept NameError:\n    print('cleared')"
+            "script": "try:\n    x\nexcept NameError:\n    print('cleared')",
+            "sessionId": self.session_id
         })
 
         assert response.status_code == 200
@@ -95,12 +94,16 @@ class TestExecuteScriptEndpoint:
     """Tests for /execute-script endpoint."""
 
     def setup_method(self):
-        """Reset executor before each test."""
+        """Create a fresh session ID for each test."""
+        self.session_id = str(uuid.uuid4())
+
+    def teardown_method(self):
+        """Clean up the session after each test."""
         if HAS_FASTAPI:
-            reset_executor()
+            delete_session(self.session_id)
 
     def _parse_sse_response(self, response):
-        """Parse SSE response into list of results."""
+        """Parse SSE response into list of execution results (excluding expressions/complete events)."""
         results = []
         lines = response.text.split('\n')
         for line in lines:
@@ -109,8 +112,10 @@ class TestExecuteScriptEndpoint:
                 if data_str.strip():
                     try:
                         data = json.loads(data_str)
-                        if 'type' not in data or data.get('type') != 'complete':
-                            results.append(data)
+                        # Skip expressions event (sent before execution) and complete event
+                        if data.get('type') in ('expressions', 'complete'):
+                            continue
+                        results.append(data)
                     except json.JSONDecodeError:
                         pass
         return results
@@ -121,7 +126,8 @@ class TestExecuteScriptEndpoint:
             return  # Skip if FastAPI not installed
 
         response = client.post("/api/execute-script", json={
-            "script": "2 + 2"
+            "script": "2 + 2",
+            "sessionId": self.session_id
         })
 
         assert response.status_code == 200
@@ -135,7 +141,7 @@ class TestExecuteScriptEndpoint:
         assert result["isInvisible"] is False
         assert len(result["output"]) == 1
         assert result["output"][0]["type"] == "stdout"
-        assert "4" in result["output"][0]["text"]
+        assert "4" in result["output"][0]["content"]
 
     def test_execute_statement(self):
         """Test executing a statement (no output)."""
@@ -143,7 +149,8 @@ class TestExecuteScriptEndpoint:
             return  # Skip if FastAPI not installed
 
         response = client.post("/api/execute-script", json={
-            "script": "x = 10"
+            "script": "x = 10",
+            "sessionId": self.session_id
         })
 
         assert response.status_code == 200
@@ -160,7 +167,8 @@ class TestExecuteScriptEndpoint:
             return  # Skip if FastAPI not installed
 
         response = client.post("/api/execute-script", json={
-            "script": "a = 1\nb = 2\na + b"
+            "script": "a = 1\nb = 2\na + b",
+            "sessionId": self.session_id
         })
 
         assert response.status_code == 200
@@ -170,7 +178,7 @@ class TestExecuteScriptEndpoint:
         assert results[0]["isInvisible"] is True
         assert results[1]["isInvisible"] is True
         assert results[2]["isInvisible"] is False
-        assert "3" in results[2]["output"][0]["text"]
+        assert "3" in results[2]["output"][0]["content"]
 
     def test_execute_with_error(self):
         """Test that errors are captured."""
@@ -178,7 +186,8 @@ class TestExecuteScriptEndpoint:
             return  # Skip if FastAPI not installed
 
         response = client.post("/api/execute-script", json={
-            "script": "1 / 0"
+            "script": "1 / 0",
+            "sessionId": self.session_id
         })
 
         assert response.status_code == 200
@@ -188,27 +197,29 @@ class TestExecuteScriptEndpoint:
         result = results[0]
         assert len(result["output"]) == 1
         assert result["output"][0]["type"] == "error"
-        assert "ZeroDivisionError" in result["output"][0]["text"]
+        assert "ZeroDivisionError" in result["output"][0]["content"]
 
     def test_namespace_persistence(self):
-        """Test that namespace persists across requests."""
+        """Test that namespace persists across requests within same session."""
         if not HAS_FASTAPI:
             return  # Skip if FastAPI not installed
 
         # Set a variable
         response1 = client.post("/api/execute-script", json={
-            "script": "persistent_var = 99"
+            "script": "persistent_var = 99",
+            "sessionId": self.session_id
         })
         assert response1.status_code == 200
 
-        # Use it in next request
+        # Use it in next request (same session)
         response2 = client.post("/api/execute-script", json={
-            "script": "persistent_var"
+            "script": "persistent_var",
+            "sessionId": self.session_id
         })
 
         assert response2.status_code == 200
         results = self._parse_sse_response(response2)
-        assert "99" in results[0]["output"][0]["text"]
+        assert "99" in results[0]["output"][0]["content"]
 
     def test_line_range_filtering(self):
         """Test executing with line range filter."""
@@ -217,7 +228,8 @@ class TestExecuteScriptEndpoint:
 
         response = client.post("/api/execute-script", json={
             "script": "a = 1\nb = 2\nc = 3",
-            "lineRange": {"from": 2, "to": 2}
+            "lineRange": {"from": 2, "to": 2},
+            "sessionId": self.session_id
         })
 
         assert response.status_code == 200
@@ -233,7 +245,8 @@ class TestExecuteScriptEndpoint:
             return  # Skip if FastAPI not installed
 
         response = client.post("/api/execute-script", json={
-            "script": "def invalid syntax"
+            "script": "def invalid syntax",
+            "sessionId": self.session_id
         })
 
         # Should return 200 with syntax error in results
@@ -243,7 +256,7 @@ class TestExecuteScriptEndpoint:
         result = results[0]
         assert len(result["output"]) == 1
         assert result["output"][0]["type"] == "error"
-        assert "SyntaxError" in result["output"][0]["text"]
+        assert "SyntaxError" in result["output"][0]["content"]
 
     def test_print_output(self):
         """Test that print output is captured."""
@@ -251,7 +264,8 @@ class TestExecuteScriptEndpoint:
             return  # Skip if FastAPI not installed
 
         response = client.post("/api/execute-script", json={
-            "script": 'print("Hello, World!")'
+            "script": 'print("Hello, World!")',
+            "sessionId": self.session_id
         })
 
         assert response.status_code == 200
@@ -260,16 +274,11 @@ class TestExecuteScriptEndpoint:
         result = results[0]
         assert len(result["output"]) == 1
         assert result["output"][0]["type"] == "stdout"
-        assert "Hello, World!" in result["output"][0]["text"]
+        assert "Hello, World!" in result["output"][0]["content"]
 
 
 class TestReadFileEndpoint:
     """Tests for /read-file endpoint."""
-
-    def setup_method(self):
-        """Reset executor before each test."""
-        if HAS_FASTAPI:
-            reset_executor()
 
     def test_read_existing_file(self):
         """Test reading a file that exists."""
@@ -300,11 +309,6 @@ class TestReadFileEndpoint:
 
 class TestSaveFileEndpoint:
     """Tests for /save-file endpoint."""
-
-    def setup_method(self):
-        """Reset executor before each test."""
-        if HAS_FASTAPI:
-            reset_executor()
 
     def test_save_file(self):
         """Test saving a file."""
