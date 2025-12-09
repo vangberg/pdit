@@ -259,11 +259,18 @@ async def watch_file(path: str, sessionId: str):
         - fileDeleted: File was deleted (closes connection)
         - error: Error occurred (closes connection)
     """
+    # Each watcher gets its own stop event for cleanup on disconnect
+    watcher_stop_event = threading.Event()
+
     async def generate_events():
-        watcher = FileWatcher(path, stop_event=shutdown_event)
+        watcher = FileWatcher(path, stop_event=watcher_stop_event)
 
         try:
             async for event in watcher.watch_with_initial():
+                # Check if server is shutting down
+                if shutdown_event.is_set():
+                    break
+
                 # Direct serialization using asdict()
                 yield format_sse(asdict(event))
 
@@ -271,6 +278,8 @@ async def watch_file(path: str, sessionId: str):
                 if event.type in ("fileDeleted", "error"):
                     break
         finally:
+            # Signal watcher to stop (important for cleanup on client disconnect)
+            watcher_stop_event.set()
             # Clean up session when SSE connection closes
             delete_session(sessionId)
 
