@@ -189,7 +189,7 @@ describe('processExecutionResults', () => {
       lineStart: 1,
       lineEnd: 1,
       state: 'done',
-      result: { output: ['x = 5'] },
+      result: { output:  [{type: 'stdout', content: 'x = 5'}] },
     });
 
     // After user adds a line at the top, line groups are updated to lines 2-2
