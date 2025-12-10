@@ -10,6 +10,8 @@ interface TopBarProps {
   hasConflict?: boolean;
   onReloadFromDisk?: () => void;
   onKeepChanges?: () => void;
+  autorun?: boolean;
+  onAutorunToggle?: (enabled: boolean) => void;
 }
 
 function detectMacOS(): boolean {
@@ -87,6 +89,47 @@ function StatusIndicator({ isReady, message }: StatusIndicatorProps) {
   );
 }
 
+interface ToggleSwitchProps {
+  enabled: boolean;
+  onToggle: (enabled: boolean) => void;
+  label: string;
+  tooltip?: string;
+  showTooltip: boolean;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}
+
+function ToggleSwitch({
+  enabled,
+  onToggle,
+  label,
+  tooltip,
+  showTooltip,
+  onMouseEnter,
+  onMouseLeave
+}: ToggleSwitchProps) {
+  return (
+    <div
+      className="top-bar-toggle-wrapper"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <button
+        className={`top-bar-toggle ${enabled ? "enabled" : ""}`}
+        onClick={() => onToggle(!enabled)}
+        role="switch"
+        aria-checked={enabled}
+      >
+        <span className="top-bar-toggle-label">{label}</span>
+        <span className="top-bar-toggle-switch">
+          <span className="top-bar-toggle-knob" />
+        </span>
+      </button>
+      {showTooltip && tooltip && <Tooltip text={tooltip} />}
+    </div>
+  );
+}
+
 export function TopBar({
   onRunAll,
   onRunCurrent,
@@ -96,7 +139,9 @@ export function TopBar({
   scriptName,
   hasConflict,
   onReloadFromDisk,
-  onKeepChanges
+  onKeepChanges,
+  autorun,
+  onAutorunToggle
 }: TopBarProps) {
   const [hoveredButton, setHoveredButton] = React.useState<string | null>(null);
   const shortcuts = getShortcuts();
@@ -155,6 +200,18 @@ export function TopBar({
         )}
 
         <StatusIndicator isReady={true} />
+
+        {onAutorunToggle && (
+          <ToggleSwitch
+            enabled={autorun ?? false}
+            onToggle={onAutorunToggle}
+            label="AUTORUN"
+            tooltip="Auto-execute script on save or file change"
+            showTooltip={hoveredButton === "autorun"}
+            onMouseEnter={() => setHoveredButton("autorun")}
+            onMouseLeave={() => setHoveredButton(null)}
+          />
+        )}
 
         {hasConflict && (
           <div className="top-bar-conflict-compact">
