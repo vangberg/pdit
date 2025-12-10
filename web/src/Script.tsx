@@ -14,10 +14,11 @@ import { LineGroupLayout } from "./line-group-layout";
 const DEFAULT_CODE = ``;
 
 interface ScriptProps {
-  path: string | null;
+  scriptPath: string | null;
+  onPathChange?: (newPath: string) => void;
 }
 
-export function Script({ path: scriptPath }: ScriptProps) {
+export function Script({ scriptPath, onPathChange }: ScriptProps) {
   const [hasConflict, setHasConflict] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [doc, setDoc] = useState<Text>();
@@ -311,7 +312,8 @@ export function Script({ path: scriptPath }: ScriptProps) {
         onRunCurrent={handleRunCurrent}
         onSave={handleSave}
         hasUnsavedChanges={hasUnsavedChanges}
-        scriptName={scriptPath ? scriptPath.split("/").pop() : undefined}
+        scriptPath={scriptPath}
+        onPathChange={onPathChange}
         hasConflict={hasConflict}
         onReloadFromDisk={handleReloadFromDisk}
         onKeepChanges={handleKeepLocalChanges}
