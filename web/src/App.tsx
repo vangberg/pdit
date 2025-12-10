@@ -135,7 +135,7 @@ function App() {
   const handleExecute = useCallback(
     async (
       script: string,
-      options?: { lineRange?: { from: number; to: number } }
+      options?: { lineRange?: { from: number; to: number }; reset?: boolean }
     ) => {
       // Extract script name from path (just the filename)
       const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
@@ -166,6 +166,13 @@ function App() {
       }
     },
     [handleExecutionEvent, resetExecutionState, scriptPath, sessionId]
+  );
+
+  const handleExecuteWithReset = useCallback(
+    (script: string) => {
+      handleExecute(script, { reset: true });
+    },
+    [handleExecute]
   );
 
   const handleExecuteCurrent = useCallback(
@@ -267,9 +274,11 @@ function App() {
   useEffect(() => {
     if (pendingAutorun.current && doc) {
       pendingAutorun.current = false;
-      handleExecute(doc.toString());
+      // Pass reset flag to executeScript instead of doing it separately
+      const script = doc.toString();
+      handleExecuteWithReset(script);
     }
-  }, [doc, handleExecute]);
+  }, [doc]);
 
   // Show error if script failed to load
   if (scriptError) {

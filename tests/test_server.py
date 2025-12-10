@@ -221,6 +221,31 @@ class TestExecuteScriptEndpoint:
         results = self._parse_sse_response(response2)
         assert "99" in results[0]["output"][0]["content"]
 
+    def test_reset_flag_clears_namespace(self):
+        """Test that reset=true clears the namespace before execution."""
+        if not HAS_FASTAPI:
+            return  # Skip if FastAPI not installed
+
+        # Set a variable
+        response1 = client.post("/api/execute-script", json={
+            "script": "reset_test_var = 42",
+            "sessionId": self.session_id
+        })
+        assert response1.status_code == 200
+
+        # Execute with reset=true - variable should not exist
+        response2 = client.post("/api/execute-script", json={
+            "script": "try:\n    reset_test_var\nexcept NameError:\n    print('cleared')",
+            "sessionId": self.session_id,
+            "reset": True
+        })
+
+        assert response2.status_code == 200
+        results = self._parse_sse_response(response2)
+        # Should have output indicating variable is cleared
+        has_cleared = any("cleared" in str(out.get("content", "")) for r in results for out in r.get("output", []))
+        assert has_cleared, f"Expected 'cleared' in output, got: {results}"
+
     def test_line_range_filtering(self):
         """Test executing with line range filter."""
         if not HAS_FASTAPI:
