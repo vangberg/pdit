@@ -180,6 +180,28 @@ plt.gca()  # ✅ This triggers plot capture
 - `plt.show()` is for interactive displays and won't work in pdit
 - Plots appear inline in the output pane automatically
 
+## Output Suppression
+
+Append `;` to any expression to suppress its output (iPython/Jupyter convention):
+
+```python
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(10, 5));  # Suppressed - no <Figure> output
+plt.plot([1, 2, 3], [1, 4, 9])
+plt.title("My Plot");  # Suppressed - no Text object output
+plt.gca()  # Shows the plot
+```
+
+**Works with:**
+- Any expression: `expensive_calc();`
+- Trailing comments: `plt.figure(); # setup`
+- DataFrames, plots, and regular values
+
+**Does not affect:**
+- Markdown cells (explicit documentation)
+- `print()` statements (stdout is always captured)
+
 ## Tips
 
 - Expressions show their values inline - `print()` is rarely needed
@@ -188,6 +210,7 @@ plt.gca()  # ✅ This triggers plot capture
 - User has full filesystem and package access (local Python execution)
 - Use docstring-style markdown cells to document your analysis
 - Use `plt.gca()` to display matplotlib plots inline
+- Use `;` to suppress unwanted output like `plt.figure()` return values
 
 ## Dependencies
 

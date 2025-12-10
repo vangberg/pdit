@@ -10,6 +10,7 @@ This module provides the PythonExecutor class which handles:
 import ast
 import base64
 import io
+import re
 import sys
 import traceback
 from contextlib import redirect_stdout, redirect_stderr
@@ -207,6 +208,7 @@ class Statement:
     is_expr: bool
     source: str  # Original source code for this statement
     is_markdown_cell: bool = False
+    suppress_output: bool = False  # True if line ends with semicolon (iPython convention)
 
 
 @dataclass
@@ -268,6 +270,12 @@ class PythonExecutor:
             # All top-level strings are treated as markdown
             is_markdown_cell = is_expr and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)
 
+            # Detect semicolon at end of line (iPython output suppression convention)
+            # Strip trailing comments before checking (handles "x; # comment")
+            last_line = source.split('\n')[-1]
+            code_without_comment = re.sub(r'#.*$', '', last_line)
+            suppress_output = code_without_comment.rstrip().endswith(';')
+
             if is_expr:
                 # Expression: compile for eval()
                 compiled = compile(
@@ -290,7 +298,8 @@ class PythonExecutor:
                 line_end=line_end,
                 is_expr=is_expr,
                 source=source,
-                is_markdown_cell=is_markdown_cell
+                is_markdown_cell=is_markdown_cell,
+                suppress_output=suppress_output
             ))
 
         return statements
@@ -354,7 +363,8 @@ class PythonExecutor:
         source: str,
         line_start: int,
         line_end: int,
-        is_markdown_cell: bool = False
+        is_markdown_cell: bool = False,
+        suppress_output: bool = False
     ) -> List[OutputItem]:
         """Execute pre-compiled statement with output capture.
 
@@ -365,6 +375,7 @@ class PythonExecutor:
             line_start: Starting line number (1-based)
             line_end: Ending line number (1-based)
             is_markdown_cell: Whether this is a markdown cell (output as markdown, not repr)
+            suppress_output: Whether to suppress expression output (semicolon convention)
 
         Returns:
             List of output items (stdout, stderr, errors, markdown, dataframes, images)
@@ -396,6 +407,9 @@ class PythonExecutor:
                     # Strip the string and output as markdown
                     markdown_text = str(result).strip()
                     output.append(OutputItem(type="markdown", content=markdown_text))
+                # Skip output if semicolon suppression is active
+                elif suppress_output:
+                    pass
                 # For DataFrames, output as serialized JSON
                 elif is_expr and result is not None and _is_dataframe(result):
                     json_data = _serialize_dataframe(result)
@@ -512,7 +526,8 @@ class PythonExecutor:
                 stmt.source,
                 stmt.line_start,
                 stmt.line_end,
-                stmt.is_markdown_cell
+                stmt.is_markdown_cell,
+                stmt.suppress_output
             )
 
             # Determine if output is invisible (no output items at all)
