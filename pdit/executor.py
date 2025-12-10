@@ -10,7 +10,6 @@ This module provides the PythonExecutor class which handles:
 import ast
 import base64
 import io
-import re
 import sys
 import traceback
 from contextlib import redirect_stdout, redirect_stderr
@@ -49,6 +48,25 @@ class OutputItem:
     """Single output item (stdout, stderr, error, markdown, dataframe, or image)."""
     type: str  # 'stdout', 'stderr', 'error', 'markdown', 'dataframe', or 'image'
     content: str
+
+
+def _has_trailing_semicolon(lines: List[str], node: ast.AST) -> bool:
+    """Check if statement has trailing semicolon (iPython output suppression).
+
+    Uses AST node end position to look at what comes after the statement.
+    Any # after the statement is definitely a comment (not inside a string).
+
+    Args:
+        lines: Source code split into lines
+        node: AST node to check
+
+    Returns:
+        True if there's a semicolon after the statement (before any comment)
+    """
+    end_line_text = lines[node.end_lineno - 1]
+    rest_after_stmt = end_line_text[node.end_col_offset:]
+    before_comment = rest_after_stmt.split('#')[0]
+    return ';' in before_comment
 
 
 def _is_dataframe(obj: Any) -> bool:
@@ -270,11 +288,8 @@ class PythonExecutor:
             # All top-level strings are treated as markdown
             is_markdown_cell = is_expr and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)
 
-            # Detect semicolon at end of line (iPython output suppression convention)
-            # Strip trailing comments before checking (handles "x; # comment")
-            last_line = source.split('\n')[-1]
-            code_without_comment = re.sub(r'#.*$', '', last_line)
-            suppress_output = code_without_comment.rstrip().endswith(';')
+            # Detect semicolon at end of statement (iPython output suppression convention)
+            suppress_output = _has_trailing_semicolon(lines, node)
 
             if is_expr:
                 # Expression: compile for eval()

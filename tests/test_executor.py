@@ -1062,6 +1062,136 @@ plt.gca()
         assert len(image_outputs) > 0
 
 
+class TestSemicolonSuppression:
+    """Tests for iPython-style semicolon output suppression."""
+
+    def setup_method(self):
+        """Create a fresh executor for each test."""
+        self.executor = PythonExecutor()
+
+    def test_semicolon_suppresses_output(self):
+        """Test that trailing semicolon suppresses expression output."""
+        results = collect_results(self.executor, "2 + 2;")
+
+        assert len(results) == 1
+        assert results[0].is_invisible is True
+        assert len(results[0].output) == 0
+
+    def test_no_semicolon_shows_output(self):
+        """Test that expression without semicolon shows output."""
+        results = collect_results(self.executor, "2 + 2")
+
+        assert len(results) == 1
+        assert results[0].is_invisible is False
+        assert results[0].output[0].content.strip() == "4"
+
+    def test_semicolon_with_comment(self):
+        """Test semicolon followed by comment still suppresses."""
+        results = collect_results(self.executor, "2 + 2; # this is a comment")
+
+        assert len(results) == 1
+        assert results[0].is_invisible is True
+        assert len(results[0].output) == 0
+
+    def test_semicolon_with_whitespace(self):
+        """Test semicolon with trailing whitespace."""
+        results = collect_results(self.executor, "2 + 2;   ")
+
+        assert len(results) == 1
+        assert results[0].is_invisible is True
+
+    def test_hash_in_string_not_comment(self):
+        """Test that # inside string doesn't break detection."""
+        # Use a list containing string with # to avoid markdown cell handling
+        results = collect_results(self.executor, '["hello # world"];')
+
+        assert len(results) == 1
+        assert results[0].is_invisible is True
+        assert len(results[0].output) == 0
+
+    def test_hash_in_string_without_semicolon(self):
+        """Test string with # but no semicolon shows output."""
+        results = collect_results(self.executor, '"hello # world"')
+
+        assert len(results) == 1
+        assert results[0].is_invisible is False
+        assert "hello # world" in results[0].output[0].content
+
+    def test_semicolon_inside_string_not_suppression(self):
+        """Test that semicolon inside string doesn't suppress."""
+        results = collect_results(self.executor, '"hello; world"')
+
+        assert len(results) == 1
+        assert results[0].is_invisible is False
+        assert "hello; world" in results[0].output[0].content
+
+    def test_multiline_expression_with_semicolon(self):
+        """Test multiline expression with trailing semicolon."""
+        script = '''(1 +
+ 2 +
+ 3);'''
+        results = collect_results(self.executor, script)
+
+        assert len(results) == 1
+        assert results[0].is_invisible is True
+
+    def test_function_call_with_semicolon(self):
+        """Test function call with semicolon suppresses output."""
+        script = """
+def foo():
+    return 42
+
+foo();
+"""
+        results = collect_results(self.executor, script)
+
+        # Function def is invisible, function call with ; is invisible
+        assert results[0].is_invisible is True  # def
+        assert results[1].is_invisible is True  # foo();
+
+    def test_assignment_with_semicolon(self):
+        """Test that assignment with semicolon stays invisible."""
+        results = collect_results(self.executor, "x = 10;")
+
+        # Assignments are already invisible, semicolon doesn't change that
+        assert len(results) == 1
+        assert results[0].is_invisible is True
+
+    def test_print_with_semicolon_still_prints(self):
+        """Test that print() with semicolon still produces stdout."""
+        results = collect_results(self.executor, 'print("hello");')
+
+        # print() outputs to stdout regardless of semicolon
+        assert len(results) == 1
+        assert len(results[0].output) == 1
+        assert results[0].output[0].type == "stdout"
+        assert results[0].output[0].content.strip() == "hello"
+
+    def test_multiple_statements_semicolon_separated(self):
+        """Test multiple statements on one line."""
+        results = collect_results(self.executor, "a = 1; b = 2; a + b")
+
+        # Should be 3 separate statements
+        assert len(results) == 3
+        assert results[0].is_invisible is True  # a = 1
+        assert results[1].is_invisible is True  # b = 2
+        assert results[2].is_invisible is False  # a + b (no trailing ;)
+        assert results[2].output[0].content.strip() == "3"
+
+    def test_dataframe_with_semicolon_suppressed(self):
+        """Test that DataFrame with semicolon is suppressed."""
+        script = """
+import polars as pl
+df = pl.DataFrame({'a': [1, 2, 3]})
+df;
+"""
+        results = collect_results(self.executor, script)
+
+        # df; should be invisible
+        assert results[-1].is_invisible is True
+        assert len(results[-1].output) == 0
+
+
 class TestEdgeCases:
     """Tests for edge cases and corner scenarios."""
 
@@ -1196,6 +1326,8 @@ if __name__ == "__main__":
             TestDataClasses,
             TestMarkdownCells,
             TestDataFrameRendering,
+            TestMatplotlibCapture,
+            TestSemicolonSuppression,
             TestEdgeCases,
         ]
 
