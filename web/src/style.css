@@ -178,6 +178,73 @@ body {
   color: #f97316;
 }
 
+/* Toggle switch styles */
+.top-bar-toggle-wrapper {
+  position: relative;
+  margin-left: 0.75rem;
+}
+
+.top-bar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: 1px solid #6b7280;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  transition: all 0.2s;
+}
+
+.top-bar-toggle:hover {
+  border-color: #93c5fd;
+}
+
+.top-bar-toggle.enabled {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.top-bar-toggle-label {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.top-bar-toggle.enabled .top-bar-toggle-label {
+  color: #22c55e;
+}
+
+.top-bar-toggle-switch {
+  width: 28px;
+  height: 14px;
+  background: #4b5563;
+  border-radius: 7px;
+  position: relative;
+  transition: background 0.2s;
+}
+
+.top-bar-toggle.enabled .top-bar-toggle-switch {
+  background: #22c55e;
+}
+
+.top-bar-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.top-bar-toggle.enabled .top-bar-toggle-knob {
+  transform: translateX(14px);
+}
+
 /* Grid layout ensures both columns match the height of the tallest content.
    - flex: 1 makes container fill remaining space after top-bar
    - Grid columns automatically stretch to match each other's height

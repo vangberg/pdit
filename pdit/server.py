@@ -77,6 +77,7 @@ class ExecuteScriptRequest(BaseModel):
     sessionId: str
     scriptName: Optional[str] = None
     lineRange: Optional[LineRange] = None
+    reset: Optional[bool] = False
 
 
 class ExecuteResponse(BaseModel):
@@ -154,7 +155,7 @@ async def execute_script(request: ExecuteScriptRequest):
     providing real-time feedback instead of waiting for entire script.
 
     Args:
-        request: Script to execute with optional line range
+        request: Script to execute with optional line range and reset flag
 
     Returns:
         StreamingResponse with text/event-stream media type
@@ -165,6 +166,10 @@ async def execute_script(request: ExecuteScriptRequest):
         import asyncio
 
         executor = get_or_create_session(request.sessionId)
+
+        # Reset execution environment if requested
+        if request.reset:
+            executor.reset()
 
         # Convert line range if provided
         line_range = None
