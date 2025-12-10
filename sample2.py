@@ -1,4 +1,3 @@
-# %% [markdown]
 """
 # Working with a coding agent
 """
@@ -6,7 +5,6 @@
 x = [1,2,3]
 y = [1,3,5]
 
-# %% [markdown]
 """
 Plot x against y
 """
