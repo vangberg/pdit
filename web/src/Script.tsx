@@ -16,9 +16,10 @@ const DEFAULT_CODE = ``;
 interface ScriptProps {
   scriptPath: string | null;
   onPathChange?: (newPath: string) => void;
+  printMode?: boolean;
 }
 
-export function Script({ scriptPath, onPathChange }: ScriptProps) {
+export function Script({ scriptPath, onPathChange, printMode = false }: ScriptProps) {
   const [hasConflict, setHasConflict] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [doc, setDoc] = useState<Text>();
@@ -283,6 +284,15 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
     }
   }, [doc]);
 
+  // Auto-run script on initial load in print mode
+  const hasAutoRunRef = useRef(false);
+  useEffect(() => {
+    if (printMode && initialCode && !hasAutoRunRef.current) {
+      hasAutoRunRef.current = true;
+      handleExecute(initialCode);
+    }
+  }, [printMode, initialCode, handleExecute]);
+
   // Show error if script failed to load
   if (scriptError) {
     return (
@@ -305,25 +315,30 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
     );
   }
 
+  // In print mode, use reader-mode-like layout (output only)
+  const showOutputOnly = readerMode || printMode;
+
   return (
-    <div id="app">
-      <TopBar
-        onRunAll={handleRunAll}
-        onRunCurrent={handleRunCurrent}
-        onSave={handleSave}
-        hasUnsavedChanges={hasUnsavedChanges}
-        scriptPath={scriptPath}
-        onPathChange={onPathChange}
-        hasConflict={hasConflict}
-        onReloadFromDisk={handleReloadFromDisk}
-        onKeepChanges={handleKeepLocalChanges}
-        readerMode={readerMode}
-        onToggleReaderMode={handleToggleReaderMode}
-        autorun={autorun}
-        onAutorunToggle={setAutorun}
-      />
-      <div className={readerMode ? "split-container reader-mode" : "split-container"}>
-        <div className={readerMode ? "editor-half editor-hidden" : "editor-half"}>
+    <div id="app" className={printMode ? "print-mode" : ""}>
+      {!printMode && (
+        <TopBar
+          onRunAll={handleRunAll}
+          onRunCurrent={handleRunCurrent}
+          onSave={handleSave}
+          hasUnsavedChanges={hasUnsavedChanges}
+          scriptPath={scriptPath}
+          onPathChange={onPathChange}
+          hasConflict={hasConflict}
+          onReloadFromDisk={handleReloadFromDisk}
+          onKeepChanges={handleKeepLocalChanges}
+          readerMode={readerMode}
+          onToggleReaderMode={handleToggleReaderMode}
+          autorun={autorun}
+          onAutorunToggle={setAutorun}
+        />
+      )}
+      <div className={showOutputOnly ? "split-container reader-mode" : "split-container"}>
+        <div className={showOutputOnly ? "editor-half editor-hidden" : "editor-half"}>
           <Editor
             ref={editorRef}
             initialCode={initialCode}
@@ -336,14 +351,15 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
             lineGroupHeights={lineGroupHeights}
           />
         </div>
-        <div className={readerMode ? "output-half output-full" : "output-half"}>
+        <div className={showOutputOnly ? "output-half output-full" : "output-half"}>
           <OutputPane
             onLineGroupHeightChange={handleLineGroupHeightChange}
             expressions={Array.from(expressions.values())}
             lineGroups={lineGroups}
             lineGroupLayouts={lineGroupLayouts}
             lineGroupHeights={lineGroupHeights}
-            readerMode={readerMode}
+            readerMode={showOutputOnly}
+            printMode={printMode}
           />
         </div>
       </div>

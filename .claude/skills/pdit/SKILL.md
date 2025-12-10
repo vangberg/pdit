@@ -180,6 +180,33 @@ plt.gca()  # ✅ This triggers plot capture
 - `plt.show()` is for interactive displays and won't work in pdit
 - Plots appear inline in the output pane automatically
 
+## Print Mode
+
+Add `?print=true` to the URL for a clean output-only view suitable for PDF export:
+
+```
+http://localhost:8888?script=analysis.py&print=true
+```
+
+**Print mode features:**
+- No TopBar or editor pane (output only)
+- No type badges (df, fig, md, etc.)
+- DataFrames show all rows (no pagination)
+- Script auto-runs on load
+
+**PDF generation with Playwright:**
+```python
+from playwright.sync_api import sync_playwright
+
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    page = browser.new_page()
+    page.goto("http://localhost:8888?script=analysis.py&print=true")
+    page.wait_for_load_state("networkidle")  # Wait for execution
+    page.pdf(path="output.pdf")
+    browser.close()
+```
+
 ## Tips
 
 - Expressions show their values inline - `print()` is rarely needed
@@ -188,6 +215,7 @@ plt.gca()  # ✅ This triggers plot capture
 - User has full filesystem and package access (local Python execution)
 - Use docstring-style markdown cells to document your analysis
 - Use `plt.gca()` to display matplotlib plots inline
+- Use `?print=true` for clean PDF exports
 
 ## Dependencies
 

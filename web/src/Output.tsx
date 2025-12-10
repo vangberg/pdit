@@ -8,6 +8,7 @@ interface OutputProps {
   index: number;
   ref?: (element: HTMLDivElement | null) => void;
   allInvisible?: boolean;
+  printMode?: boolean;
 }
 
 // Component for rendering a single image output item
@@ -29,7 +30,7 @@ const getTypeLabel = (type: string): string => {
   }
 };
 
-export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible }) => {
+export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible, printMode = false }) => {
   const elementRef = useRef<HTMLDivElement | null>(null);
 
   useImperativeHandle(ref, () => elementRef.current as HTMLDivElement, []);
@@ -47,14 +48,16 @@ export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible })
             key={i}
             className={`output-item output-${item.type}`}
           >
-            <span className={`output-type-badge output-type-${item.type}`}>
-              {getTypeLabel(item.type)}
-            </span>
+            {!printMode && (
+              <span className={`output-type-badge output-type-${item.type}`}>
+                {getTypeLabel(item.type)}
+              </span>
+            )}
             <div className="output-content-wrapper">
               {item.type === 'markdown' ? (
                 <Markdown>{item.content}</Markdown>
               ) : item.type === 'dataframe' ? (
-                <DataframeTable jsonData={item.content} />
+                <DataframeTable jsonData={item.content} printMode={printMode} />
               ) : item.type === 'image' ? (
                 <ImageOutput dataUrl={item.content} />
               ) : (

@@ -4,8 +4,13 @@ import "./style.css";
 
 function App() {
   // Manage script path in state to support client-side navigation
-  const [scriptPath, setScriptPath] = useState(() => 
+  const [scriptPath, setScriptPath] = useState(() =>
     new URLSearchParams(window.location.search).get("script")
+  );
+
+  // Print mode: clean output-only view for PDF generation
+  const [printMode] = useState(() =>
+    new URLSearchParams(window.location.search).get("print") === "true"
   );
 
   useEffect(() => {
@@ -29,7 +34,7 @@ function App() {
     setScriptPath(newPath || null);
   }, []);
 
-  return <Script scriptPath={scriptPath} onPathChange={handlePathChange} />;
+  return <Script scriptPath={scriptPath} onPathChange={handlePathChange} printMode={printMode} />;
 }
 
 export default App;
