@@ -8,22 +8,7 @@ import { PythonServerBackend } from './execution-backend-python';
 // Re-export types from backend
 export type { OutputItem, Expression, ExpressionResult, ExecutionEvent, ExpressionState } from './execution-backend-python';
 
-let pythonServerBackend: PythonServerBackend | null = null;
-
-/**
- * Get or create the Python server backend instance.
- */
-function getBackend(): PythonServerBackend {
-  if (!pythonServerBackend) {
-    // Check for python-server URL parameter
-    const params = new URLSearchParams(window.location.search);
-    const serverUrl = params.get('python-server') || 'http://127.0.0.1:8888';
-
-    console.log('[Execution] Using Python server backend:', serverUrl);
-    pythonServerBackend = new PythonServerBackend(serverUrl);
-  }
-  return pythonServerBackend;
-}
+const backend = new PythonServerBackend();
 
 /**
  * Execute Python code using the server backend.
@@ -42,7 +27,6 @@ export async function* executeScript(
     scriptName?: string;
   }
 ) {
-  const backend = getBackend();
   yield* backend.executeScript(script, options);
 }
 
@@ -50,6 +34,5 @@ export async function* executeScript(
  * Reset the execution namespace.
  */
 export async function reset(): Promise<void> {
-  const backend = getBackend();
   await backend.reset();
 }

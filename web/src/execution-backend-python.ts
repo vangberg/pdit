@@ -32,12 +32,6 @@ export type ExecutionEvent =
 let globalIdCounter = 1;
 
 export class PythonServerBackend {
-  private baseUrl: string;
-
-  constructor(baseUrl = 'http://127.0.0.1:8888') {
-    this.baseUrl = baseUrl;
-  }
-
   /**
    * Execute a Python script with SSE streaming.
    * Yields events as execution progresses: pending, executing, done.
@@ -51,7 +45,7 @@ export class PythonServerBackend {
     }
   ): AsyncGenerator<ExecutionEvent, void, unknown> {
     // Use Fetch API with POST (EventSource only supports GET)
-    const response = await fetch(`${this.baseUrl}/api/execute-script`, {
+    const response = await fetch('/api/execute-script', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -159,7 +153,7 @@ export class PythonServerBackend {
    * Reset the execution namespace.
    */
   async reset(): Promise<void> {
-    await fetch(`${this.baseUrl}/api/reset`, { method: 'POST' });
+    await fetch('/api/reset', { method: 'POST' });
   }
 
   /**
@@ -167,7 +161,7 @@ export class PythonServerBackend {
    */
   async isAvailable(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/health`, {
+      const response = await fetch('/api/health', {
         signal: AbortSignal.timeout(1000), // 1 second timeout
       });
       return response.ok;
