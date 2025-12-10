@@ -19,6 +19,7 @@ function App() {
   const [hasConflict, setHasConflict] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [doc, setDoc] = useState<Text>();
+  const [readerMode, setReaderMode] = useState(false);
   const [autorun, setAutorun] = useState(false);
   const autorunRef = useRef(false);
   const isProgrammaticUpdate = useRef(false);
@@ -221,6 +222,10 @@ function App() {
     setHasConflict(false);
   }, []);
 
+  const handleToggleReaderMode = useCallback(() => {
+    setReaderMode((prev) => !prev);
+  }, []);
+
   const handleSave = useCallback(async () => {
     if (!scriptPath || !doc) {
       console.warn("Cannot save: no script path or document");
@@ -314,11 +319,13 @@ function App() {
         hasConflict={hasConflict}
         onReloadFromDisk={handleReloadFromDisk}
         onKeepChanges={handleKeepLocalChanges}
+        readerMode={readerMode}
+        onToggleReaderMode={handleToggleReaderMode}
         autorun={autorun}
         onAutorunToggle={setAutorun}
       />
-      <div className="split-container">
-        <div className="editor-half">
+      <div className={readerMode ? "split-container reader-mode" : "split-container"}>
+        <div className={readerMode ? "editor-half editor-hidden" : "editor-half"}>
           <Editor
             ref={editorRef}
             initialCode={initialCode}
@@ -331,13 +338,14 @@ function App() {
             lineGroupHeights={lineGroupHeights}
           />
         </div>
-        <div className="output-half">
+        <div className={readerMode ? "output-half output-full" : "output-half"}>
           <OutputPane
             onLineGroupHeightChange={handleLineGroupHeightChange}
             expressions={Array.from(expressions.values())}
             lineGroups={lineGroups}
             lineGroupLayouts={lineGroupLayouts}
             lineGroupHeights={lineGroupHeights}
+            readerMode={readerMode}
           />
         </div>
       </div>

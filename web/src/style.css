@@ -181,7 +181,6 @@ body {
 /* Toggle switch styles */
 .top-bar-toggle-wrapper {
   position: relative;
-  margin-left: 0.75rem;
 }
 
 .top-bar-toggle {
@@ -189,16 +188,17 @@ body {
   align-items: center;
   gap: 0.5rem;
   background: transparent;
-  border: 1px solid #6b7280;
+  border: 1px solid #93c5fd;
   border-radius: 4px;
-  padding: 0.25rem 0.5rem;
+  padding: 0.3rem 0.6rem;
   cursor: pointer;
+  font-size: 0.75rem;
   font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   transition: all 0.2s;
 }
 
 .top-bar-toggle:hover {
-  border-color: #93c5fd;
+  background: rgba(147, 197, 253, 0.2);
 }
 
 .top-bar-toggle.enabled {
@@ -207,8 +207,8 @@ body {
 }
 
 .top-bar-toggle-label {
-  font-size: 0.7rem;
-  color: #9ca3af;
+  font-size: 0.75rem;
+  color: #93c5fd;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -271,6 +271,21 @@ body {
   display: flex;
   flex: 0 0 50%;
   min-width: 0;
+}
+
+/* Reader mode layout */
+.split-container.reader-mode {
+  grid-template-columns: 0fr 1fr;
+}
+
+.editor-hidden {
+  visibility: hidden;
+  width: 0;
+  overflow: hidden;
+}
+
+.output-full {
+  flex: 1;
 }
 
 .editor-half,
@@ -341,6 +356,13 @@ h1 {
   margin: 1px 6px;
   padding: 4px 8px;
   border-radius: 0 3px 3px 0;
+}
+
+.output-content.reader-mode .output-group {
+  margin: 0;
+  border: none;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .output-group-invisible {

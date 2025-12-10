@@ -10,6 +10,8 @@ interface TopBarProps {
   hasConflict?: boolean;
   onReloadFromDisk?: () => void;
   onKeepChanges?: () => void;
+  readerMode?: boolean;
+  onToggleReaderMode?: () => void;
   autorun?: boolean;
   onAutorunToggle?: (enabled: boolean) => void;
 }
@@ -140,6 +142,8 @@ export function TopBar({
   hasConflict,
   onReloadFromDisk,
   onKeepChanges,
+  readerMode,
+  onToggleReaderMode,
   autorun,
   onAutorunToggle
 }: TopBarProps) {
@@ -181,6 +185,28 @@ export function TopBar({
           showTooltip={hoveredButton === "markdown"}
         />
 
+        <ToggleSwitch
+          enabled={readerMode ?? false}
+          onToggle={onToggleReaderMode || (() => {})}
+          label="READER"
+          tooltip="Toggle reader mode"
+          showTooltip={hoveredButton === "reader"}
+          onMouseEnter={() => setHoveredButton("reader")}
+          onMouseLeave={() => setHoveredButton(null)}
+        />
+
+        {onAutorunToggle && (
+          <ToggleSwitch
+            enabled={autorun ?? false}
+            onToggle={onAutorunToggle}
+            label="AUTORUN"
+            tooltip="Auto-execute script on save or file change"
+            showTooltip={hoveredButton === "autorun"}
+            onMouseEnter={() => setHoveredButton("autorun")}
+            onMouseLeave={() => setHoveredButton(null)}
+          />
+        )}
+
         {scriptName && (
           <ActionButton
             label="SAVE"
@@ -200,18 +226,6 @@ export function TopBar({
         )}
 
         <StatusIndicator isReady={true} />
-
-        {onAutorunToggle && (
-          <ToggleSwitch
-            enabled={autorun ?? false}
-            onToggle={onAutorunToggle}
-            label="AUTORUN"
-            tooltip="Auto-execute script on save or file change"
-            showTooltip={hoveredButton === "autorun"}
-            onMouseEnter={() => setHoveredButton("autorun")}
-            onMouseLeave={() => setHoveredButton(null)}
-          />
-        )}
 
         {hasConflict && (
           <div className="top-bar-conflict-compact">

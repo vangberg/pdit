@@ -11,6 +11,7 @@ interface OutputPaneProps {
   lineGroups: LineGroup[];
   lineGroupLayouts?: Map<string, LineGroupLayout>;
   lineGroupHeights?: Map<string, number>;
+  readerMode?: boolean;
 }
 
 export const OutputPane: React.FC<OutputPaneProps> = ({
@@ -19,12 +20,13 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
   lineGroups,
   lineGroupLayouts,
   lineGroupHeights,
+  readerMode,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const lineGroupRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const minHeight = useMemo(() => {
-    if (!lineGroupLayouts || !lineGroupHeights || lineGroups.length === 0) {
+    if (readerMode || !lineGroupLayouts || !lineGroupHeights || lineGroups.length === 0) {
       return undefined;
     }
 
@@ -33,7 +35,7 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
     const height = lineGroupHeights.get(lastGroup.id);
 
     return layout && height !== undefined ? layout.top + height : undefined;
-  }, [lineGroups, lineGroupLayouts, lineGroupHeights]);
+  }, [readerMode, lineGroups, lineGroupLayouts, lineGroupHeights]);
 
   const getLineGroupHeights = useCallback((): Map<string, number> => {
     const heights = new Map<string, number>();
@@ -85,7 +87,7 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
   return (
     <div id="output" ref={containerRef}>
       <div
-        className="output-content"
+        className={`output-content ${readerMode ? 'reader-mode' : ''}`}
         style={minHeight ? { minHeight: `${minHeight}px` } : undefined}
       >
         {lineGroups.map((group) => {
@@ -106,13 +108,13 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
             : "output-group";
 
           const style: CSSProperties = {};
-          if (layout) {
-            style.position = "absolute";
-            style.top = layout.top;
-            style.left = 8;
-            style.right = 8;
-            style.minHeight = `${layout.naturalHeight}px`;
-          }
+           if (layout && !readerMode) {
+             style.position = "absolute";
+             style.top = layout.top;
+             style.left = 8;
+             style.right = 8;
+             style.minHeight = `${layout.naturalHeight}px`;
+           }
 
           return (
             <div
