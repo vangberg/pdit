@@ -135,10 +135,9 @@ GET  /api/health          - Health check
 
 ## Markdown Cells
 
-pdit supports markdown cells for documentation and explanations using `# %% [markdown]` followed by a docstring:
+pdit supports markdown cells for documentation and explanations in top-level docstring
 
 ```python
-# %% [markdown]
 """
 # Data Analysis
 This section loads and explores the dataset
@@ -148,7 +147,6 @@ import pandas as pd
 df = pd.read_csv("data.csv")
 df.head()
 
-# %% [markdown]
 """
 ## Summary Statistics
 Let's look at the distribution of values
@@ -159,15 +157,10 @@ df.describe()
 
 **Usage:**
 
-- Start with `# %% [markdown]` on its own line
-- Follow with a triple-quoted docstring (`"""..."""`) containing markdown
+- Start with a triple-quoted docstring (`"""..."""`) containing markdown
 - Content is rendered as markdown in the output pane
 - Supports standard markdown: headers, lists, links, code blocks, etc.
 - Great for documenting analysis steps and explaining results
-
-**Shortcut:**
-
-- Insert markdown cell: Cmd+Shift+M / Ctrl+Shift+M (inserts template and positions cursor)
 
 ## Matplotlib Plots
 
