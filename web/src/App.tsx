@@ -20,7 +20,15 @@ function App() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [doc, setDoc] = useState<Text>();
   const [readerMode, setReaderMode] = useState(false);
+  const [autorun, setAutorun] = useState(false);
+  const autorunRef = useRef(false);
   const isProgrammaticUpdate = useRef(false);
+  const pendingAutorun = useRef(false);
+
+  // Keep autorunRef in sync with autorun state
+  useEffect(() => {
+    autorunRef.current = autorun;
+  }, [autorun]);
 
   const editorRef = useRef<EditorHandles | null>(null);
   const lineGroupsRef = useRef<LineGroup[]>([]);
@@ -48,6 +56,11 @@ function App() {
           lineGroups: adjustedGroups,
         });
         isProgrammaticUpdate.current = false;
+
+        // Trigger autorun if enabled (file changed from disk)
+        if (autorunRef.current) {
+          pendingAutorun.current = true;
+        }
       }
     },
     [hasUnsavedChanges, doc]
@@ -123,7 +136,7 @@ function App() {
   const handleExecute = useCallback(
     async (
       script: string,
-      options?: { lineRange?: { from: number; to: number } }
+      options?: { lineRange?: { from: number; to: number }; reset?: boolean }
     ) => {
       // Extract script name from path (just the filename)
       const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
@@ -154,6 +167,13 @@ function App() {
       }
     },
     [handleExecutionEvent, resetExecutionState, scriptPath, sessionId]
+  );
+
+  const handleExecuteWithReset = useCallback(
+    (script: string) => {
+      handleExecute(script, { reset: true });
+    },
+    [handleExecute]
   );
 
   const handleExecuteCurrent = useCallback(
@@ -227,13 +247,18 @@ function App() {
       if (response.ok) {
         setHasUnsavedChanges(false);
         setHasConflict(false);
+
+        // Trigger autorun if enabled (after save)
+        if (autorunRef.current) {
+          handleExecute(doc.toString());
+        }
       } else {
         console.error("Failed to save file:", await response.text());
       }
     } catch (error) {
       console.error("Error saving file:", error);
     }
-  }, [scriptPath, doc]);
+  }, [scriptPath, doc, handleExecute]);
 
   // Handle Cmd+S / Ctrl+S keyboard shortcut
   useEffect(() => {
@@ -249,6 +274,16 @@ function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [hasUnsavedChanges, handleSave]);
+
+  // Process pending autorun (triggered by file change from disk)
+  useEffect(() => {
+    if (pendingAutorun.current && doc) {
+      pendingAutorun.current = false;
+      // Pass reset flag to executeScript instead of doing it separately
+      const script = doc.toString();
+      handleExecuteWithReset(script);
+    }
+  }, [doc]);
 
   // Show error if script failed to load
   if (scriptError) {
@@ -286,6 +321,8 @@ function App() {
         onKeepChanges={handleKeepLocalChanges}
         readerMode={readerMode}
         onToggleReaderMode={handleToggleReaderMode}
+        autorun={autorun}
+        onAutorunToggle={setAutorun}
       />
       <div className={readerMode ? "split-container reader-mode" : "split-container"}>
         <div className={readerMode ? "editor-half editor-hidden" : "editor-half"}>

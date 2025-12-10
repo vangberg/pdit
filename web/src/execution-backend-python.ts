@@ -42,6 +42,7 @@ export class PythonServerBackend {
       sessionId: string;
       lineRange?: { from: number; to: number };
       scriptName?: string;
+      reset?: boolean;
     }
   ): AsyncGenerator<ExecutionEvent, void, unknown> {
     // Use Fetch API with POST (EventSource only supports GET)
@@ -56,6 +57,7 @@ export class PythonServerBackend {
         sessionId: options.sessionId,
         scriptName: options.scriptName,
         lineRange: options.lineRange,
+        reset: options.reset,
       }),
     });
 

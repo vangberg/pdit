@@ -18,6 +18,7 @@ const backend = new PythonServerBackend();
  * @param options.sessionId - Session ID for execution environment
  * @param options.lineRange - Optional line range to filter which statements to execute (1-based, inclusive)
  * @param options.scriptName - Optional script name for verbose output
+ * @param options.reset - Optional flag to reset the execution environment before running
  */
 export async function* executeScript(
   script: string,
@@ -25,6 +26,7 @@ export async function* executeScript(
     sessionId: string;
     lineRange?: { from: number; to: number };
     scriptName?: string;
+    reset?: boolean;
   }
 ) {
   yield* backend.executeScript(script, options);

@@ -156,6 +156,10 @@ export function useResults() {
   // Mutable ref for ongoing execution state
   const executionStateRef = useRef<ExecutionState | null>(null);
 
+  // Keep a ref to the latest lineGroups to avoid stale closures
+  const lineGroupsRef = useRef<LineGroup[]>(lineGroups);
+  lineGroupsRef.current = lineGroups;
+
   /**
    * Handle an execution event. Returns updated line groups and done expression IDs.
    */
@@ -169,8 +173,8 @@ export function useResults() {
         executionStateRef.current = {
           expressionsByRange: new Map(),
           lineRange: options?.lineRange,
-          // Initialize from current state to enable ID reuse
-          currentLineGroups: lineGroups,
+          // Initialize from ref to get latest value and enable ID reuse
+          currentLineGroups: lineGroupsRef.current,
         };
       }
 
@@ -208,7 +212,7 @@ export function useResults() {
 
       return { lineGroups: groups, doneIds };
     },
-    [expressions, lineGroups]
+    [expressions]
   );
 
   /**
@@ -241,10 +245,16 @@ export function useResults() {
     [expressions, lineGroups]
   );
 
+  // Update both ref and state - ref is immediate, state triggers re-render
+  const updateLineGroups = useCallback((groups: LineGroup[]) => {
+    lineGroupsRef.current = groups;
+    setLineGroups(groups);
+  }, []);
+
   return {
     expressions,
     lineGroups,
-    setLineGroups,
+    setLineGroups: updateLineGroups,
     addExpressions,
     handleExecutionEvent,
     resetExecutionState,
