@@ -200,11 +200,6 @@ function App() {
     editorRef.current?.focus();
   }, []);
 
-  const handleInsertMarkdownCell = useCallback(() => {
-    editorRef.current?.insertMarkdownCell();
-    editorRef.current?.focus();
-  }, []);
-
   const handleReloadFromDisk = useCallback(() => {
     if (diskContent) {
       isProgrammaticUpdate.current = true;
@@ -313,7 +308,6 @@ function App() {
         onRunAll={handleRunAll}
         onRunCurrent={handleRunCurrent}
         onSave={handleSave}
-        onInsertMarkdownCell={handleInsertMarkdownCell}
         hasUnsavedChanges={hasUnsavedChanges}
         scriptName={scriptPath ? scriptPath.split("/").pop() : undefined}
         hasConflict={hasConflict}
