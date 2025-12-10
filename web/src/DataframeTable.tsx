@@ -9,6 +9,7 @@ import {
   createColumnHelper,
   SortingState,
 } from "@tanstack/react-table";
+import { useInteractive } from "./InteractiveContext";
 
 interface DataframeData {
   columns: string[];
@@ -20,10 +21,10 @@ interface DataframeTableProps {
 }
 
 export const DataframeTable: React.FC<DataframeTableProps> = ({ jsonData }) => {
+  const interactive = useInteractive();
   const [pageIndex, setPageIndex] = useState(0);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
-  const pageSize = 10;
 
   const { columns, rows } = useMemo(() => {
     const parsed: DataframeData = JSON.parse(jsonData);
@@ -48,6 +49,9 @@ export const DataframeTable: React.FC<DataframeTableProps> = ({ jsonData }) => {
 
     return { columns, rows };
   }, [jsonData]);
+
+  // When non-interactive, show all rows; otherwise paginate at 10 per page
+  const pageSize = interactive ? 10 : rows.length;
 
   const table = useReactTable({
     data: rows,
@@ -79,10 +83,10 @@ export const DataframeTable: React.FC<DataframeTableProps> = ({ jsonData }) => {
               {headerGroup.headers.map((header) => (
                 <th
                   key={header.id}
-                  onClick={header.column.getToggleSortingHandler()}
-                  style={{ cursor: header.column.getCanSort() ? "pointer" : "default", userSelect: "none" }}
+                  onClick={interactive ? header.column.getToggleSortingHandler() : undefined}
+                  style={{ cursor: interactive && header.column.getCanSort() ? "pointer" : "default", userSelect: "none" }}
                   title={
-                    header.column.getCanSort()
+                    interactive && header.column.getCanSort()
                       ? header.column.getIsSorted() === "desc"
                         ? "Sorted descending. Click to sort ascending."
                         : header.column.getIsSorted() === "asc"
@@ -91,19 +95,10 @@ export const DataframeTable: React.FC<DataframeTableProps> = ({ jsonData }) => {
                       : undefined
                   }
                 >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                    <span style={{ fontSize: "0.85em", opacity: 0.6, flexShrink: 0 }}>
-                      {header.column.getIsSorted() === "asc"
-                        ? "▲"
-                        : header.column.getIsSorted() === "desc"
-                        ? "▼"
-                        : ""}
-                    </span>
-                  </div>
+                  {flexRender(
+                    header.column.columnDef.header,
+                    header.getContext()
+                  )}
                 </th>
               ))}
             </tr>
@@ -121,59 +116,61 @@ export const DataframeTable: React.FC<DataframeTableProps> = ({ jsonData }) => {
           ))}
         </tbody>
       </table>
-      <div className="dataframe-toolbar">
-        <input
-          type="text"
-          placeholder="Filter..."
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-          className="dataframe-filter-input"
-        />
-        <div className="dataframe-toolbar-pagination">
-          <button
-            onClick={() => table.setPageIndex(0)}
-            disabled={!table.getCanPreviousPage()}
-            title="First page"
-          >
-            &lt;&lt;
-          </button>
-          <button
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            title="Previous page"
-          >
-            &lt;
-          </button>
-          <div className="dataframe-toolbar-pagination-group">
-            <input
-              type="number"
-              min={1}
-              max={table.getPageCount()}
-              value={table.getState().pagination.pageIndex + 1}
-              onChange={(e) => {
-                const page = e.target.value ? Number(e.target.value) - 1 : 0;
-                table.setPageIndex(Math.min(Math.max(page, 0), table.getPageCount() - 1));
-              }}
-            />
-            <span className="dataframe-toolbar-pagination-separator">/</span>
-            <span className="dataframe-toolbar-pagination-total">{table.getPageCount()}</span>
+      {interactive && (
+        <div className="dataframe-toolbar">
+          <input
+            type="text"
+            placeholder="Filter..."
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            className="dataframe-filter-input"
+          />
+          <div className="dataframe-toolbar-pagination">
+            <button
+              onClick={() => table.setPageIndex(0)}
+              disabled={!table.getCanPreviousPage()}
+              title="First page"
+            >
+              &lt;&lt;
+            </button>
+            <button
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              title="Previous page"
+            >
+              &lt;
+            </button>
+            <div className="dataframe-toolbar-pagination-group">
+              <input
+                type="number"
+                min={1}
+                max={table.getPageCount()}
+                value={table.getState().pagination.pageIndex + 1}
+                onChange={(e) => {
+                  const page = e.target.value ? Number(e.target.value) - 1 : 0;
+                  table.setPageIndex(Math.min(Math.max(page, 0), table.getPageCount() - 1));
+                }}
+              />
+              <span className="dataframe-toolbar-pagination-separator">/</span>
+              <span className="dataframe-toolbar-pagination-total">{table.getPageCount()}</span>
+            </div>
+            <button
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              title="Next page"
+            >
+              &gt;
+            </button>
+            <button
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              disabled={!table.getCanNextPage()}
+              title="Last page"
+            >
+              &gt;&gt;
+            </button>
           </div>
-          <button
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            title="Next page"
-          >
-            &gt;
-          </button>
-          <button
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-            disabled={!table.getCanNextPage()}
-            title="Last page"
-          >
-            &gt;&gt;
-          </button>
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { OutputPane } from "./OutputPane";
 import { executeScript } from "./execution-python";
 import { useResults } from "./results";
 import { useScriptFile } from "./use-script-file";
+import { InteractiveContext } from "./InteractiveContext";
 import "./style.css";
 
 /**
@@ -88,12 +89,14 @@ export function OutputOnly() {
   }
 
   return (
-    <div className="output-only-container" data-complete={isComplete}>
-      <OutputPane
-        expressions={Array.from(expressions.values())}
-        lineGroups={lineGroups}
-        readerMode={true}
-      />
-    </div>
+    <InteractiveContext.Provider value={false}>
+      <div className="output-only-container" data-complete={isComplete}>
+        <OutputPane
+          expressions={Array.from(expressions.values())}
+          lineGroups={lineGroups}
+          readerMode={true}
+        />
+      </div>
+    </InteractiveContext.Provider>
   );
 }
