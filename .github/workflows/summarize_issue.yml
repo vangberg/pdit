@@ -1,0 +1,22 @@
+name: Auto-Summarize Issue
+on:
+  issues:
+    types: [opened, edited, labeled]
+  issue_comment:
+    types: [created, edited, deleted]
+
+jobs:
+  summarize:
+    runs-on: ubuntu-latest
+    if: contains(github.event.issue.labels.*.name, 'summarize')
+    permissions:
+      issues: write
+    steps:
+      - name: Run Issuerizer
+        uses: harryvangberg/issuerizer@main
+        with:
+          # Dynamically get the issue number from the event
+          issue-query: "${{ github.repository }}#${{ github.event.issue.number }}"
+          update: "true"
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
