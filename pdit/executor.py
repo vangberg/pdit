@@ -10,7 +10,6 @@ This module provides the PythonExecutor class which handles:
 import ast
 import base64
 import io
-import re
 import sys
 import traceback
 from contextlib import redirect_stdout, redirect_stderr
@@ -265,12 +264,9 @@ class PythonExecutor:
 
             # Compile AST node directly
             is_expr = isinstance(node, ast.Expr)
-            is_markdown_cell = False
-
-            # Check if this is a string expression preceded by markdown cell marker
-            if is_expr and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
-                # Look for # %% [markdown] marker within 3 lines before the expression
-                is_markdown_cell = self._has_markdown_marker(lines, line_start)
+            
+            # All top-level strings are treated as markdown
+            is_markdown_cell = is_expr and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)
 
             if is_expr:
                 # Expression: compile for eval()
@@ -299,30 +295,7 @@ class PythonExecutor:
 
         return statements
 
-    def _has_markdown_marker(self, lines: List[str], expr_line: int) -> bool:
-        """Check if there's a markdown cell marker within 3 lines before the expression.
 
-        Looks for '# %% [markdown]' pattern in comments.
-
-        Args:
-            lines: List of source code lines (0-indexed)
-            expr_line: 1-based line number of the expression
-
-        Returns:
-            True if a markdown marker is found
-        """
-        # Pattern matches: # %% [markdown] with optional whitespace
-        marker_pattern = re.compile(r'^\s*#\s*%%\s*\[markdown\]', re.IGNORECASE)
-
-        # Check up to 3 lines before (lines is 0-indexed, expr_line is 1-indexed)
-        start_idx = max(0, expr_line - 4)  # -4 because expr_line is 1-indexed
-        end_idx = expr_line - 1  # Line before the expression
-
-        for idx in range(start_idx, end_idx):
-            if idx < len(lines) and marker_pattern.match(lines[idx]):
-                return True
-
-        return False
 
     def capture_matplotlib_figures(self, mpl_object: Any) -> List[OutputItem]:
         """Capture the matplotlib figure associated with an Axes or Figure object.
