@@ -185,15 +185,27 @@ export function TopBar({
           showTooltip={hoveredButton === "markdown"}
         />
 
-        <ActionButton
-          label={readerMode ? "📖 Reader" : "Reader"}
-          onClick={onToggleReaderMode || (() => {})}
-          disabled={false}
-          onMouseEnter={() => setHoveredButton("reader")}
-          onMouseLeave={() => setHoveredButton(null)}
+        <ToggleSwitch
+          enabled={readerMode ?? false}
+          onToggle={onToggleReaderMode || (() => {})}
+          label="READER"
           tooltip="Toggle reader mode"
           showTooltip={hoveredButton === "reader"}
+          onMouseEnter={() => setHoveredButton("reader")}
+          onMouseLeave={() => setHoveredButton(null)}
         />
+
+        {onAutorunToggle && (
+          <ToggleSwitch
+            enabled={autorun ?? false}
+            onToggle={onAutorunToggle}
+            label="AUTORUN"
+            tooltip="Auto-execute script on save or file change"
+            showTooltip={hoveredButton === "autorun"}
+            onMouseEnter={() => setHoveredButton("autorun")}
+            onMouseLeave={() => setHoveredButton(null)}
+          />
+        )}
 
         {scriptName && (
           <ActionButton
@@ -214,18 +226,6 @@ export function TopBar({
         )}
 
         <StatusIndicator isReady={true} />
-
-        {onAutorunToggle && (
-          <ToggleSwitch
-            enabled={autorun ?? false}
-            onToggle={onAutorunToggle}
-            label="AUTORUN"
-            tooltip="Auto-execute script on save or file change"
-            showTooltip={hoveredButton === "autorun"}
-            onMouseEnter={() => setHoveredButton("autorun")}
-            onMouseLeave={() => setHoveredButton(null)}
-          />
-        )}
 
         {hasConflict && (
           <div className="top-bar-conflict-compact">
