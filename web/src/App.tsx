@@ -1,8 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Script } from "./Script";
+import { OutputOnly } from "./OutputOnly";
 import "./style.css";
 
 function App() {
+  // Check if this is the /output route
+  if (window.location.pathname === "/output") {
+    return <OutputOnly />;
+  }
+
   // Manage script path in state to support client-side navigation
   const [scriptPath, setScriptPath] = useState(() => 
     new URLSearchParams(window.location.search).get("script")

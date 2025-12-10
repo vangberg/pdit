@@ -1032,3 +1032,27 @@ h1 {
   color: #6b7280;
   min-width: 0;
 }
+
+/* Output-only view (for screenshots/PDFs) */
+.output-only-container {
+  width: 100%;
+  min-height: 100vh;
+  padding: 16px;
+  box-sizing: border-box;
+  background: #ffffff;
+}
+
+.output-only-container #output {
+  background: #ffffff;
+  border-left: none;
+}
+
+.output-only-loading,
+.output-only-error {
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  padding: 20px;
+}
+
+.output-only-error {
+  color: #dc2626;
+}
