@@ -1,6 +1,6 @@
 # Development Guidelines
 
-- DO NOT: commit to git, unless I tell you to.
+- **NEVER commit to git, unless I tell you to.**
 
 - Use React 19 API's
 - Use CodeMirror 6 API
