@@ -180,4 +180,43 @@ describe('processExecutionResults', () => {
     expect(groups).toHaveLength(1);
     expect(groups[0].resultIds).toEqual([3]);
   });
+
+  it('should preserve result when line numbers change after document edit', () => {
+    // Initial execution at lines 1-1 with result "x = 5"
+    const store = new Map<number, Expression>();
+    store.set(1, {
+      id: 1,
+      lineStart: 1,
+      lineEnd: 1,
+      state: 'done',
+      result: { output: ['x = 5'] },
+    });
+
+    // After user adds a line at the top, line groups are updated to lines 2-2
+    // (expressions in store still have old line numbers 1-1, which is fine)
+    const currentLineGroups: LineGroup[] = [
+      lg('g1', [1], 2, 2),
+    ];
+
+    // Re-executing with the new line numbers
+    const newExpressions: Expression[] = [
+      {
+        id: 2,
+        lineStart: 2,
+        lineEnd: 2,
+        state: 'pending',
+        result: undefined,
+      },
+    ];
+
+    const { groups } = processExecutionResults(store, newExpressions, {
+      currentLineGroups,
+      lineRange: { from: 2, to: 2 },
+    });
+
+    // The new expression at lines 2-2 should match the updated line group at 2-2
+    // and preserve the old result ID via previousResultIds
+    expect(groups).toHaveLength(1);
+    expect(groups[0].previousResultIds).toEqual([1]); // Should have preserved old result
+  });
 });

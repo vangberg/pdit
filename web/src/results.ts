@@ -100,11 +100,17 @@ function handleExpressionsEvent(
   expressions: Expression[],
   existingExpressions: Map<number, Expression>
 ): void {
-  // Build lookup of existing expressions by line range
+  // Build lookup of existing expressions by current line range (from line groups)
+  // Line groups have up-to-date positions, while expressions have stale line numbers
   const existingByRange = new Map<string, Expression>();
-  for (const expr of existingExpressions.values()) {
-    const key = lineRangeKey(expr.lineStart, expr.lineEnd);
-    existingByRange.set(key, expr);
+  for (const group of state.currentLineGroups) {
+    const key = lineRangeKey(group.lineStart, group.lineEnd);
+    // Get the most recent result from this group
+    const resultId = group.resultIds[group.resultIds.length - 1];
+    const expr = existingExpressions.get(resultId);
+    if (expr) {
+      existingByRange.set(key, expr);
+    }
   }
 
   // Initialize all expressions - first one is executing, rest are pending
