@@ -1,11 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
+import { PathEditor } from "./PathEditor";
 
 interface TopBarProps {
   onRunAll: () => void;
   onRunCurrent?: () => void;
   onSave?: () => void;
   hasUnsavedChanges?: boolean;
-  scriptName?: string;
+  scriptPath?: string | null;
+  onPathChange?: (newPath: string) => void;
   hasConflict?: boolean;
   onReloadFromDisk?: () => void;
   onKeepChanges?: () => void;
@@ -135,7 +137,8 @@ export function TopBar({
   onRunCurrent,
   onSave,
   hasUnsavedChanges,
-  scriptName,
+  scriptPath,
+  onPathChange,
   hasConflict,
   onReloadFromDisk,
   onKeepChanges,
@@ -144,7 +147,8 @@ export function TopBar({
   autorun,
   onAutorunToggle
 }: TopBarProps) {
-  const [hoveredButton, setHoveredButton] = React.useState<string | null>(null);
+  const [hoveredButton, setHoveredButton] = useState<string | null>(null);
+
   const shortcuts = getShortcuts();
   const isMac = detectMacOS();
   const saveShortcut = isMac ? "Command + S" : "Ctrl + S";
@@ -194,7 +198,7 @@ export function TopBar({
           />
         )}
 
-        {scriptName && (
+        {scriptPath && (
           <ActionButton
             label="SAVE"
             onClick={onSave || (() => {})}
@@ -206,11 +210,10 @@ export function TopBar({
           />
         )}
 
-        {scriptName && (
-          <span style={{ fontSize: "12px", color: "#ccc", marginLeft: "8px" }}>
-            {scriptName}
-          </span>
-        )}
+        <PathEditor
+          scriptPath={scriptPath}
+          onPathChange={onPathChange}
+        />
 
         <StatusIndicator isReady={true} />
 
