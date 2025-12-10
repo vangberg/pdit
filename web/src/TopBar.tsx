@@ -10,6 +10,8 @@ interface TopBarProps {
   hasConflict?: boolean;
   onReloadFromDisk?: () => void;
   onKeepChanges?: () => void;
+  readerMode?: boolean;
+  onToggleReaderMode?: () => void;
 }
 
 function detectMacOS(): boolean {
@@ -96,7 +98,9 @@ export function TopBar({
   scriptName,
   hasConflict,
   onReloadFromDisk,
-  onKeepChanges
+  onKeepChanges,
+  readerMode,
+  onToggleReaderMode,
 }: TopBarProps) {
   const [hoveredButton, setHoveredButton] = React.useState<string | null>(null);
   const shortcuts = getShortcuts();
@@ -134,6 +138,16 @@ export function TopBar({
           onMouseLeave={() => setHoveredButton(null)}
           tooltip={shortcuts.markdown}
           showTooltip={hoveredButton === "markdown"}
+        />
+
+        <ActionButton
+          label={readerMode ? "📖 Reader" : "Reader"}
+          onClick={onToggleReaderMode || (() => {})}
+          disabled={false}
+          onMouseEnter={() => setHoveredButton("reader")}
+          onMouseLeave={() => setHoveredButton(null)}
+          tooltip="Toggle reader mode"
+          showTooltip={hoveredButton === "reader"}
         />
 
         {scriptName && (

@@ -6,7 +6,6 @@
 - Use CodeMirror 6 API
 - Consult CodeMirror 6 docs in `docs/codemirror6/` when doing CodeMirror related tasks.
 - Prefer simple code over defensive code
-- Test with Chrome MCP
 - Use GitHub CLI for pull requests
 
 **IMPORTANT**: This project uses **bd (beads)** for ALL issue tracking. Do NOT use markdown TODOs, task lists, or other tracking methods.
