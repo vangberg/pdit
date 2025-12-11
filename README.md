@@ -1,4 +1,4 @@
-# pdit
+# pdit 🫛
 
 Pythonic live scripting.
 
