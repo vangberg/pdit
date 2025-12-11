@@ -4,7 +4,7 @@
  */
 
 export interface OutputItem {
-  type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message' | 'markdown' | 'dataframe' | 'image';
+  type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message' | 'markdown' | 'dataframe' | 'image' | 'html';
   content: string;
 }
 

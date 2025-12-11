@@ -45,8 +45,8 @@ def set_script_name(script_name: Optional[str]) -> None:
 
 @dataclass
 class OutputItem:
-    """Single output item (stdout, stderr, error, markdown, dataframe, or image)."""
-    type: str  # 'stdout', 'stderr', 'error', 'markdown', 'dataframe', or 'image'
+    """Single output item (stdout, stderr, error, markdown, dataframe, image, or html)."""
+    type: str  # 'stdout', 'stderr', 'error', 'markdown', 'dataframe', 'image', or 'html'
     content: str
 
 
@@ -106,6 +106,16 @@ def _is_matplotlib_axes_or_figure(obj: Any) -> bool:
         return True
 
     return False
+
+
+def _has_repr_html(obj: Any) -> bool:
+    """Check if object has a _repr_html_() method.
+
+    This follows the Jupyter/IPython convention for rich HTML display.
+    Many libraries implement this: pandas Styler, great_tables GT, Plotly,
+    ITables, and custom objects wanting rich HTML representation.
+    """
+    return hasattr(obj, '_repr_html_') and callable(getattr(obj, '_repr_html_'))
 
 
 def _serialize_dataframe(df: Any) -> str:
@@ -435,6 +445,14 @@ class PythonExecutor:
                     # Note: We do this INSIDE the with redirect block, but capture_matplotlib_figures
                     # doesn't produce stdout/stderr, so this is fine
                     output.extend(self.capture_matplotlib_figures(result))
+                # For objects with _repr_html_(), output as HTML (Jupyter convention)
+                elif is_expr and result is not None and _has_repr_html(result):
+                    html_content = result._repr_html_()
+                    if html_content is not None:
+                        output.append(OutputItem(type="html", content=html_content))
+                    else:
+                        # _repr_html_() returned None, fall back to repr()
+                        print(repr(result))
                 # For regular expressions, print result if not None
                 elif is_expr and result is not None:
                     print(repr(result))
