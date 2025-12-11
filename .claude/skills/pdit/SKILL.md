@@ -12,31 +12,20 @@ split-pane interface: code editor (left) and streaming execution results (right)
 
 **Starting pdit:**
 
-pdit runs from the local uv environment so dependencies work seamlessly.
-
-If pyproject.toml exists, just add pdit and run:
+pdit runs using `uv run --with` so it's available without modifying the project:
 
 ```bash
-uv add git+https://github.com/vangberg/pdit@dist
-uv run pdit script.py --verbose
-```
-
-If starting fresh:
-
-```bash
-uv init
-uv add git+https://github.com/vangberg/pdit@dist
-uv run pdit script.py --verbose
+uv run --with git+https://github.com/vangberg/pdit@dist pdit script.py --verbose
 ```
 
 **Note:** The `@dist` branch contains pre-built frontend assets, so no Node.js or build step is needed.
 
 **Upgrading pdit:**
 
-To upgrade to the latest version of pdit:
+Since pdit is run with `--with`, it will fetch the latest version each time. To force a fresh fetch:
 
 ```bash
-uv lock --upgrade-package pdit
+uv cache clean pdit
 ```
 
 **IMPORTANT: Run with `run_in_background: true` in the Bash tool so you can continue editing.**
