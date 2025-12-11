@@ -234,6 +234,8 @@ export function Editor({
       onLineGroupsChangeRef.current(view.state.field(lineGroupsField));
     }
 
+    view.focus();
+
     return () => {
       view.destroy();
       viewRef.current = null;

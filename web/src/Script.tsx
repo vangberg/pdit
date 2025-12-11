@@ -24,6 +24,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
   const [doc, setDoc] = useState<Text>();
   const [readerMode, setReaderMode] = useState(false);
   const [autorun, setAutorun] = useState(false);
+  const [isFuzzyFinderOpen, setIsFuzzyFinderOpen] = useState(false);
   const autorunRef = useRef(false);
   const isProgrammaticUpdate = useRef(false);
   const pendingAutorun = useRef(false);
@@ -258,7 +259,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
     }
   }, [scriptPath, doc, handleExecute]);
 
-  // Handle Cmd+S / Ctrl+S keyboard shortcut
+  // Handle keyboard shortcuts (Cmd+S save, Cmd+P fuzzy finder)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
@@ -266,12 +267,17 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
         if (hasUnsavedChanges) {
           handleSave();
         }
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "p") {
+        e.preventDefault();
+        if (onPathChange) {
+          setIsFuzzyFinderOpen(true);
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [hasUnsavedChanges, handleSave]);
+  }, [hasUnsavedChanges, handleSave, onPathChange]);
 
   // Process pending autorun (triggered by file change from disk)
   useEffect(() => {
@@ -321,6 +327,8 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
         onToggleReaderMode={handleToggleReaderMode}
         autorun={autorun}
         onAutorunToggle={setAutorun}
+        isFuzzyFinderOpen={isFuzzyFinderOpen}
+        onFuzzyFinderOpenChange={setIsFuzzyFinderOpen}
       />
       <div className={readerMode ? "split-container reader-mode" : "split-container"}>
         <div className={readerMode ? "editor-half editor-hidden" : "editor-half"}>
