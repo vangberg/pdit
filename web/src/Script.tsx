@@ -258,14 +258,25 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
     }
   }, [scriptPath, doc, handleExecute]);
 
-  // Handle Cmd+S / Ctrl+S keyboard shortcut
+  // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+S / Ctrl+S - Save
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
         if (hasUnsavedChanges) {
           handleSave();
         }
+      }
+      // Cmd+\ / Ctrl+\ - Toggle Reader mode
+      if ((e.metaKey || e.ctrlKey) && e.key === "\\") {
+        e.preventDefault();
+        setReaderMode((prev) => !prev);
+      }
+      // Cmd+Shift+A / Ctrl+Shift+A - Toggle Autorun
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "A") {
+        e.preventDefault();
+        setAutorun((prev) => !prev);
       }
     };
 

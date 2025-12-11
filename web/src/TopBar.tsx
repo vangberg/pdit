@@ -26,6 +26,8 @@ function getShortcuts() {
   return {
     current: isMac ? "Command + Enter" : "Ctrl + Enter",
     all: isMac ? "Command + Shift + Enter" : "Ctrl + Shift + Enter",
+    reader: isMac ? "Command + \\" : "Ctrl + \\",
+    autorun: isMac ? "Command + Shift + A" : "Ctrl + Shift + A",
   };
 }
 
@@ -180,7 +182,7 @@ export function TopBar({
           enabled={readerMode ?? false}
           onToggle={onToggleReaderMode || (() => {})}
           label="READER"
-          tooltip="Toggle reader mode"
+          tooltip={shortcuts.reader}
           showTooltip={hoveredButton === "reader"}
           onMouseEnter={() => setHoveredButton("reader")}
           onMouseLeave={() => setHoveredButton(null)}
@@ -191,7 +193,7 @@ export function TopBar({
             enabled={autorun ?? false}
             onToggle={onAutorunToggle}
             label="AUTORUN"
-            tooltip="Auto-execute script on save or file change"
+            tooltip={shortcuts.autorun}
             showTooltip={hoveredButton === "autorun"}
             onMouseEnter={() => setHoveredButton("autorun")}
             onMouseLeave={() => setHoveredButton(null)}
