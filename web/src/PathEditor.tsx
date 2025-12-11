@@ -4,18 +4,28 @@ import { FuzzyFinder } from "./FuzzyFinder";
 interface PathEditorProps {
   scriptPath: string | null | undefined;
   onPathChange: ((newPath: string) => void) | undefined;
+  isFuzzyFinderOpen?: boolean;
+  onFuzzyFinderOpenChange?: (open: boolean) => void;
 }
 
 function detectMacOS(): boolean {
   return /Mac|iPhone|iPod|iPad/i.test(navigator.userAgent);
 }
 
-export function PathEditor({ scriptPath, onPathChange }: PathEditorProps) {
+export function PathEditor({
+  scriptPath,
+  onPathChange,
+  isFuzzyFinderOpen = false,
+  onFuzzyFinderOpenChange
+}: PathEditorProps) {
   const [isEditingPath, setIsEditingPath] = useState(false);
   const [editedPath, setEditedPath] = useState(scriptPath || "");
-  const [isFuzzyFinderOpen, setIsFuzzyFinderOpen] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const setIsFuzzyFinderOpen = (open: boolean) => {
+    onFuzzyFinderOpenChange?.(open);
+  };
 
   const shortcut = detectMacOS() ? "Command + P" : "Ctrl + P";
 
@@ -31,20 +41,6 @@ export function PathEditor({ scriptPath, onPathChange }: PathEditorProps) {
     }
   }, [isEditingPath]);
 
-  // Handle Cmd+P / Ctrl+P keyboard shortcut to open fuzzy finder
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "p") {
-        e.preventDefault();
-        if (onPathChange) {
-          setIsFuzzyFinderOpen(true);
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onPathChange]);
 
   const handleFuzzySelect = (path: string) => {
     if (onPathChange) {

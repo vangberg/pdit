@@ -15,6 +15,8 @@ interface TopBarProps {
   onToggleReaderMode?: () => void;
   autorun?: boolean;
   onAutorunToggle?: (enabled: boolean) => void;
+  isFuzzyFinderOpen?: boolean;
+  onFuzzyFinderOpenChange?: (open: boolean) => void;
 }
 
 function detectMacOS(): boolean {
@@ -145,7 +147,9 @@ export function TopBar({
   readerMode,
   onToggleReaderMode,
   autorun,
-  onAutorunToggle
+  onAutorunToggle,
+  isFuzzyFinderOpen,
+  onFuzzyFinderOpenChange
 }: TopBarProps) {
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
@@ -213,6 +217,8 @@ export function TopBar({
         <PathEditor
           scriptPath={scriptPath}
           onPathChange={onPathChange}
+          isFuzzyFinderOpen={isFuzzyFinderOpen}
+          onFuzzyFinderOpenChange={onFuzzyFinderOpenChange}
         />
 
         <StatusIndicator isReady={true} />
