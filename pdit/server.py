@@ -326,6 +326,45 @@ async def read_file(path: str):
         raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
 
 
+class ListFilesResponse(BaseModel):
+    """Response from listing files."""
+    files: List[str]
+
+
+@app.get("/api/list-files", response_model=ListFilesResponse)
+async def list_files():
+    """List all Python files in the current working directory.
+
+    Returns:
+        List of relative paths to .py files
+
+    Note:
+        Excludes hidden directories and common virtual environment directories.
+    """
+    import fnmatch
+
+    cwd = Path.cwd()
+    py_files: list[str] = []
+
+    # Directories to skip
+    skip_dirs = {".git", ".venv", "venv", "__pycache__", "node_modules", ".tox", ".mypy_cache", ".pytest_cache", "dist", "build", "*.egg-info"}
+
+    for root, dirs, files in os.walk(cwd):
+        # Filter out hidden and virtual environment directories
+        dirs[:] = [d for d in dirs if not d.startswith('.') and d not in skip_dirs and not any(fnmatch.fnmatch(d, pattern) for pattern in skip_dirs)]
+
+        for file in files:
+            if file.endswith('.py'):
+                full_path = Path(root) / file
+                relative_path = full_path.relative_to(cwd)
+                py_files.append(str(relative_path))
+
+    # Sort by filename (not path) for better UX
+    py_files.sort(key=lambda p: Path(p).name.lower())
+
+    return ListFilesResponse(files=py_files)
+
+
 @app.post("/api/save-file")
 async def save_file(request: SaveFileRequest):
     """Save a file to the filesystem.
