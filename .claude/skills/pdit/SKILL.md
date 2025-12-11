@@ -1,6 +1,6 @@
 ---
 name: pdit
-description: Collaborate with users running pdit, an interactive Python editor with inline execution results. Use when user mentions pdit, runs `uv run pdit`, or is doing collaborative Python development where they see live execution output in a browser.
+description: "Collaborate with users running pdit, an interactive Python editor with inline execution results. Use when user mentions pdit, runs 'uv run pdit', or is doing collaborative Python development where they see live execution output in a browser."
 ---
 
 # pdit Collaboration
@@ -190,6 +190,76 @@ plt.gca()  # Shows the plot
 **Does not affect:**
 - Markdown cells (explicit documentation)
 - `print()` statements (stdout is always captured)
+
+## Output Types & Rich Display
+
+pdit renders different output types with appropriate visualizations:
+
+| Badge | Type | Description |
+|-------|------|-------------|
+| >>> | stdout | print() output |
+| err | stderr | Error/warning output |
+| !!! | error | Exceptions with traceback |
+| md | markdown | Rendered markdown from docstrings |
+| df | dataframe | Interactive table (pagination, sort, filter) |
+| fig | image | Matplotlib figures |
+| htm | html | Rich HTML from _repr_html_() |
+
+### DataFrames
+
+Pandas and Polars DataFrames render as interactive TanStack tables:
+
+```python
+import pandas as pd
+df = pd.read_csv("sales.csv")
+df  # Interactive table with pagination, sorting, filtering
+```
+
+### Rich HTML Display (`_repr_html_`)
+
+Objects with a `_repr_html_()` method render as rich HTML. Many libraries support this:
+
+**Plotly** - Interactive charts:
+```python
+import plotly.express as px
+fig = px.scatter(df, x="price", y="sales")
+fig  # Interactive Plotly chart
+```
+
+**Great Tables** - Formatted tables:
+```python
+from great_tables import GT
+GT(df).fmt_currency("price").fmt_percent("margin")
+```
+
+**pandas Styler** - Conditional formatting:
+```python
+df.style.format({"price": "${:.2f}"}).background_gradient(subset=["sales"])
+```
+
+### Custom HTML Widgets
+
+Create your own rich displays by implementing `_repr_html_()`:
+
+```python
+class MetricCard:
+    def __init__(self, title, value, color="#667eea"):
+        self.title = title
+        self.value = value
+        self.color = color
+
+    def _repr_html_(self):
+        return f'''
+        <div style="background:{self.color}; padding:16px; border-radius:8px; color:white;">
+            <div style="font-size:24px; font-weight:bold;">{self.value}</div>
+            <div style="opacity:0.8;">{self.title}</div>
+        </div>
+        '''
+
+MetricCard("Total Revenue", "$1,234,567")  # Renders as styled card
+```
+
+This pattern is powerful for building dashboards and custom visualizations.
 
 ## Tips
 
