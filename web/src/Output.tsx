@@ -15,6 +15,44 @@ const ImageOutput: React.FC<{ dataUrl: string }> = ({ dataUrl }) => {
   return <img src={dataUrl} className="output-image" alt="Plot output" />;
 };
 
+// Component for rendering HTML output (from _repr_html_())
+// Uses iframe with srcdoc for DOM isolation and security
+const HtmlOutput: React.FC<{ html: string }> = ({ html }) => {
+  const iframeRef = React.useRef<HTMLIFrameElement>(null);
+
+  // Auto-resize iframe to fit content
+  React.useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    const resizeIframe = () => {
+      if (iframe.contentDocument?.body) {
+        // Get the content height
+        const height = iframe.contentDocument.body.scrollHeight;
+        iframe.style.height = `${height}px`;
+      }
+    };
+
+    // Resize when iframe loads
+    iframe.addEventListener('load', resizeIframe);
+
+    // Also try to resize immediately in case content is already loaded
+    resizeIframe();
+
+    return () => iframe.removeEventListener('load', resizeIframe);
+  }, [html]);
+
+  return (
+    <iframe
+      ref={iframeRef}
+      srcDoc={html}
+      className="output-html-iframe"
+      sandbox="allow-scripts allow-same-origin"
+      title="HTML output"
+    />
+  );
+};
+
 // Get a fun type label for output items
 const getTypeLabel = (type: string): string => {
   switch (type) {
@@ -25,6 +63,7 @@ const getTypeLabel = (type: string): string => {
     case 'dataframe': return 'df';
     case 'image': return 'fig';
     case 'markdown': return 'md';
+    case 'html': return 'htm';
     default: return '~~~';
   }
 };
@@ -57,6 +96,8 @@ export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible })
                 <DataframeTable jsonData={item.content} />
               ) : item.type === 'image' ? (
                 <ImageOutput dataUrl={item.content} />
+              ) : item.type === 'html' ? (
+                <HtmlOutput html={item.content} />
               ) : (
                 <pre>{item.content}</pre>
               )}

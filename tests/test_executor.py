@@ -10,6 +10,7 @@ from pdit.executor import (
     OutputItem,
     PythonExecutor,
     _is_dataframe,
+    _has_repr_html,
     _serialize_value,
     _serialize_dataframe,
 )
@@ -1062,6 +1063,209 @@ plt.gca()
         assert len(image_outputs) > 0
 
 
+class TestReprHtml:
+    """Tests for _repr_html_() support (Jupyter convention for rich HTML display)."""
+
+    def setup_method(self):
+        """Create a fresh executor for each test."""
+        self.executor = PythonExecutor()
+
+    def test_has_repr_html_with_method(self):
+        """Test detecting objects with _repr_html_() method."""
+        class WithReprHtml:
+            def _repr_html_(self):
+                return "<b>bold</b>"
+
+        obj = WithReprHtml()
+        assert _has_repr_html(obj) is True
+
+    def test_has_repr_html_without_method(self):
+        """Test that objects without _repr_html_() are not detected."""
+        class WithoutReprHtml:
+            pass
+
+        obj = WithoutReprHtml()
+        assert _has_repr_html(obj) is False
+
+    def test_has_repr_html_non_callable(self):
+        """Test that non-callable _repr_html_ attribute is not detected."""
+        class WithNonCallable:
+            _repr_html_ = "not callable"
+
+        obj = WithNonCallable()
+        assert _has_repr_html(obj) is False
+
+    def test_has_repr_html_basic_types(self):
+        """Test that basic types don't have _repr_html_()."""
+        assert _has_repr_html("hello") is False
+        assert _has_repr_html(42) is False
+        assert _has_repr_html([1, 2, 3]) is False
+        assert _has_repr_html({'a': 1}) is False
+
+    def test_basic_repr_html_output(self):
+        """Test executing code with an object that has _repr_html_()."""
+        script = '''
+class Foo:
+    def _repr_html_(self):
+        return "<b>Bold HTML</b>"
+
+Foo()
+'''
+        results = collect_results(self.executor, script)
+
+        # Should get 2 results: class definition, Foo() expression
+        assert len(results) == 2
+        assert results[1].output[0].type == "html"
+        assert results[1].output[0].content == "<b>Bold HTML</b>"
+        assert results[1].is_invisible is False
+
+    def test_repr_html_returns_none_fallback(self):
+        """Test that _repr_html_() returning None falls back to repr()."""
+        script = '''
+class Foo:
+    def _repr_html_(self):
+        return None
+    def __repr__(self):
+        return "Foo()"
+
+Foo()
+'''
+        results = collect_results(self.executor, script)
+
+        # Should fall back to repr() output
+        assert results[-1].output[0].type == "stdout"
+        assert "Foo()" in results[-1].output[0].content
+
+    def test_repr_html_complex_content(self):
+        """Test _repr_html_() with complex HTML content."""
+        script = '''
+class Table:
+    def _repr_html_(self):
+        return """<table>
+<tr><th>Name</th><th>Value</th></tr>
+<tr><td>a</td><td>1</td></tr>
+<tr><td>b</td><td>2</td></tr>
+</table>"""
+
+Table()
+'''
+        results = collect_results(self.executor, script)
+
+        assert results[-1].output[0].type == "html"
+        assert "<table>" in results[-1].output[0].content
+        assert "<th>Name</th>" in results[-1].output[0].content
+
+    def test_repr_html_with_styles(self):
+        """Test _repr_html_() with inline styles."""
+        script = '''
+class Styled:
+    def _repr_html_(self):
+        return '<div style="color: red; font-weight: bold;">Styled content</div>'
+
+Styled()
+'''
+        results = collect_results(self.executor, script)
+
+        assert results[-1].output[0].type == "html"
+        assert 'style="color: red' in results[-1].output[0].content
+
+    def test_repr_html_with_semicolon_suppressed(self):
+        """Test that _repr_html_() with semicolon is suppressed."""
+        script = '''
+class Foo:
+    def _repr_html_(self):
+        return "<b>Bold</b>"
+
+Foo();
+'''
+        results = collect_results(self.executor, script)
+
+        # Foo(); should be invisible (semicolon suppression)
+        assert results[-1].is_invisible is True
+        assert len(results[-1].output) == 0
+
+    def test_repr_html_in_assignment(self):
+        """Test that _repr_html_() in assignment context doesn't output."""
+        script = '''
+class Foo:
+    def _repr_html_(self):
+        return "<b>Bold</b>"
+
+x = Foo()
+'''
+        results = collect_results(self.executor, script)
+
+        # Assignment is invisible
+        assert results[-1].is_invisible is True
+        assert len(results[-1].output) == 0
+
+    def test_pandas_styler_has_repr_html(self):
+        """Test that pandas Styler has _repr_html_()."""
+        import pandas as pd
+        try:
+            df = pd.DataFrame({'a': [1, 2, 3]})
+            styler = df.style
+            assert _has_repr_html(styler) is True
+        except AttributeError:
+            # jinja2 not installed, skip test
+            pass
+
+    def test_pandas_styler_execution(self):
+        """Test executing pandas Styler with _repr_html_()."""
+        # Skip if jinja2 not installed
+        try:
+            import jinja2
+        except ImportError:
+            return
+
+        script = '''
+import pandas as pd
+df = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+df.style.format({'a': '{:.2f}'})
+'''
+        results = collect_results(self.executor, script)
+
+        # Should get html output from Styler
+        assert results[-1].output[0].type == "html"
+        assert "<table" in results[-1].output[0].content.lower()
+        assert "<style" in results[-1].output[0].content.lower()
+
+    def test_dataframe_not_treated_as_html(self):
+        """Test that raw DataFrames are still rendered as dataframe type, not html."""
+        script = '''
+import pandas as pd
+df = pd.DataFrame({'a': [1, 2, 3]})
+df
+'''
+        results = collect_results(self.executor, script)
+
+        # Raw DataFrame should be type 'dataframe', not 'html'
+        # (even though pandas DataFrames have _repr_html_())
+        assert results[-1].output[0].type == "dataframe"
+
+    def test_multiple_repr_html_objects(self):
+        """Test multiple objects with _repr_html_() in one script."""
+        script = '''
+class A:
+    def _repr_html_(self):
+        return "<div>A</div>"
+
+class B:
+    def _repr_html_(self):
+        return "<div>B</div>"
+
+A()
+B()
+'''
+        results = collect_results(self.executor, script)
+
+        # Should have two html outputs
+        html_results = [r for r in results if r.output and r.output[0].type == "html"]
+        assert len(html_results) == 2
+        assert html_results[0].output[0].content == "<div>A</div>"
+        assert html_results[1].output[0].content == "<div>B</div>"
+
+
 class TestSemicolonSuppression:
     """Tests for iPython-style semicolon output suppression."""
 
@@ -1327,6 +1531,7 @@ if __name__ == "__main__":
             TestMarkdownCells,
             TestDataFrameRendering,
             TestMatplotlibCapture,
+            TestReprHtml,
             TestSemicolonSuppression,
             TestEdgeCases,
         ]

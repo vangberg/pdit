@@ -453,6 +453,11 @@ h1 {
   background: #78716c;
 }
 
+.output-type-html {
+  color: #fff;
+  background: #ea580c;
+}
+
 .output-content-wrapper {
   flex: 1;
   min-width: 0;
@@ -594,6 +599,14 @@ h1 {
   height: auto;
   display: block;
   background: #ffffff;
+}
+
+.output-html-iframe {
+  width: 100%;
+  min-height: 50px;
+  border: none;
+  background: #ffffff;
+  display: block;
 }
 
 .output-table {
