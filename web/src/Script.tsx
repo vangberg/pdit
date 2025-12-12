@@ -25,6 +25,7 @@ export function Script({ scriptPath, onPathChange, printMode = false }: ScriptPr
   const [doc, setDoc] = useState<Text>();
   const [readerMode, setReaderMode] = useState(false);
   const [autorun, setAutorun] = useState(false);
+  const [isFuzzyFinderOpen, setIsFuzzyFinderOpen] = useState(false);
   const autorunRef = useRef(false);
   const isProgrammaticUpdate = useRef(false);
   const pendingAutorun = useRef(false);
@@ -141,9 +142,10 @@ export function Script({ scriptPath, onPathChange, printMode = false }: ScriptPr
     async (
       script: string,
       options?: { lineRange?: { from: number; to: number }; reset?: boolean }
-    ) => {
+    ): Promise<{ lastExecutedLineEnd?: number }> => {
       // Extract script name from path (just the filename)
       const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
+      let lastExecutedLineEnd: number | undefined;
 
       try {
         for await (const event of executeScript(script, {
@@ -152,6 +154,14 @@ export function Script({ scriptPath, onPathChange, printMode = false }: ScriptPr
           scriptName,
         })) {
           console.log("Execute event:", event);
+
+          // Track the last executed line end
+          if (event.type === "done") {
+            const lineEnd = event.expression.lineEnd;
+            if (lastExecutedLineEnd === undefined || lineEnd > lastExecutedLineEnd) {
+              lastExecutedLineEnd = lineEnd;
+            }
+          }
 
           const { lineGroups: newLineGroups, doneIds } = handleExecutionEvent(
             event,
@@ -169,6 +179,8 @@ export function Script({ scriptPath, onPathChange, printMode = false }: ScriptPr
       } finally {
         resetExecutionState();
       }
+
+      return { lastExecutedLineEnd };
     },
     [handleExecutionEvent, resetExecutionState, scriptPath, sessionId]
   );
@@ -181,8 +193,12 @@ export function Script({ scriptPath, onPathChange, printMode = false }: ScriptPr
   );
 
   const handleExecuteCurrent = useCallback(
-    (script: string, lineRange: { from: number; to: number }) => {
-      handleExecute(script, { lineRange });
+    async (script: string, lineRange: { from: number; to: number }) => {
+      const { lastExecutedLineEnd } = await handleExecute(script, { lineRange });
+      // Advance cursor to the next non-empty line after the last executed statement
+      if (lastExecutedLineEnd !== undefined) {
+        editorRef.current?.advanceCursorToNextStatement(lastExecutedLineEnd);
+      }
     },
     [handleExecute]
   );
@@ -259,7 +275,7 @@ export function Script({ scriptPath, onPathChange, printMode = false }: ScriptPr
     }
   }, [scriptPath, doc, handleExecute]);
 
-  // Handle Cmd+S / Ctrl+S keyboard shortcut
+  // Handle keyboard shortcuts (Cmd+S save, Cmd+P fuzzy finder)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
@@ -267,12 +283,17 @@ export function Script({ scriptPath, onPathChange, printMode = false }: ScriptPr
         if (hasUnsavedChanges) {
           handleSave();
         }
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "p") {
+        e.preventDefault();
+        if (onPathChange) {
+          setIsFuzzyFinderOpen(true);
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [hasUnsavedChanges, handleSave]);
+  }, [hasUnsavedChanges, handleSave, onPathChange]);
 
   // Process pending autorun (triggered by file change from disk)
   useEffect(() => {
@@ -335,6 +356,8 @@ export function Script({ scriptPath, onPathChange, printMode = false }: ScriptPr
           onToggleReaderMode={handleToggleReaderMode}
           autorun={autorun}
           onAutorunToggle={setAutorun}
+          isFuzzyFinderOpen={isFuzzyFinderOpen}
+          onFuzzyFinderOpenChange={setIsFuzzyFinderOpen}
         />
       )}
       <div className={showOutputOnly ? "split-container reader-mode" : "split-container"}>

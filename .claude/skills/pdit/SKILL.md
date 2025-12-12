@@ -1,6 +1,6 @@
 ---
 name: pdit
-description: Collaborate with users running pdit, an interactive Python editor with inline execution results. Use when user mentions pdit, runs `uv run pdit`, or is doing collaborative Python development where they see live execution output in a browser.
+description: "Collaborate with users running pdit, an interactive Python editor with inline execution results. Use when user mentions pdit, runs 'uv run pdit', or is doing collaborative Python development where they see live execution output in a browser."
 ---
 
 # pdit Collaboration
@@ -12,31 +12,20 @@ split-pane interface: code editor (left) and streaming execution results (right)
 
 **Starting pdit:**
 
-pdit runs from the local uv environment so dependencies work seamlessly.
-
-If pyproject.toml exists, just add pdit and run:
+pdit runs using `uv run --with` so it's available without modifying the project:
 
 ```bash
-uv add git+https://github.com/vangberg/pdit@dist
-uv run pdit script.py --verbose
-```
-
-If starting fresh:
-
-```bash
-uv init
-uv add git+https://github.com/vangberg/pdit@dist
-uv run pdit script.py --verbose
+uv run --with git+https://github.com/vangberg/pdit@dist pdit script.py --verbose
 ```
 
 **Note:** The `@dist` branch contains pre-built frontend assets, so no Node.js or build step is needed.
 
 **Upgrading pdit:**
 
-To upgrade to the latest version of pdit:
+Since pdit is run with `--with`, it will fetch the latest version each time. To force a fresh fetch:
 
 ```bash
-uv lock --upgrade-package pdit
+uv cache clean pdit
 ```
 
 **IMPORTANT: Run with `run_in_background: true` in the Bash tool so you can continue editing.**
@@ -180,6 +169,98 @@ plt.gca()  # ✅ This triggers plot capture
 - `plt.show()` is for interactive displays and won't work in pdit
 - Plots appear inline in the output pane automatically
 
+## Output Suppression
+
+Append `;` to any expression to suppress its output (iPython/Jupyter convention):
+
+```python
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(10, 5));  # Suppressed - no <Figure> output
+plt.plot([1, 2, 3], [1, 4, 9])
+plt.title("My Plot");  # Suppressed - no Text object output
+plt.gca()  # Shows the plot
+```
+
+**Works with:**
+- Any expression: `expensive_calc();`
+- Trailing comments: `plt.figure(); # setup`
+- DataFrames, plots, and regular values
+
+**Does not affect:**
+- Markdown cells (explicit documentation)
+- `print()` statements (stdout is always captured)
+
+## Output Types & Rich Display
+
+pdit renders different output types with appropriate visualizations:
+
+| Badge | Type | Description |
+|-------|------|-------------|
+| >>> | stdout | print() output |
+| err | stderr | Error/warning output |
+| !!! | error | Exceptions with traceback |
+| md | markdown | Rendered markdown from docstrings |
+| df | dataframe | Interactive table (pagination, sort, filter) |
+| fig | image | Matplotlib figures |
+| htm | html | Rich HTML from _repr_html_() |
+
+### DataFrames
+
+Pandas and Polars DataFrames render as interactive TanStack tables:
+
+```python
+import pandas as pd
+df = pd.read_csv("sales.csv")
+df  # Interactive table with pagination, sorting, filtering
+```
+
+### Rich HTML Display (`_repr_html_`)
+
+Objects with a `_repr_html_()` method render as rich HTML. Many libraries support this:
+
+**Plotly** - Interactive charts:
+```python
+import plotly.express as px
+fig = px.scatter(df, x="price", y="sales")
+fig  # Interactive Plotly chart
+```
+
+**Great Tables** - Formatted tables:
+```python
+from great_tables import GT
+GT(df).fmt_currency("price").fmt_percent("margin")
+```
+
+**pandas Styler** - Conditional formatting:
+```python
+df.style.format({"price": "${:.2f}"}).background_gradient(subset=["sales"])
+```
+
+### Custom HTML Widgets
+
+Create your own rich displays by implementing `_repr_html_()`:
+
+```python
+class MetricCard:
+    def __init__(self, title, value, color="#667eea"):
+        self.title = title
+        self.value = value
+        self.color = color
+
+    def _repr_html_(self):
+        return f'''
+        <div style="background:{self.color}; padding:16px; border-radius:8px; color:white;">
+            <div style="font-size:24px; font-weight:bold;">{self.value}</div>
+            <div style="opacity:0.8;">{self.title}</div>
+        </div>
+        '''
+
+MetricCard("Total Revenue", "$1,234,567")  # Renders as styled card
+```
+
+This pattern is powerful for building dashboards and custom visualizations.
+
 ## Print Mode
 
 Add `?print=true` to the URL for a clean output-only view suitable for PDF export:
@@ -207,6 +288,7 @@ with sync_playwright() as p:
     browser.close()
 ```
 
+
 ## Tips
 
 - Expressions show their values inline - `print()` is rarely needed
@@ -215,6 +297,7 @@ with sync_playwright() as p:
 - User has full filesystem and package access (local Python execution)
 - Use docstring-style markdown cells to document your analysis
 - Use `plt.gca()` to display matplotlib plots inline
+- Use `;` to suppress unwanted output like `plt.figure()` return values
 - Use `?print=true` for clean PDF exports
 
 ## Dependencies

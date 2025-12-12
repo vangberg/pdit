@@ -453,6 +453,11 @@ h1 {
   background: #78716c;
 }
 
+.output-type-html {
+  color: #fff;
+  background: #ea580c;
+}
+
 .output-content-wrapper {
   flex: 1;
   min-width: 0;
@@ -594,6 +599,14 @@ h1 {
   height: auto;
   display: block;
   background: #ffffff;
+}
+
+.output-html-iframe {
+  width: 100%;
+  min-height: 50px;
+  border: none;
+  background: #ffffff;
+  display: block;
 }
 
 .output-table {
@@ -1031,4 +1044,87 @@ h1 {
 .dataframe-toolbar-pagination-total {
   color: #6b7280;
   min-width: 0;
+}
+
+/* Fuzzy Finder styles */
+.fuzzy-finder-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: #374151;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  width: 320px;
+  max-height: 300px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1000;
+}
+
+.fuzzy-finder-input {
+  background: #2d3748;
+  color: #e5e7eb;
+  border: none;
+  border-bottom: 1px solid #4b5563;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  outline: none;
+}
+
+.fuzzy-finder-input:focus {
+  background: #1f2937;
+}
+
+.fuzzy-finder-input::placeholder {
+  color: #6b7280;
+}
+
+.fuzzy-finder-list {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.fuzzy-finder-item {
+  padding: 6px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.fuzzy-finder-item.selected {
+  background: rgba(147, 197, 253, 0.2);
+}
+
+.fuzzy-finder-filename {
+  color: #e5e7eb;
+  font-size: 12px;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  flex-shrink: 0;
+}
+
+.fuzzy-finder-path {
+  color: #6b7280;
+  font-size: 10px;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fuzzy-match-highlight {
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+.fuzzy-finder-empty {
+  padding: 12px 10px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 11px;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }

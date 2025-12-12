@@ -10,6 +10,7 @@ This module provides the PythonExecutor class which handles:
 import ast
 import base64
 import io
+import os
 import sys
 import traceback
 from contextlib import redirect_stdout, redirect_stderr
@@ -45,9 +46,28 @@ def set_script_name(script_name: Optional[str]) -> None:
 
 @dataclass
 class OutputItem:
-    """Single output item (stdout, stderr, error, markdown, dataframe, or image)."""
-    type: str  # 'stdout', 'stderr', 'error', 'markdown', 'dataframe', or 'image'
+    """Single output item (stdout, stderr, error, markdown, dataframe, image, or html)."""
+    type: str  # 'stdout', 'stderr', 'error', 'markdown', 'dataframe', 'image', or 'html'
     content: str
+
+
+def _has_trailing_semicolon(lines: List[str], node: ast.AST) -> bool:
+    """Check if statement has trailing semicolon (iPython output suppression).
+
+    Uses AST node end position to look at what comes after the statement.
+    Any # after the statement is definitely a comment (not inside a string).
+
+    Args:
+        lines: Source code split into lines
+        node: AST node to check
+
+    Returns:
+        True if there's a semicolon after the statement (before any comment)
+    """
+    end_line_text = lines[node.end_lineno - 1]
+    rest_after_stmt = end_line_text[node.end_col_offset:]
+    before_comment = rest_after_stmt.split('#')[0]
+    return ';' in before_comment
 
 
 def _is_dataframe(obj: Any) -> bool:
@@ -87,6 +107,16 @@ def _is_matplotlib_axes_or_figure(obj: Any) -> bool:
         return True
 
     return False
+
+
+def _has_repr_html(obj: Any) -> bool:
+    """Check if object has a _repr_html_() method.
+
+    This follows the Jupyter/IPython convention for rich HTML display.
+    Many libraries implement this: pandas Styler, great_tables GT, Plotly,
+    ITables, and custom objects wanting rich HTML representation.
+    """
+    return hasattr(obj, '_repr_html_') and callable(getattr(obj, '_repr_html_'))
 
 
 def _serialize_dataframe(df: Any) -> str:
@@ -207,6 +237,7 @@ class Statement:
     is_expr: bool
     source: str  # Original source code for this statement
     is_markdown_cell: bool = False
+    suppress_output: bool = False  # True if line ends with semicolon (iPython convention)
 
 
 @dataclass
@@ -225,6 +256,11 @@ class PythonExecutor:
     def __init__(self):
         """Initialize executor with empty namespace."""
         self.namespace: Dict[str, Any] = {'__builtins__': __builtins__}
+
+        # Add current working directory to sys.path to allow local imports
+        cwd = os.getcwd()
+        if cwd not in sys.path:
+            sys.path.insert(0, cwd)
 
         # Set matplotlib to use non-interactive Agg backend to avoid display/segfault issues
         # This must be done before any user code imports matplotlib
@@ -268,6 +304,9 @@ class PythonExecutor:
             # All top-level strings are treated as markdown
             is_markdown_cell = is_expr and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)
 
+            # Detect semicolon at end of statement (iPython output suppression convention)
+            suppress_output = _has_trailing_semicolon(lines, node)
+
             if is_expr:
                 # Expression: compile for eval()
                 compiled = compile(
@@ -290,7 +329,8 @@ class PythonExecutor:
                 line_end=line_end,
                 is_expr=is_expr,
                 source=source,
-                is_markdown_cell=is_markdown_cell
+                is_markdown_cell=is_markdown_cell,
+                suppress_output=suppress_output
             ))
 
         return statements
@@ -354,7 +394,8 @@ class PythonExecutor:
         source: str,
         line_start: int,
         line_end: int,
-        is_markdown_cell: bool = False
+        is_markdown_cell: bool = False,
+        suppress_output: bool = False
     ) -> List[OutputItem]:
         """Execute pre-compiled statement with output capture.
 
@@ -365,6 +406,7 @@ class PythonExecutor:
             line_start: Starting line number (1-based)
             line_end: Ending line number (1-based)
             is_markdown_cell: Whether this is a markdown cell (output as markdown, not repr)
+            suppress_output: Whether to suppress expression output (semicolon convention)
 
         Returns:
             List of output items (stdout, stderr, errors, markdown, dataframes, images)
@@ -396,6 +438,9 @@ class PythonExecutor:
                     # Strip the string and output as markdown
                     markdown_text = str(result).strip()
                     output.append(OutputItem(type="markdown", content=markdown_text))
+                # Skip output if semicolon suppression is active
+                elif suppress_output:
+                    pass
                 # For DataFrames, output as serialized JSON
                 elif is_expr and result is not None and _is_dataframe(result):
                     json_data = _serialize_dataframe(result)
@@ -406,6 +451,14 @@ class PythonExecutor:
                     # Note: We do this INSIDE the with redirect block, but capture_matplotlib_figures
                     # doesn't produce stdout/stderr, so this is fine
                     output.extend(self.capture_matplotlib_figures(result))
+                # For objects with _repr_html_(), output as HTML (Jupyter convention)
+                elif is_expr and result is not None and _has_repr_html(result):
+                    html_content = result._repr_html_()
+                    if html_content is not None:
+                        output.append(OutputItem(type="html", content=html_content))
+                    else:
+                        # _repr_html_() returned None, fall back to repr()
+                        print(repr(result))
                 # For regular expressions, print result if not None
                 elif is_expr and result is not None:
                     print(repr(result))
@@ -512,7 +565,8 @@ class PythonExecutor:
                 stmt.source,
                 stmt.line_start,
                 stmt.line_end,
-                stmt.is_markdown_cell
+                stmt.is_markdown_cell,
+                stmt.suppress_output
             )
 
             # Determine if output is invisible (no output items at all)
