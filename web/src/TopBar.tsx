@@ -17,6 +17,7 @@ interface TopBarProps {
   onAutorunToggle?: (enabled: boolean) => void;
   isFuzzyFinderOpen?: boolean;
   onFuzzyFinderOpenChange?: (open: boolean) => void;
+  isExecuting?: boolean;
 }
 
 function detectMacOS(): boolean {
@@ -149,7 +150,8 @@ export function TopBar({
   autorun,
   onAutorunToggle,
   isFuzzyFinderOpen,
-  onFuzzyFinderOpenChange
+  onFuzzyFinderOpenChange,
+  isExecuting
 }: TopBarProps) {
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
@@ -163,7 +165,7 @@ export function TopBar({
         <ActionButton
           label="▶ RUN CURRENT"
           onClick={onRunCurrent || (() => {})}
-          disabled={false}
+          disabled={isExecuting || false}
           onMouseEnter={() => setHoveredButton("current")}
           onMouseLeave={() => setHoveredButton(null)}
           tooltip={shortcuts.current}
@@ -173,7 +175,7 @@ export function TopBar({
         <ActionButton
           label="▶ RUN ALL"
           onClick={onRunAll}
-          disabled={false}
+          disabled={isExecuting || false}
           onMouseEnter={() => setHoveredButton("all")}
           onMouseLeave={() => setHoveredButton(null)}
           tooltip={shortcuts.all}

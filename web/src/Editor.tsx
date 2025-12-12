@@ -77,6 +77,8 @@ interface EditorProps {
   onLineGroupsChange?: (groups: LineGroup[]) => void;
   onLineGroupLayoutChange?: (layouts: Map<string, LineGroupLayout>) => void;
   lineGroupHeights?: Map<string, number>;
+  readOnly?: boolean;
+  editable?: boolean;
   ref?: React.Ref<EditorHandles>;
 }
 
@@ -89,6 +91,8 @@ export function Editor({
   onLineGroupsChange,
   onLineGroupLayoutChange,
   lineGroupHeights,
+  readOnly,
+  editable,
   ref: externalRef,
 }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -100,6 +104,8 @@ export function Editor({
   const onDocumentChangeRef = useRef(onDocumentChange);
   const onLineGroupsChangeRef = useRef(onLineGroupsChange);
   const lineGroupLayoutCallbackCompartment = useMemo(() => new Compartment(), []);
+  const readOnlyCompartment = useMemo(() => new Compartment(), []);
+  const editableCompartment = useMemo(() => new Compartment(), []);
 
   // Mirror the latest callbacks so long-lived view listeners stay up to date
   useEffect(() => {
@@ -194,6 +200,8 @@ export function Editor({
         lineGroupLayoutCallbackCompartment.of(
           lineGroupLayoutChangeFacet.of(onLineGroupLayoutChange ?? null)
         ),
+        readOnlyCompartment.of(EditorState.readOnly.of(readOnly ?? false)),
+        editableCompartment.of(EditorView.editable.of(editable ?? true)),
         EditorView.updateListener.of((update: ViewUpdate) => {
           if (update.docChanged) {
             onDocumentChangeRef.current?.(update.state.doc);
@@ -351,6 +359,32 @@ export function Editor({
       ),
     });
   }, [onLineGroupLayoutChange, lineGroupLayoutCallbackCompartment]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) {
+      return;
+    }
+
+    view.dispatch({
+      effects: readOnlyCompartment.reconfigure(
+        EditorState.readOnly.of(readOnly ?? false)
+      ),
+    });
+  }, [readOnly, readOnlyCompartment]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) {
+      return;
+    }
+
+    view.dispatch({
+      effects: editableCompartment.reconfigure(
+        EditorView.editable.of(editable ?? true)
+      ),
+    });
+  }, [editable, editableCompartment]);
 
   return <div id="editor" ref={editorRef} />;
 }

@@ -27,6 +27,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
   const { autorun, setAutorun, readerMode, setReaderMode } = useScriptSettings(scriptPath);
 
   const [isFuzzyFinderOpen, setIsFuzzyFinderOpen] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
   const autorunRef = useRef(false);
   const isProgrammaticUpdate = useRef(false);
   const pendingAutorun = useRef(false);
@@ -149,6 +150,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
       const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
       let lastExecutedLineEnd: number | undefined;
 
+      setIsExecuting(true);
       try {
         for await (const event of executeScript(script, {
           sessionId,
@@ -180,6 +182,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
         console.error("Execution error:", error);
       } finally {
         resetExecutionState();
+        setIsExecuting(false);
       }
 
       return { lastExecutedLineEnd };
@@ -359,6 +362,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
         onAutorunToggle={setAutorun}
         isFuzzyFinderOpen={isFuzzyFinderOpen}
         onFuzzyFinderOpenChange={setIsFuzzyFinderOpen}
+        isExecuting={isExecuting}
       />
       <div className={readerMode ? "split-container reader-mode" : "split-container"}>
         <div className={readerMode ? "editor-half editor-hidden" : "editor-half"}>
@@ -372,6 +376,8 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
             onLineGroupsChange={handleLineGroupsChange}
             onLineGroupLayoutChange={handleLineGroupLayoutChange}
             lineGroupHeights={lineGroupHeights}
+            readOnly={isExecuting}
+            editable={!isExecuting}
           />
         </div>
         <div className={readerMode ? "output-half output-full" : "output-half"}>
