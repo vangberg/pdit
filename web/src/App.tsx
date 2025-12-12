@@ -3,10 +3,15 @@ import { Script } from "./Script";
 import "./style.css";
 
 function App() {
-  // Manage script path in state to support client-side navigation
-  const [scriptPath, setScriptPath] = useState(() => 
-    new URLSearchParams(window.location.search).get("script")
-  );
+  // Parse URL params once on mount
+  const [{ scriptPath: initialScriptPath, autorun: initialAutorun }] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      scriptPath: params.get("script"),
+      autorun: params.has("autorun"),
+    };
+  });
+  const [scriptPath, setScriptPath] = useState(initialScriptPath);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -29,7 +34,7 @@ function App() {
     setScriptPath(newPath || null);
   }, []);
 
-  return <Script scriptPath={scriptPath} onPathChange={handlePathChange} />;
+  return <Script scriptPath={scriptPath} onPathChange={handlePathChange} initialAutorun={initialAutorun} />;
 }
 
 export default App;

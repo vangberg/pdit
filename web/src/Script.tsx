@@ -16,18 +16,20 @@ const DEFAULT_CODE = ``;
 interface ScriptProps {
   scriptPath: string | null;
   onPathChange?: (newPath: string) => void;
+  initialAutorun?: boolean;
 }
 
-export function Script({ scriptPath, onPathChange }: ScriptProps) {
+export function Script({ scriptPath, onPathChange, initialAutorun }: ScriptProps) {
   const [hasConflict, setHasConflict] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [doc, setDoc] = useState<Text>();
   const [readerMode, setReaderMode] = useState(false);
-  const [autorun, setAutorun] = useState(false);
+  const [autorun, setAutorun] = useState(initialAutorun ?? false);
   const [isFuzzyFinderOpen, setIsFuzzyFinderOpen] = useState(false);
   const autorunRef = useRef(false);
   const isProgrammaticUpdate = useRef(false);
   const pendingAutorun = useRef(false);
+  const prevAutorunRef = useRef(false);
 
   // Keep autorunRef in sync with autorun state
   useEffect(() => {
@@ -303,6 +305,18 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
       handleExecuteWithReset(script);
     }
   }, [doc]);
+
+  // Trigger run when autorun is enabled (either from URL param on load, or toggled on)
+  useEffect(() => {
+    if (!doc) return;
+
+    const wasEnabled = prevAutorunRef.current;
+    prevAutorunRef.current = autorun;
+
+    if (autorun && !wasEnabled) {
+      handleExecute(doc.toString());
+    }
+  }, [autorun, doc, handleExecute]);
 
   // Show error if script failed to load
   if (scriptError) {
