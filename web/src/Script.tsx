@@ -10,21 +10,22 @@ import { TopBar } from "./TopBar";
 import { useResults } from "./results";
 import { useScriptFile } from "./use-script-file";
 import { LineGroupLayout } from "./line-group-layout";
+import { useScriptSettings } from "./use-script-settings";
 
 const DEFAULT_CODE = ``;
 
 interface ScriptProps {
   scriptPath: string | null;
   onPathChange?: (newPath: string) => void;
-  initialAutorun?: boolean;
 }
 
-export function Script({ scriptPath, onPathChange, initialAutorun }: ScriptProps) {
+export function Script({ scriptPath, onPathChange }: ScriptProps) {
   const [hasConflict, setHasConflict] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [doc, setDoc] = useState<Text>();
-  const [readerMode, setReaderMode] = useState(false);
-  const [autorun, setAutorun] = useState(initialAutorun ?? false);
+  
+  const { autorun, setAutorun, readerMode, setReaderMode } = useScriptSettings(scriptPath);
+
   const [isFuzzyFinderOpen, setIsFuzzyFinderOpen] = useState(false);
   const autorunRef = useRef(false);
   const isProgrammaticUpdate = useRef(false);
@@ -239,8 +240,8 @@ export function Script({ scriptPath, onPathChange, initialAutorun }: ScriptProps
   }, []);
 
   const handleToggleReaderMode = useCallback(() => {
-    setReaderMode((prev) => !prev);
-  }, []);
+    setReaderMode(!readerMode);
+  }, [readerMode, setReaderMode]);
 
   const handleSave = useCallback(async () => {
     if (!scriptPath || !doc) {

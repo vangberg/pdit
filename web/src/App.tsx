@@ -4,11 +4,10 @@ import "./style.css";
 
 function App() {
   // Parse URL params once on mount
-  const [{ scriptPath: initialScriptPath, autorun: initialAutorun }] = useState(() => {
+  const [{ scriptPath: initialScriptPath }] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return {
       scriptPath: params.get("script"),
-      autorun: params.has("autorun"),
     };
   });
   const [scriptPath, setScriptPath] = useState(initialScriptPath);
@@ -34,7 +33,13 @@ function App() {
     setScriptPath(newPath || null);
   }, []);
 
-  return <Script scriptPath={scriptPath} onPathChange={handlePathChange} initialAutorun={initialAutorun} />;
+  return (
+    <Script
+      key={scriptPath || "no-script"}
+      scriptPath={scriptPath}
+      onPathChange={handlePathChange}
+    />
+  );
 }
 
 export default App;
