@@ -204,6 +204,22 @@ export function TopBar({
 
         {scriptPath && (
           <ActionButton
+            label="🖨 PRINT"
+            onClick={() => {
+              const url = new URL(window.location.href);
+              url.searchParams.set("print", "true");
+              window.open(url.toString(), "_blank");
+            }}
+            disabled={false}
+            onMouseEnter={() => setHoveredButton("print")}
+            onMouseLeave={() => setHoveredButton(null)}
+            tooltip="Open print preview in new tab"
+            showTooltip={hoveredButton === "print"}
+          />
+        )}
+
+        {scriptPath && (
+          <ActionButton
             label="SAVE"
             onClick={onSave || (() => {})}
             disabled={!(hasUnsavedChanges ?? false)}
