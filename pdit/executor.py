@@ -10,6 +10,7 @@ This module provides the PythonExecutor class which handles:
 import ast
 import base64
 import io
+import os
 import sys
 import traceback
 from contextlib import redirect_stdout, redirect_stderr
@@ -255,6 +256,11 @@ class PythonExecutor:
     def __init__(self):
         """Initialize executor with empty namespace."""
         self.namespace: Dict[str, Any] = {'__builtins__': __builtins__}
+
+        # Add current working directory to sys.path to allow local imports
+        cwd = os.getcwd()
+        if cwd not in sys.path:
+            sys.path.insert(0, cwd)
 
         # Set matplotlib to use non-interactive Agg backend to avoid display/segfault issues
         # This must be done before any user code imports matplotlib
