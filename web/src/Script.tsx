@@ -141,9 +141,10 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
     async (
       script: string,
       options?: { lineRange?: { from: number; to: number }; reset?: boolean }
-    ) => {
+    ): Promise<{ lastExecutedLineEnd?: number }> => {
       // Extract script name from path (just the filename)
       const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
+      let lastExecutedLineEnd: number | undefined;
 
       try {
         for await (const event of executeScript(script, {
@@ -152,6 +153,14 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
           scriptName,
         })) {
           console.log("Execute event:", event);
+
+          // Track the last executed line end
+          if (event.type === "done") {
+            const lineEnd = event.expression.lineEnd;
+            if (lastExecutedLineEnd === undefined || lineEnd > lastExecutedLineEnd) {
+              lastExecutedLineEnd = lineEnd;
+            }
+          }
 
           const { lineGroups: newLineGroups, doneIds } = handleExecutionEvent(
             event,
@@ -169,6 +178,8 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
       } finally {
         resetExecutionState();
       }
+
+      return { lastExecutedLineEnd };
     },
     [handleExecutionEvent, resetExecutionState, scriptPath, sessionId]
   );
@@ -181,8 +192,12 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
   );
 
   const handleExecuteCurrent = useCallback(
-    (script: string, lineRange: { from: number; to: number }) => {
-      handleExecute(script, { lineRange });
+    async (script: string, lineRange: { from: number; to: number }) => {
+      const { lastExecutedLineEnd } = await handleExecute(script, { lineRange });
+      // Advance cursor to the next non-empty line after the last executed statement
+      if (lastExecutedLineEnd !== undefined) {
+        editorRef.current?.advanceCursorToNextStatement(lastExecutedLineEnd);
+      }
     },
     [handleExecute]
   );
