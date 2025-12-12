@@ -141,7 +141,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
     async (
       script: string,
       options?: { lineRange?: { from: number; to: number }; reset?: boolean }
-    ): Promise<number | undefined> => {
+    ): Promise<{ lastExecutedLineEnd?: number }> => {
       // Extract script name from path (just the filename)
       const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
       let lastExecutedLineEnd: number | undefined;
@@ -179,7 +179,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
         resetExecutionState();
       }
 
-      return lastExecutedLineEnd;
+      return { lastExecutedLineEnd };
     },
     [handleExecutionEvent, resetExecutionState, scriptPath, sessionId]
   );
@@ -193,7 +193,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
 
   const handleExecuteCurrent = useCallback(
     async (script: string, lineRange: { from: number; to: number }) => {
-      const lastExecutedLineEnd = await handleExecute(script, { lineRange });
+      const { lastExecutedLineEnd } = await handleExecute(script, { lineRange });
       // Advance cursor to the next non-empty line after the last executed statement
       if (lastExecutedLineEnd !== undefined) {
         editorRef.current?.advanceCursorToNextStatement(lastExecutedLineEnd);
