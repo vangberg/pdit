@@ -62,6 +62,7 @@ export interface EditorHandles {
   }) => void;
   executeCurrent: () => void;
   focus: () => void;
+  advanceCursorToNextStatement: (executedLineEnd: number) => void;
 }
 
 interface EditorProps {
@@ -293,6 +294,27 @@ export function Editor({
           return;
         }
         view.focus();
+      },
+      advanceCursorToNextStatement: (executedLineEnd: number) => {
+        const view = viewRef.current;
+        if (!view) {
+          return;
+        }
+
+        const doc = view.state.doc;
+        // Find the next non-empty, non-comment line after executedLineEnd
+        for (let lineNum = executedLineEnd + 1; lineNum <= doc.lines; lineNum++) {
+          const line = doc.line(lineNum);
+          const trimmed = line.text.trim();
+          if (trimmed !== "" && !trimmed.startsWith("#")) {
+            view.dispatch({
+              selection: { anchor: line.from },
+              scrollIntoView: true,
+            });
+            return;
+          }
+        }
+        // No suitable line found - cursor stays in place
       },
     }),
     [executeCurrentSelection]
