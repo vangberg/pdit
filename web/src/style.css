@@ -1,248 +1,262 @@
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
 
-  color-scheme: light;
-  color: rgba(0, 0, 0, 0.87);
-  background-color: #ffffff;
+    color-scheme: light;
+    color: rgba(0, 0, 0, 0.87);
+    background-color: #ffffff;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
 }
 
 body {
-  margin: 0;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
+    margin: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
 }
 
 #app {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .top-bar {
-  background: #374151;
-  padding: 0.5rem 1rem;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  border-bottom: 1px solid #4b5563;
+    background: #374151;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    border-bottom: 1px solid #4b5563;
 }
 
 .top-bar-content {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  width: 100%;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    width: 100%;
 }
 
 .top-bar-button-wrapper {
-  position: relative;
+    position: relative;
 }
 
 .top-bar-button {
-  background: transparent;
-  color: #93c5fd;
-  border: 1px solid #93c5fd;
-  border-radius: 4px;
-  padding: 0.3rem 0.6rem;
-  font-size: 0.75rem;
-  cursor: pointer;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  transition: all 0.2s;
+    background: transparent;
+    color: #93c5fd;
+    border: 1px solid #93c5fd;
+    border-radius: 4px;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    transition: all 0.2s;
 }
 
 .top-bar-button:hover:not(:disabled) {
-  background: rgba(147, 197, 253, 0.2);
+    background: rgba(147, 197, 253, 0.2);
 }
 
 .top-bar-button:disabled {
-  cursor: not-allowed;
-  color: #9ca3af;
-  border-color: #9ca3af;
+    cursor: not-allowed;
+    color: #9ca3af;
+    border-color: #9ca3af;
 }
 
 .top-bar-tooltip {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: #f9fafb;
-  color: #374151;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: 500;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
-  pointer-events: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #f9fafb;
+    color: #374151;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    pointer-events: none;
 }
 
 .top-bar-status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-left: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: 0.75rem;
 }
 
 .top-bar-status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
 }
 
 .top-bar-status-dot.ready {
-  background: #60a5fa;
+    background: #60a5fa;
 }
 
 .top-bar-status-dot.initializing {
-  background: #f97316;
+    background: #f97316;
 }
 
 .top-bar-conflict-compact {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
-  border-radius: 6px;
-  padding: 0.25rem 0.375rem;
-  font-size: 0.7rem;
-  margin-left: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 6px;
+    padding: 0.25rem 0.375rem;
+    font-size: 0.7rem;
+    margin-left: 0.75rem;
 }
 
 .top-bar-conflict-compact-message {
-  color: #92400e;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  white-space: nowrap;
-  font-size: 0.875rem;
+    color: #92400e;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    white-space: nowrap;
+    font-size: 0.875rem;
 }
 
 .top-bar-conflict-button-primary {
-  position: relative;
-  background: #0066cc;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.7rem;
-  cursor: pointer;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  transition: background 0.2s;
+    position: relative;
+    background: #0066cc;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+    cursor: pointer;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    transition: background 0.2s;
 }
 
 .top-bar-conflict-button-primary:hover {
-  background: #0052a3;
+    background: #0052a3;
 }
 
 .top-bar-conflict-button-secondary {
-  position: relative;
-  background: white;
-  color: #333;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.7rem;
-  cursor: pointer;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  transition: all 0.2s;
+    position: relative;
+    background: white;
+    color: #333;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+    cursor: pointer;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    transition: all 0.2s;
 }
 
 .top-bar-conflict-button-secondary:hover {
-  background: #f5f5f5;
-  border-color: #999;
+    background: #f5f5f5;
+    border-color: #999;
 }
 
 .top-bar-status-text {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .top-bar-status-text.ready {
-  color: #60a5fa;
+    color: #60a5fa;
 }
 
 .top-bar-status-text.initializing {
-  color: #f97316;
+    color: #f97316;
 }
 
 /* Toggle switch styles */
 .top-bar-toggle-wrapper {
-  position: relative;
+    position: relative;
 }
 
 .top-bar-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: transparent;
-  border: 1px solid #93c5fd;
-  border-radius: 4px;
-  padding: 0.3rem 0.6rem;
-  cursor: pointer;
-  font-size: 0.75rem;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: transparent;
+    border: 1px solid #93c5fd;
+    border-radius: 4px;
+    padding: 0.3rem 0.6rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    transition: all 0.2s;
 }
 
 .top-bar-toggle:hover {
-  background: rgba(147, 197, 253, 0.2);
+    background: rgba(147, 197, 253, 0.2);
 }
 
 .top-bar-toggle.enabled {
-  border-color: #22c55e;
-  background: rgba(34, 197, 94, 0.1);
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
 }
 
 .top-bar-toggle-label {
-  font-size: 0.75rem;
-  color: #93c5fd;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+    font-size: 0.75rem;
+    color: #93c5fd;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .top-bar-toggle.enabled .top-bar-toggle-label {
-  color: #22c55e;
+    color: #22c55e;
 }
 
 .top-bar-toggle-switch {
-  width: 28px;
-  height: 14px;
-  background: #4b5563;
-  border-radius: 7px;
-  position: relative;
-  transition: background 0.2s;
+    width: 28px;
+    height: 14px;
+    background: #4b5563;
+    border-radius: 7px;
+    position: relative;
+    transition: background 0.2s;
 }
 
 .top-bar-toggle.enabled .top-bar-toggle-switch {
-  background: #22c55e;
+    background: #22c55e;
 }
 
 .top-bar-toggle-knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 10px;
-  height: 10px;
-  background: #fff;
-  border-radius: 50%;
-  transition: transform 0.2s;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 10px;
+    height: 10px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
 }
 
 .top-bar-toggle.enabled .top-bar-toggle-knob {
-  transform: translateX(14px);
+    transform: translateX(14px);
 }
 
 /* Grid layout ensures both columns match the height of the tallest content.
@@ -250,245 +264,247 @@ body {
    - Grid columns automatically stretch to match each other's height
    - overflow-y: auto provides scrolling when content exceeds viewport
    - This allows editor-half to grow beyond viewport while output-half stretches to match */
- .split-container {
-   display: grid;
-   grid-template-columns: 1fr 1fr;
-   flex: 1;
-   min-height: 0;
-   overflow-y: auto;
-   overflow-x: hidden;
- }
-
+.split-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
 
 .editor-half {
-  display: flex;
-  flex-direction: column;
-  flex: 0 0 50%;
-  min-width: 0;
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 50%;
+    min-width: 0;
 }
 
 .output-half {
-  display: flex;
-  flex: 0 0 50%;
-  min-width: 0;
+    display: flex;
+    flex: 0 0 50%;
+    min-width: 0;
 }
 
 /* Reader mode layout */
 .split-container.reader-mode {
-  grid-template-columns: 0fr 1fr;
+    grid-template-columns: 0fr 1fr;
 }
 
 .editor-hidden {
-  visibility: hidden;
-  width: 0;
-  overflow: hidden;
+    visibility: hidden;
+    width: 0;
+    overflow: hidden;
 }
 
 .output-full {
-  flex: 1;
+    flex: 1;
 }
 
 .editor-half,
 .output-half {
-  /* Styling handled by parent container */
+    /* Styling handled by parent container */
 }
 
 h1 {
-  font-size: 2.5em;
-  line-height: 1.1;
-  margin-bottom: 1em;
-  text-align: center;
+    font-size: 2.5em;
+    line-height: 1.1;
+    margin-bottom: 1em;
+    text-align: center;
 }
 
 .editor-container {
-  display: flex;
-  flex-direction: row;
-  width: 100%;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 #editor {
-  flex: 1;
-  width: 100%;
-  min-width: 0;
+    flex: 1;
+    width: 100%;
+    min-width: 0;
 }
 
 #editor-preview {
-  flex: 1;
-  border-left: 1px solid #e5e5e5;
-  padding-left: 0.5rem;
+    flex: 1;
+    border-left: 1px solid #e5e5e5;
+    padding-left: 0.5rem;
 }
 
-
 .cm-editor {
-  font-size: 14px;
-  min-width: 0;
+    font-size: 14px;
+    min-width: 0;
 }
 
 .cm-focused {
-  outline: none;
+    outline: none;
 }
 
 #output {
-  font-size: 13px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  width: 100%;
-  min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  background: #f8f8f8;
-  border-left: 1px solid #e0e0e0;
+    font-size: 13px;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: #f8f8f8;
+    border-left: 1px solid #e0e0e0;
 }
 
 .output-content {
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  padding: 2px 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    padding: 2px 0;
 }
 
 .output-group {
-  background: #ffffff;
-  border-left: 2px solid #d0d0d0;
-  margin: 1px 6px;
-  padding: 4px 8px;
-  border-radius: 0 3px 3px 0;
+    background: #ffffff;
+    border-left: 2px solid #d0d0d0;
+    margin: 1px 6px;
+    padding: 4px 8px;
+    border-radius: 0 3px 3px 0;
 }
 
 .output-content.reader-mode .output-group {
-  margin: 0;
-  border: none;
-  padding-left: 8px;
-  padding-right: 8px;
+    margin: 0;
+    border: none;
+    padding-left: 8px;
+    padding-right: 8px;
 }
 
 .output-group-invisible {
-  background: transparent;
-  border: none;
-  height: 0;
-  overflow: hidden;
-  margin: 0;
-  padding: 0;
-  border-radius: 0;
-  box-shadow: none;
+    background: transparent;
+    border: none;
+    height: 0;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .output-container {
-  padding: 2px 0;
+    padding: 2px 0;
 }
 
 .output-container-invisible {
-  padding: 0;
+    padding: 0;
 }
 
 .output-line {
-  position: relative;
+    position: relative;
 }
 
 .output-line:not(.empty-line) {
-  padding: 0;
+    padding: 0;
 }
 
 .output-line pre {
-  margin: 0;
-  padding: 0;
-  font-size: 14px;
-  line-height: 1.4;
+    margin: 0;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1.4;
 }
 
 .output-item {
-  color: #374151;
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
+    color: #374151;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
 }
 
 .output-type-badge {
-  font-size: 9px;
-  font-weight: 500;
-  padding: 1px 4px;
-  border-radius: 3px;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
-  flex-shrink: 0;
-  margin-top: 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+    font-size: 9px;
+    font-weight: 500;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: "Fira Code", Monaco, Consolas, monospace;
+    flex-shrink: 0;
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .output-type-result {
-  color: #fff;
-  background: #16a34a;
+    color: #fff;
+    background: #16a34a;
 }
 
 .output-type-stdout {
-  color: #fff;
-  background: #6366f1;
+    color: #fff;
+    background: #6366f1;
 }
 
 .output-type-stderr {
-  color: #fff;
-  background: #dc2626;
+    color: #fff;
+    background: #dc2626;
 }
 
 .output-type-error {
-  color: #fff;
-  background: #dc2626;
+    color: #fff;
+    background: #dc2626;
 }
 
 .output-type-dataframe {
-  color: #fff;
-  background: #0891b2;
+    color: #fff;
+    background: #0891b2;
 }
 
 .output-type-image {
-  color: #fff;
-  background: #c026d3;
+    color: #fff;
+    background: #c026d3;
 }
 
 .output-type-markdown {
-  color: #fff;
-  background: #78716c;
+    color: #fff;
+    background: #78716c;
 }
 
 .output-type-html {
-  color: #fff;
-  background: #ea580c;
+    color: #fff;
+    background: #ea580c;
 }
 
 .output-content-wrapper {
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
 }
 
 .output-item.output-stdout .output-content-wrapper {
-  color: #4b5563;
+    color: #4b5563;
 }
 
 .output-item.output-stderr .output-content-wrapper {
-  color: #dc2626;
-  font-weight: 500;
+    color: #dc2626;
+    font-weight: 500;
 }
 
 .output-item.output-error .output-content-wrapper {
-  color: #dc2626;
+    color: #dc2626;
 }
 
 .output-item.output-warning .output-content-wrapper {
-  color: #9ca3af;
+    color: #9ca3af;
 }
 
 .output-item.output-message .output-content-wrapper {
-  color: #4b5563;
+    color: #4b5563;
 }
 
 .output-item.output-markdown {
-  color: #374151;
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.6;
+    color: #374151;
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
 }
 
 .output-item.output-markdown h1,
@@ -497,11 +513,11 @@ h1 {
 .output-item.output-markdown h4,
 .output-item.output-markdown h5,
 .output-item.output-markdown h6 {
-  margin-top: 0.5em;
-  margin-bottom: 0.25em;
-  font-weight: 600;
-  line-height: 1.3;
-  text-align: left;
+    margin-top: 0.5em;
+    margin-bottom: 0.25em;
+    font-weight: 600;
+    line-height: 1.3;
+    text-align: left;
 }
 
 .output-item.output-markdown h1:first-child,
@@ -510,621 +526,704 @@ h1 {
 .output-item.output-markdown h4:first-child,
 .output-item.output-markdown h5:first-child,
 .output-item.output-markdown h6:first-child {
-  margin-top: 0;
+    margin-top: 0;
 }
 
-.output-item.output-markdown h1 { font-size: 1.5em; }
-.output-item.output-markdown h2 { font-size: 1.3em; }
-.output-item.output-markdown h3 { font-size: 1.1em; }
+.output-item.output-markdown h1 {
+    font-size: 1.5em;
+}
+.output-item.output-markdown h2 {
+    font-size: 1.3em;
+}
+.output-item.output-markdown h3 {
+    font-size: 1.1em;
+}
 
 .output-item.output-markdown p {
-  margin: 0.5em 0;
+    margin: 0.5em 0;
 }
 
 .output-item.output-markdown p:first-child {
-  margin-top: 0;
+    margin-top: 0;
 }
 
 .output-item.output-markdown ul,
 .output-item.output-markdown ol {
-  margin: 0.5em 0;
-  padding-left: 1.5em;
+    margin: 0.5em 0;
+    padding-left: 1.5em;
 }
 
 .output-item.output-markdown ul:first-child,
 .output-item.output-markdown ol:first-child {
-  margin-top: 0;
+    margin-top: 0;
 }
 
 .output-item.output-markdown li {
-  margin: 0.25em 0;
+    margin: 0.25em 0;
 }
 
 .output-item.output-markdown code {
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  background: #f3f4f6;
-  padding: 0.1em 0.3em;
-  border-radius: 3px;
-  font-size: 0.9em;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    background: #f3f4f6;
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+    font-size: 0.9em;
 }
 
 .output-item.output-markdown pre {
-  background: #f3f4f6;
-  padding: 0.75em;
-  border-radius: 4px;
-  overflow-x: auto;
-  margin: 0.5em 0;
+    background: #f3f4f6;
+    padding: 0.75em;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 0.5em 0;
 }
 
 .output-item.output-markdown pre code {
-  background: none;
-  padding: 0;
+    background: none;
+    padding: 0;
 }
 
 .output-item.output-markdown blockquote {
-  border-left: 3px solid #d1d5db;
-  margin: 0.5em 0;
-  padding-left: 1em;
-  color: #6b7280;
+    border-left: 3px solid #d1d5db;
+    margin: 0.5em 0;
+    padding-left: 1em;
+    color: #6b7280;
 }
 
 .output-item.output-markdown a {
-  color: #2563eb;
-  text-decoration: underline;
+    color: #2563eb;
+    text-decoration: underline;
 }
 
 .output-item.output-markdown strong {
-  font-weight: 600;
+    font-weight: 600;
 }
 
 .output-item.output-markdown em {
-  font-style: italic;
+    font-style: italic;
 }
 
 .output-item.output-plot {
-  margin-top: 0.25rem;
+    margin-top: 0.25rem;
 }
 
 .output-plot canvas {
-  display: block;
-  background: #ffffff;
-  width: 400px;
-  height: 300px;
-  border: 1px solid #d1d5db;
+    display: block;
+    background: #ffffff;
+    width: 400px;
+    height: 300px;
+    border: 1px solid #d1d5db;
 }
 
 .output-image {
-  max-width: 100%;
-  max-width: min(100%, 1200px);
-  height: auto;
-  display: block;
-  background: #ffffff;
+    max-width: 100%;
+    max-width: min(100%, 1200px);
+    height: auto;
+    display: block;
+    background: #ffffff;
 }
 
 .output-html-iframe {
-  width: 100%;
-  min-height: 50px;
-  border: none;
-  background: #ffffff;
-  display: block;
+    width: 100%;
+    min-height: 50px;
+    border: none;
+    background: #ffffff;
+    display: block;
 }
 
 .output-table {
-  width: 100%;
-  border-collapse: collapse;
-  color: #666;
+    width: 100%;
+    border-collapse: collapse;
+    color: #666;
 }
 
 .output-table td {
-  padding: 0.15rem 0.3rem;
-  border: none;
+    padding: 0.15rem 0.3rem;
+    border: none;
 }
 
 .output-table .header-row td {
-  font-weight: 500;
-  color: #555;
+    font-weight: 500;
+    color: #555;
 }
 
 .output-table td:last-child {
-  text-align: right;
-  font-family: monospace;
+    text-align: right;
+    font-family: monospace;
 }
 
 .empty-line {
-  height: 18px;
+    height: 18px;
 }
 
 .plot-chart {
-  display: flex;
-  align-items: end;
-  gap: 1px;
-  height: 30px;
+    display: flex;
+    align-items: end;
+    gap: 1px;
+    height: 30px;
 }
 
 .plot-bar {
-  min-width: 6px;
-  background-color: #ccc;
-  opacity: 0.6;
+    min-width: 6px;
+    background-color: #ccc;
+    opacity: 0.6;
 }
 
 .array-items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
 }
 
 .array-item {
-  background: #f0f0f0;
-  color: #666;
-  padding: 1px 4px;
-  border-radius: 3px;
-  font-family: monospace;
+    background: #f0f0f0;
+    color: #666;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: monospace;
 }
 
 .output-spacer-container {
-  display: block;
-  background: transparent;
+    display: block;
+    background: transparent;
 }
 
 .output-spacer {
-  width: 100%;
+    width: 100%;
 }
 
 .debug-panel {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #f8f9fa;
-  border-top: 1px solid #e5e7eb;
-  padding: 1rem;
-  max-height: 300px;
-  overflow-y: auto;
-  font-size: 0.8rem;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #f8f9fa;
+    border-top: 1px solid #e5e7eb;
+    padding: 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+    font-size: 0.8rem;
 }
 
 .debug-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
 }
 
 .debug-header h3 {
-  margin: 0;
-  color: #374151;
+    margin: 0;
+    color: #374151;
 }
 
 .debug-status {
-  color: #6b7280;
-  font-size: 0.75rem;
+    color: #6b7280;
+    font-size: 0.75rem;
 }
 
 .debug-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 6px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .debug-table th {
-  background: #f3f4f6;
-  color: #374151;
-  padding: 0.75rem 1rem;
-  text-align: right;
-  font-weight: 600;
-  font-size: 0.75rem;
-  border-bottom: 1px solid #e5e7eb;
+    background: #f3f4f6;
+    color: #374151;
+    padding: 0.75rem 1rem;
+    text-align: right;
+    font-weight: 600;
+    font-size: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
 }
 
 .debug-table td {
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid #f3f4f6;
-  font-size: 0.75rem;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.75rem;
 }
 
 .debug-table tbody tr:hover {
-  background: #f9fafb;
+    background: #f9fafb;
 }
 
 .line-number {
-  font-weight: 600;
-  color: #6b7280;
-  text-align: center;
-  width: 60px;
+    font-weight: 600;
+    color: #6b7280;
+    text-align: center;
+    width: 60px;
 }
 
 .height-value {
-  font-family: monospace;
-  text-align: right;
-  color: #374151;
+    font-family: monospace;
+    text-align: right;
+    color: #374151;
 }
 
 .debug-tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    gap: 4px;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
 }
 
 .debug-tab {
-  background: none;
-  border: none;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #6b7280;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s;
+    background: none;
+    border: none;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #6b7280;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
 }
 
 .debug-tab:hover {
-  color: #374151;
-  background: #f9fafb;
+    color: #374151;
+    background: #f9fafb;
 }
 
 .debug-tab.active {
-  color: #2563eb;
-  border-bottom-color: #2563eb;
+    color: #2563eb;
+    border-bottom-color: #2563eb;
 }
 
 .debug-tab-content {
-  /* Container for tab content */
+    /* Container for tab content */
 }
 
 .debug-empty {
-  text-align: center;
-  color: #6b7280;
-  padding: 2rem;
-  font-style: italic;
+    text-align: center;
+    color: #6b7280;
+    padding: 2rem;
+    font-style: italic;
 }
 
 .range-id {
-  font-weight: 600;
-  color: #6b7280;
-  text-align: center;
-  width: 60px;
+    font-weight: 600;
+    color: #6b7280;
+    text-align: center;
+    width: 60px;
 }
 
 .range-value {
-  font-family: monospace;
-  text-align: right;
-  color: #374151;
+    font-family: monospace;
+    text-align: right;
+    color: #374151;
 }
 
 @keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
 }
 
 /* Dataframe table styles */
 .dataframe-table-container {
-  overflow-x: auto;
-  max-width: 100%;
+    overflow-x: auto;
+    max-width: 100%;
 }
 
 .dataframe-table {
-  border-collapse: collapse;
-  font-size: 13px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  min-width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    min-width: 100%;
 }
 
 .dataframe-table th,
 .dataframe-table td {
-  padding: 4px 8px;
-  text-align: left;
-  border: 1px solid #e5e7eb;
-  white-space: nowrap;
+    padding: 4px 8px;
+    text-align: left;
+    border: 1px solid #e5e7eb;
+    white-space: nowrap;
 }
 
 .dataframe-table th {
-  background: #f9fafb;
-  font-weight: 600;
-  color: #374151;
-  position: sticky;
-  top: 0;
+    background: #f9fafb;
+    font-weight: 600;
+    color: #374151;
+    position: sticky;
+    top: 0;
 }
 
 .dataframe-table tbody tr:hover {
-  background: #f3f4f6;
+    background: #f3f4f6;
 }
 
 .dataframe-table td {
-  color: #4b5563;
+    color: #4b5563;
 }
 
 /* Right-align numeric columns */
 .dataframe-table td:not(:first-child) {
-  text-align: right;
+    text-align: right;
 }
 
 /* Pagination controls */
 .dataframe-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 1px;
-  padding: 2px 4px;
-  border-top: 1px solid #e5e7eb;
-  background: #f9fafb;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1px;
+    padding: 2px 4px;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    font-size: 11px;
 }
 
 .pagination-input-group {
-  margin-left: 0;
+    margin-left: 0;
 }
 
 .dataframe-pagination button {
-  background: transparent;
-  border: 1px solid #d1d5db;
-  border-radius: 2px;
-  padding: 0;
-  font-size: 11px;
-  cursor: pointer;
-  color: #4b5563;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  transition: all 0.15s;
-  min-width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    background: transparent;
+    border: 1px solid #d1d5db;
+    border-radius: 2px;
+    padding: 0;
+    font-size: 11px;
+    cursor: pointer;
+    color: #4b5563;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    transition: all 0.15s;
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .dataframe-pagination button:hover:not(:disabled) {
-  background: #e5e7eb;
-  border-color: #9ca3af;
-  color: #374151;
+    background: #e5e7eb;
+    border-color: #9ca3af;
+    color: #374151;
 }
 
 .dataframe-pagination button:disabled {
-  cursor: not-allowed;
-  color: #d1d5db;
-  border-color: #e5e7eb;
-  opacity: 0.6;
+    cursor: not-allowed;
+    color: #d1d5db;
+    border-color: #e5e7eb;
+    opacity: 0.6;
 }
 
 .pagination-input-group {
-  display: flex;
-  align-items: center;
-  gap: 1px;
-  margin: 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    margin: 0 4px;
 }
 
 .pagination-input-group input {
-  background: transparent;
-  border: 1px solid #d1d5db;
-  border-radius: 2px;
-  padding: 1px 3px;
-  font-size: 11px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  color: #4b5563;
-  width: 32px;
-  text-align: center;
-  transition: all 0.15s;
-  height: 20px;
+    background: transparent;
+    border: 1px solid #d1d5db;
+    border-radius: 2px;
+    padding: 1px 3px;
+    font-size: 11px;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    color: #4b5563;
+    width: 32px;
+    text-align: center;
+    transition: all 0.15s;
+    height: 20px;
 }
 
 .pagination-input-group input:hover {
-  border-color: #9ca3af;
+    border-color: #9ca3af;
 }
 
 .pagination-input-group input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  background: #f0f9ff;
+    outline: none;
+    border-color: #3b82f6;
+    background: #f0f9ff;
 }
 
 .pagination-separator {
-  color: #9ca3af;
-  padding: 0 2px;
+    color: #9ca3af;
+    padding: 0 2px;
 }
 
 .pagination-total {
-  color: #6b7280;
-  min-width: 0;
+    color: #6b7280;
+    min-width: 0;
 }
 
 .dataframe-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 1px;
-  padding: 2px 4px;
-  border-top: 1px solid #e5e7eb;
-  background: #f9fafb;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    padding: 2px 4px;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    font-size: 11px;
 }
 
 .dataframe-filter-input {
-  padding: 1px 3px;
-  border: 1px solid #d1d5db;
-  border-radius: 2px;
-  font-size: 11px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  color: #4b5563;
-  background: transparent;
-  min-width: 150px;
-  height: 20px;
-  transition: all 0.15s;
+    padding: 1px 3px;
+    border: 1px solid #d1d5db;
+    border-radius: 2px;
+    font-size: 11px;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    color: #4b5563;
+    background: transparent;
+    min-width: 150px;
+    height: 20px;
+    transition: all 0.15s;
 }
 
 .dataframe-filter-input:hover {
-  border-color: #9ca3af;
+    border-color: #9ca3af;
 }
 
 .dataframe-filter-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  background: #f0f9ff;
+    outline: none;
+    border-color: #3b82f6;
+    background: #f0f9ff;
 }
 
 .dataframe-toolbar-pagination {
-  display: flex;
-  align-items: center;
-  gap: 1px;
-  margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    margin-left: auto;
 }
 
 .dataframe-toolbar button {
-  background: transparent;
-  border: 1px solid #d1d5db;
-  border-radius: 2px;
-  padding: 0;
-  font-size: 11px;
-  cursor: pointer;
-  color: #4b5563;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  transition: all 0.15s;
-  min-width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    background: transparent;
+    border: 1px solid #d1d5db;
+    border-radius: 2px;
+    padding: 0;
+    font-size: 11px;
+    cursor: pointer;
+    color: #4b5563;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    transition: all 0.15s;
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .dataframe-toolbar button:hover:not(:disabled) {
-  background: #e5e7eb;
-  border-color: #9ca3af;
-  color: #374151;
+    background: #e5e7eb;
+    border-color: #9ca3af;
+    color: #374151;
 }
 
 .dataframe-toolbar button:disabled {
-  cursor: not-allowed;
-  color: #d1d5db;
-  border-color: #e5e7eb;
-  opacity: 0.6;
+    cursor: not-allowed;
+    color: #d1d5db;
+    border-color: #e5e7eb;
+    opacity: 0.6;
 }
 
 .dataframe-toolbar-pagination-group {
-  display: flex;
-  align-items: center;
-  gap: 1px;
-  margin: 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    margin: 0 4px;
 }
 
 .dataframe-toolbar-pagination-group input {
-  background: transparent;
-  border: 1px solid #d1d5db;
-  border-radius: 2px;
-  padding: 1px 3px;
-  font-size: 11px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  color: #4b5563;
-  width: 32px;
-  text-align: center;
-  transition: all 0.15s;
-  height: 20px;
+    background: transparent;
+    border: 1px solid #d1d5db;
+    border-radius: 2px;
+    padding: 1px 3px;
+    font-size: 11px;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    color: #4b5563;
+    width: 32px;
+    text-align: center;
+    transition: all 0.15s;
+    height: 20px;
 }
 
 .dataframe-toolbar-pagination-group input:hover {
-  border-color: #9ca3af;
+    border-color: #9ca3af;
 }
 
 .dataframe-toolbar-pagination-group input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  background: #f0f9ff;
+    outline: none;
+    border-color: #3b82f6;
+    background: #f0f9ff;
 }
 
 .dataframe-toolbar-pagination-separator {
-  color: #9ca3af;
-  padding: 0 2px;
+    color: #9ca3af;
+    padding: 0 2px;
 }
 
 .dataframe-toolbar-pagination-total {
-  color: #6b7280;
-  min-width: 0;
+    color: #6b7280;
+    min-width: 0;
 }
 
 /* Fuzzy Finder styles */
 .fuzzy-finder-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  margin-top: 4px;
-  background: #374151;
-  border: 1px solid #4b5563;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  width: 320px;
-  max-height: 300px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  z-index: 1000;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+    background: #374151;
+    border: 1px solid #4b5563;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    width: 320px;
+    max-height: 300px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 1000;
 }
 
 .fuzzy-finder-input {
-  background: #2d3748;
-  color: #e5e7eb;
-  border: none;
-  border-bottom: 1px solid #4b5563;
-  padding: 8px 10px;
-  font-size: 12px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  outline: none;
+    background: #2d3748;
+    color: #e5e7eb;
+    border: none;
+    border-bottom: 1px solid #4b5563;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    outline: none;
 }
 
 .fuzzy-finder-input:focus {
-  background: #1f2937;
+    background: #1f2937;
 }
 
 .fuzzy-finder-input::placeholder {
-  color: #6b7280;
+    color: #6b7280;
 }
 
 .fuzzy-finder-list {
-  overflow-y: auto;
-  flex: 1;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .fuzzy-finder-item {
-  padding: 6px 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
 }
 
 .fuzzy-finder-item.selected {
-  background: rgba(147, 197, 253, 0.2);
+    background: rgba(147, 197, 253, 0.2);
 }
 
 .fuzzy-finder-filename {
-  color: #e5e7eb;
-  font-size: 12px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  flex-shrink: 0;
+    color: #e5e7eb;
+    font-size: 12px;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    flex-shrink: 0;
 }
 
 .fuzzy-finder-path {
-  color: #6b7280;
-  font-size: 10px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    color: #6b7280;
+    font-size: 10px;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .fuzzy-match-highlight {
-  color: #93c5fd;
-  font-weight: 600;
+    color: #93c5fd;
+    font-weight: 600;
 }
 
 .fuzzy-finder-empty {
-  padding: 12px 10px;
-  text-align: center;
-  color: #6b7280;
-  font-size: 11px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    padding: 12px 10px;
+    text-align: center;
+    color: #6b7280;
+    font-size: 11px;
+    font-family:
+        "Fira Code", Monaco, Consolas, "Liberation Mono", "Courier New",
+        monospace;
+}
+
+/* Print styles - based on reader mode */
+@media print {
+    .top-bar,
+    .editor-half,
+    .output-type-badge {
+        display: none !important;
+    }
+
+    body {
+        overflow: visible;
+    }
+
+    #app {
+        height: auto;
+    }
+
+    .split-container {
+        display: block;
+        overflow: visible;
+    }
+
+    .output-half {
+        flex: 1;
+        width: 100%;
+    }
+
+    #output {
+        border: none;
+        background: white;
+        overflow: visible;
+    }
+
+    .output-content {
+        min-height: 0 !important;
+    }
+
+    /* Reader mode styles for output groups */
+    .output-group {
+        position: static !important;
+        margin: 0;
+        border: none;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .output-item {
+        gap: 0;
+    }
 }
