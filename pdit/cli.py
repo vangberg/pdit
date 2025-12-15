@@ -22,6 +22,8 @@ import uvicorn
 # Flag for graceful shutdown on SIGTERM
 _shutdown_requested = False
 
+app = typer.Typer(help="pdit - Interactive Python notebook.")
+
 
 def find_available_port(start_port=8888, max_tries=100):
     """Find an available port starting from start_port.
@@ -82,33 +84,14 @@ class Server(uvicorn.Server):
                 sys.exit(1)
 
 
-app = typer.Typer(help="pdit - Interactive Python notebook.")
-
-
-@app.command()
-def main(
-    script: Annotated[
-        Optional[Path],
-        typer.Argument(help="Python script file to open", exists=True, dir_okay=False)
-    ] = None,
-    port: Annotated[
-        Optional[int],
-        typer.Option(help="Port to run server on (default: 8888, or next available)")
-    ] = None,
-    host: Annotated[
-        str,
-        typer.Option(help="Host to bind to")
-    ] = "127.0.0.1",
-    no_browser: Annotated[
-        bool,
-        typer.Option("--no-browser", help="Don't open browser automatically")
-    ] = False,
-    verbose: Annotated[
-        bool,
-        typer.Option(help="Print all computation stdout/stderr to console")
-    ] = False,
+def start(
+    script: Optional[Path] = None,
+    port: Optional[int] = None,
+    host: str = "127.0.0.1",
+    no_browser: bool = False,
+    verbose: bool = False,
 ):
-    """Starts a local Python execution server and opens the web interface."""
+    """Start the pdit server with optional script."""
     # Set verbose mode in executor
     from .executor import set_verbose_mode
     set_verbose_mode(verbose)
@@ -185,6 +168,99 @@ def main(
             typer.echo("\nShutting down...")
         except KeyboardInterrupt:
             typer.echo("\nShutting down...")
+
+
+@app.command(name="start")
+def start_cmd(
+    script: Annotated[
+        Optional[Path],
+        typer.Argument(help="Python script file to open", exists=True, dir_okay=False)
+    ] = None,
+    port: Annotated[
+        Optional[int],
+        typer.Option(help="Port to run server on (default: 8888, or next available)")
+    ] = None,
+    host: Annotated[
+        str,
+        typer.Option(help="Host to bind to")
+    ] = "127.0.0.1",
+    no_browser: Annotated[
+        bool,
+        typer.Option("--no-browser", help="Don't open browser automatically")
+    ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option(help="Print all computation stdout/stderr to console")
+    ] = False,
+):
+    """Start the pdit server with optional script."""
+    start(script, port, host, no_browser, verbose)
+
+
+@app.command()
+def export(
+    script: Annotated[
+        Path,
+        typer.Argument(help="Python script file to export", exists=True, dir_okay=False)
+    ],
+    output: Annotated[
+        Optional[Path],
+        typer.Option("-o", "--output", help="Output file (default: script.html)")
+    ] = None,
+    stdout: Annotated[
+        bool,
+        typer.Option("--stdout", help="Write to stdout instead of file")
+    ] = False,
+):
+    """Export a Python script to a self-contained HTML file.
+
+    Executes the script and generates a static HTML file with the output.
+    The HTML file can be opened in any browser without a server.
+    """
+    from .exporter import export_script
+
+    try:
+        html_output = export_script(script)
+    except FileNotFoundError as e:
+        typer.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+    if stdout:
+        typer.echo(html_output)
+    else:
+        output_path = output if output else script.with_suffix('.html')
+        output_path.write_text(html_output)
+        typer.echo(f"Exported to {output_path}")
+
+
+def main():
+    """Entry point for the CLI."""
+    # Intercept arguments to provide default command behavior
+    import sys
+
+    args = sys.argv[1:]
+    known_commands = ['start', 'export']
+
+    # If no args, show help
+    if not args:
+        app()
+        return
+
+    # Check if first non-option arg is a command or looks like a file
+    first_non_option = None
+    for arg in args:
+        if not arg.startswith('-'):
+            first_non_option = arg
+            break
+
+    # If first non-option arg is not a known command, assume it's a script for 'start'
+    if first_non_option and first_non_option not in known_commands:
+        # Check if it looks like a file path
+        if not first_non_option.startswith('-'):
+            # Insert 'start' as the command
+            sys.argv.insert(1, 'start')
+
+    app()
 
 
 if __name__ == "__main__":

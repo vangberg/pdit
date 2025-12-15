@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "test": "vitest",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && vite build --config vite.config.export.ts",
     "preview": "vite preview",
     "ladle": "ladle serve",
     "ladle:build": "ladle build"
@@ -20,11 +20,11 @@
     "playwright": "^1.56.1",
     "typescript": "^5.2.2",
     "vite": "^5.3.1",
+    "vite-plugin-singlefile": "^2.3.0",
     "vitest": "^4.0.8"
   },
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.2",
-    "diff": "^8.0.2",
     "@codemirror/lang-python": "^6.1.6",
     "@codemirror/state": "^6.4.1",
     "@codemirror/theme-one-dark": "^6.1.2",
@@ -34,6 +34,7 @@
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.2",
     "codemirror": "^6.0.1",
+    "diff": "^8.0.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-markdown": "^10.1.0"

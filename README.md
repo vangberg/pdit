@@ -18,14 +18,14 @@ Pythonic live scripting.
 # Install from dist branch (recommended, includes pre-built assets)
 uv add git+https://github.com/vangberg/pdit@dist
 
-# Or use directly with uv
-uv run --with git+https://github.com/vangberg/pdit@dist pdit script.py
+# Or use directly with uvx
+uvx --from git+https://github.com/vangberg/pdit@dist pdit start script.py
 
 # From cloned repo (for development)
 git clone git@github.com:vangberg/pdit.git
 cd pdit
 uv pip install -e .
-uv run pdit script.py
+uv run pdit start script.py
 ```
 
 ## Usage
@@ -33,7 +33,7 @@ uv run pdit script.py
 Start pdit with a Python file:
 
 ```bash
-uv run pdit script.py
+uv run pdit start script.py
 ```
 
 This will:
@@ -44,12 +44,13 @@ This will:
 ### Options
 
 ```bash
-uv run pdit [OPTIONS] [SCRIPT]
+uv run pdit start [OPTIONS] [SCRIPT]
 
 Options:
   --port INTEGER       Port to run server on (default: 8888)
   --host TEXT         Host to bind to (default: 127.0.0.1)
   --no-browser        Don't open browser automatically
+  --verbose           Print all computation stdout/stderr to console
   --help              Show help message
 ```
 
@@ -57,17 +58,27 @@ Options:
 
 ```bash
 # Start with script
-uv run pdit analysis.py
+uv run pdit start analysis.py
 
 # Custom port
-uv run pdit --port 9000 script.py
+uv run pdit start --port 9000 script.py
 
 # Start without opening browser
-uv run pdit --no-browser script.py
+uv run pdit start --no-browser script.py
 
 # Just start the editor (no script)
-uv run pdit
+uv run pdit start
 ```
+
+### Exporting
+
+Export a script to a self-contained HTML file:
+
+```bash
+uv run pdit export script.py
+```
+
+This executes the script and generates `script.html` with the output. The HTML file can be opened in any browser without a server.
 
 ## Development
 
