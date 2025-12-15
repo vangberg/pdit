@@ -18,8 +18,8 @@ Pythonic live scripting.
 # Install from dist branch (recommended, includes pre-built assets)
 uv add git+https://github.com/vangberg/pdit@dist
 
-# Or use directly with uvx
-uvx --from git+https://github.com/vangberg/pdit@dist pdit script.py
+# Or use directly with uv
+uv run --with git+https://github.com/vangberg/pdit@dist pdit script.py
 
 # From cloned repo (for development)
 git clone git@github.com:vangberg/pdit.git
