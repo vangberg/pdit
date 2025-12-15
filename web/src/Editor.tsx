@@ -320,6 +320,7 @@ export function Editor({
               selection: { anchor: line.from },
               scrollIntoView: true,
             });
+            view.focus();
             return;
           }
         }

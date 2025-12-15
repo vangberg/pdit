@@ -10,12 +10,11 @@ When a todo is done, delete it.
 
 ## Todos
 
-1. Cmd+Enter should skip to next code line if current line is empty or comment.
-2. Reader mode: center + set max-width so it does not take up full width.
-3. Combine Run buttons into a single button with a dropdown.
+1. Reader mode: center + set max-width so it does not take up full width.
+2. Combine Run buttons into a single button with a dropdown.
     1. Default: "Run all".
     2. Drop down options: Run all, Run current.
-4. Use icons for Run, Autorun, Reader.
-5. Use css grid for output so we can align badges and content.
-6. Render top-level f-strings as Markdown.
-7. Text-wrap output, even when there's no whitespace.
+3. Use icons for Run, Autorun, Reader.
+4. Use css grid for output so we can align badges and content.
+5. Render top-level f-strings as Markdown.
+6. Text-wrap output, even when there's no whitespace.

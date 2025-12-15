@@ -23,8 +23,9 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
   const [hasConflict, setHasConflict] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [doc, setDoc] = useState<Text>();
-  
-  const { autorun, setAutorun, readerMode, setReaderMode } = useScriptSettings(scriptPath);
+
+  const { autorun, setAutorun, readerMode, setReaderMode } =
+    useScriptSettings(scriptPath);
 
   const [isFuzzyFinderOpen, setIsFuzzyFinderOpen] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -56,7 +57,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
         const adjustedGroups = adjustLineGroupsForDiff(
           doc?.toString() ?? "",
           newContent,
-          lineGroupsRef.current
+          lineGroupsRef.current,
         );
         isProgrammaticUpdate.current = true;
         editorRef.current?.applyExecutionUpdate({
@@ -71,7 +72,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
         }
       }
     },
-    [hasUnsavedChanges, doc]
+    [hasUnsavedChanges, doc],
   );
 
   const {
@@ -97,21 +98,21 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
   }, [lineGroups]);
 
   const [lineGroupHeights, setLineGroupHeights] = useState<Map<string, number>>(
-    new Map()
+    new Map(),
   );
-  const [lineGroupLayouts, setLineGroupLayouts] = useState<Map<string, LineGroupLayout>>(
-    new Map()
-  );
+  const [lineGroupLayouts, setLineGroupLayouts] = useState<
+    Map<string, LineGroupLayout>
+  >(new Map());
 
   const handleLineGroupHeightChange = useCallback(
     (heights: Map<string, number>) => {
       console.log(
         "Script received line group heights:",
-        Array.from(heights.entries()).slice(0, 5)
+        Array.from(heights.entries()).slice(0, 5),
       );
       setLineGroupHeights(heights);
     },
-    []
+    [],
   );
 
   const handleInitialDocumentLoad = useCallback((doc: Text) => {
@@ -130,21 +131,24 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
       console.log("Script received line groups change:", groups);
       setLineGroups(groups);
     },
-    [setLineGroups]
+    [setLineGroups],
   );
 
-  const handleLineGroupLayoutChange = useCallback((layouts: Map<string, LineGroupLayout>) => {
-    console.log(
-      "Script received line group layouts:",
-      Array.from(layouts.entries()).slice(0, 5)
-    );
-    setLineGroupLayouts(layouts);
-  }, []);
+  const handleLineGroupLayoutChange = useCallback(
+    (layouts: Map<string, LineGroupLayout>) => {
+      console.log(
+        "Script received line group layouts:",
+        Array.from(layouts.entries()).slice(0, 5),
+      );
+      setLineGroupLayouts(layouts);
+    },
+    [],
+  );
 
   const handleExecute = useCallback(
     async (
       script: string,
-      options?: { lineRange?: { from: number; to: number }; reset?: boolean }
+      options?: { lineRange?: { from: number; to: number }; reset?: boolean },
     ): Promise<{ lastExecutedLineEnd?: number }> => {
       // Extract script name from path (just the filename)
       const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
@@ -162,14 +166,17 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
           // Track the last executed line end
           if (event.type === "done") {
             const lineEnd = event.expression.lineEnd;
-            if (lastExecutedLineEnd === undefined || lineEnd > lastExecutedLineEnd) {
+            if (
+              lastExecutedLineEnd === undefined ||
+              lineEnd > lastExecutedLineEnd
+            ) {
               lastExecutedLineEnd = lineEnd;
             }
           }
 
           const { lineGroups: newLineGroups, doneIds } = handleExecutionEvent(
             event,
-            options
+            options,
           );
 
           editorRef.current?.applyExecutionUpdate({
@@ -187,32 +194,34 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
 
       return { lastExecutedLineEnd };
     },
-    [handleExecutionEvent, resetExecutionState, scriptPath, sessionId]
+    [handleExecutionEvent, resetExecutionState, scriptPath, sessionId],
   );
 
   const handleExecuteWithReset = useCallback(
     (script: string) => {
       handleExecute(script, { reset: true });
     },
-    [handleExecute]
+    [handleExecute],
   );
 
   const handleExecuteCurrent = useCallback(
     async (script: string, lineRange: { from: number; to: number }) => {
-      const { lastExecutedLineEnd } = await handleExecute(script, { lineRange });
+      const { lastExecutedLineEnd } = await handleExecute(script, {
+        lineRange,
+      });
       // Advance cursor to the next non-empty line after the last executed statement
-      if (lastExecutedLineEnd !== undefined) {
-        editorRef.current?.advanceCursorToNextStatement(lastExecutedLineEnd);
-      }
+      // If nothing executed (e.g. comment/empty line), use the end of the selection
+      const lineToAdvanceFrom = lastExecutedLineEnd ?? lineRange.to;
+      editorRef.current?.advanceCursorToNextStatement(lineToAdvanceFrom);
     },
-    [handleExecute]
+    [handleExecute],
   );
 
   const handleExecuteAll = useCallback(
     (script: string) => {
       handleExecute(script);
     },
-    [handleExecute]
+    [handleExecute],
   );
 
   const handleRunAll = useCallback(() => {
@@ -364,8 +373,14 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
         onFuzzyFinderOpenChange={setIsFuzzyFinderOpen}
         isExecuting={isExecuting}
       />
-      <div className={readerMode ? "split-container reader-mode" : "split-container"}>
-        <div className={readerMode ? "editor-half editor-hidden" : "editor-half"}>
+      <div
+        className={
+          readerMode ? "split-container reader-mode" : "split-container"
+        }
+      >
+        <div
+          className={readerMode ? "editor-half editor-hidden" : "editor-half"}
+        >
           <Editor
             ref={editorRef}
             initialCode={initialCode}
@@ -377,7 +392,6 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
             onLineGroupLayoutChange={handleLineGroupLayoutChange}
             lineGroupHeights={lineGroupHeights}
             readOnly={isExecuting}
-            editable={!isExecuting}
           />
         </div>
         <div className={readerMode ? "output-half output-full" : "output-half"}>
