@@ -3,8 +3,14 @@ import matplotlib.pyplot as plt
 
 import time
 
+"""
+# Markdown
+
+And some ...
+"""
+
 if True:
-  time.sleep(1)
+  # time.sleep(5)
   print(time.time())
 
 # Load iris dataset (150 rows) and repeat to get ~500 rows
@@ -30,10 +36,10 @@ for species, color in zip(species_list, colors):
         alpha=0.6
     )
 
-ax.set_xlabel("Sepal Length (cm)")
-ax.set_ylabel("Sepal Width (cm)")
-ax.set_title("Iris Dataset: Sepal Length vs Sepal Width")
-ax.legend()
+ax.set_xlabel("Sepal Length (cm)");
+ax.set_ylabel("Sepal Width (cm)");
+ax.set_title("Iris Dataset: Sepal Length vs Sepal Width");
+ax.legend();
 ax.grid(True, alpha=0.3)
 
 fig
