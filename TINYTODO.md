@@ -17,3 +17,5 @@ When a todo is done, delete it.
     2. Drop down options: Run all, Run current.
 4. Use icons for Run, Autorun, Reader.
 5. Use css grid for output so we can align badges and content.
+6. Render top-level f-strings as Markdown.
+7. Text-wrap output, even when there's no whitespace.
