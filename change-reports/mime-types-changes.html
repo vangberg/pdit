@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MIME Types Refactor - Change Report</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      line-height: 1.6;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: #fafafa;
+      color: #24292f;
+    }
+
+    h1 {
+      border-bottom: 2px solid #d0d7de;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+
+    h2 {
+      margin-top: 40px;
+      border-bottom: 1px solid #d0d7de;
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      margin-top: 24px;
+      color: #57606a;
+    }
+
+    p {
+      margin: 16px 0;
+    }
+
+    code {
+      background: #f6f8fa;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.9em;
+    }
+
+    .file-badge {
+      display: inline-block;
+      background: #ddf4ff;
+      color: #0969da;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.85em;
+      margin: 8px 0;
+    }
+
+    .diff {
+      margin: 20px 0;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      overflow: hidden;
+      background: white;
+    }
+
+    .diff-header {
+      background: #f6f8fa;
+      padding: 10px 16px;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.85em;
+      border-bottom: 1px solid #d0d7de;
+      color: #57606a;
+    }
+
+    .diff-content {
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.8em;
+      overflow-x: auto;
+    }
+
+    .diff-line {
+      padding: 2px 16px;
+      white-space: pre;
+    }
+
+    .diff-add {
+      background: #e6ffec;
+      color: #1a7f37;
+    }
+
+    .diff-remove {
+      background: #ffebe9;
+      color: #cf222e;
+    }
+
+    .diff-context {
+      background: white;
+      color: #57606a;
+    }
+
+    .diff-hunk {
+      background: #f1f8ff;
+      color: #0969da;
+      padding: 8px 16px;
+    }
+
+    .architecture {
+      background: white;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+
+    .flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+
+    .flow-box {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 12px 16px;
+      text-align: center;
+      font-size: 0.9em;
+    }
+
+    .flow-arrow {
+      color: #57606a;
+      font-size: 1.2em;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      background: white;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 10px 16px;
+      text-align: left;
+      border-bottom: 1px solid #d0d7de;
+    }
+
+    th {
+      background: #f6f8fa;
+      font-weight: 600;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .summary-box {
+      background: #ddf4ff;
+      border: 1px solid #54aeff;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 24px 0;
+    }
+
+    .summary-box h3 {
+      margin-top: 0;
+      color: #0969da;
+    }
+  </style>
+</head>
+<body>
+  <h1>MIME Types Refactor</h1>
+
+  <div class="summary-box">
+    <h3>Summary</h3>
+    <p>
+      This change removes the translation layer between Jupyter MIME types and custom pdit output types.
+      Instead of converting <code>image/png</code> → <code>image</code>, the MIME types now flow through
+      directly to the frontend.
+    </p>
+  </div>
+
+  <h2>Problem</h2>
+  <p>
+    The xeus-python backend returns output using standard MIME types (<code>image/png</code>,
+    <code>text/html</code>, <code>application/json</code>, etc.), but pdit was translating these
+    into custom type names (<code>image</code>, <code>html</code>, <code>dataframe</code>).
+  </p>
+  <p>
+    This translation layer:
+  </p>
+  <ul>
+    <li>Added unnecessary complexity</li>
+    <li>Lost information (e.g., <code>image/jpeg</code> vs <code>image/png</code>)</li>
+    <li>Required special-case handling for data URLs</li>
+  </ul>
+
+  <h2>Solution</h2>
+  <p>
+    Pass MIME types through directly. The <code>OutputItem.type</code> field now contains either:
+  </p>
+  <ul>
+    <li><strong>MIME types</strong>: <code>text/plain</code>, <code>text/html</code>, <code>text/markdown</code>, <code>image/png</code>, <code>application/json</code></li>
+    <li><strong>Stream types</strong>: <code>stdout</code>, <code>stderr</code>, <code>error</code> (these aren't MIME data)</li>
+  </ul>
+
+  <div class="architecture">
+    <h3>Data Flow</h3>
+    <div class="flow">
+      <div class="flow-box">Xeus Kernel<br><small>MIME bundles</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Python Backend<br><small>OutputItem</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">SSE Stream<br><small>JSON</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">React Frontend<br><small>Render by type</small></div>
+    </div>
+  </div>
+
+  <h3>Type Mapping</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Old Type</th>
+        <th>New Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>image</code></td><td><code>image/png</code></td></tr>
+      <tr><td><code>html</code></td><td><code>text/html</code></td></tr>
+      <tr><td><code>dataframe</code></td><td><code>application/json</code></td></tr>
+      <tr><td><code>markdown</code></td><td><code>text/markdown</code></td></tr>
+      <tr><td><code>stdout</code></td><td><code>stdout</code> (unchanged)</td></tr>
+      <tr><td><code>stderr</code></td><td><code>stderr</code> (unchanged)</td></tr>
+      <tr><td><code>error</code></td><td><code>error</code> (unchanged)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Files Changed</h2>
+
+  <h3>Backend: xeus_executor.py</h3>
+  <p class="file-badge">pdit/xeus_executor.py</p>
+  <p>
+    Simplified <code>_process_mime_data()</code> to pass through MIME types directly instead of
+    translating them. Removed special-case DataFrame detection and data URL wrapping for images.
+  </p>
+
+  <div class="diff">
+    <div class="diff-header">pdit/xeus_executor.py</div>
+    <div class="diff-content">
+      <div class="diff-hunk">@@ -108,27 +108,23 @@ _process_mime_data</div>
+      <div class="diff-line diff-remove">-    def _process_mime_data(self, data: Dict) -> List[OutputItem]:</div>
+      <div class="diff-line diff-remove">-        """Process MIME bundle data into OutputItems."""</div>
+      <div class="diff-line diff-add">+    def _process_mime_data(self, data: Dict) -> List[OutputItem]:</div>
+      <div class="diff-line diff-add">+        """Process MIME bundle data into OutputItems.</div>
+      <div class="diff-line diff-add">+</div>
+      <div class="diff-line diff-add">+        Passes through MIME types directly instead of translating to custom types.</div>
+      <div class="diff-line diff-add">+        Uses priority order: image > html > json > plain text.</div>
+      <div class="diff-line diff-add">+        """</div>
+      <div class="diff-line diff-context">         output: List[OutputItem] = []</div>
+      <div class="diff-line diff-context"> </div>
+      <div class="diff-line diff-remove">-        # Priority order for MIME types</div>
+      <div class="diff-line diff-add">+        # Priority order for MIME types - pass through directly</div>
+      <div class="diff-line diff-context">         if 'image/png' in data:</div>
+      <div class="diff-line diff-remove">-            img_data = data['image/png']</div>
+      <div class="diff-line diff-remove">-            # Already base64 encoded</div>
+      <div class="diff-line diff-remove">-            output.append(OutputItem(type="image", content=f"data:image/png;base64,{img_data}"))</div>
+      <div class="diff-line diff-add">+            output.append(OutputItem(type="image/png", content=data['image/png']))</div>
+      <div class="diff-line diff-context">         elif 'text/html' in data:</div>
+      <div class="diff-line diff-remove">-            html = data['text/html']</div>
+      <div class="diff-line diff-remove">-            output.append(OutputItem(type="html", content=html))</div>
+      <div class="diff-line diff-add">+            output.append(OutputItem(type="text/html", content=data['text/html']))</div>
+      <div class="diff-line diff-context">         elif 'application/json' in data:</div>
+      <div class="diff-line diff-remove">-            # Could be a DataFrame or other structured data</div>
+      <div class="diff-line diff-context">             json_data = data['application/json']</div>
+      <div class="diff-line diff-remove">-            if isinstance(json_data, dict) and 'columns' in json_data and 'data' in json_data:</div>
+      <div class="diff-line diff-remove">-                output.append(OutputItem(type="dataframe", content=json.dumps(json_data)))</div>
+      <div class="diff-line diff-remove">-            else:</div>
+      <div class="diff-line diff-remove">-                output.append(OutputItem(type="stdout", content=json.dumps(json_data, indent=2)))</div>
+      <div class="diff-line diff-add">+            output.append(OutputItem(type="application/json", content=json.dumps(json_data)))</div>
+      <div class="diff-line diff-context">         elif 'text/plain' in data:</div>
+      <div class="diff-line diff-remove">-            text = data['text/plain']</div>
+      <div class="diff-line diff-remove">-            output.append(OutputItem(type="stdout", content=text))</div>
+      <div class="diff-line diff-add">+            output.append(OutputItem(type="text/plain", content=data['text/plain']))</div>
+    </div>
+  </div>
+
+  <h3>Backend: executor.py</h3>
+  <p class="file-badge">pdit/executor.py</p>
+  <p>
+    Updated the in-process executor to use MIME types. Changed image content from data URL to
+    raw base64 (frontend now builds the data URL).
+  </p>
+
+  <div class="diff">
+    <div class="diff-header">pdit/executor.py - OutputItem definition</div>
+    <div class="diff-content">
+      <div class="diff-hunk">@@ -46,8 +46,12 @@ OutputItem</div>
+      <div class="diff-line diff-context"> @dataclass</div>
+      <div class="diff-line diff-context"> class OutputItem:</div>
+      <div class="diff-line diff-remove">-    """Single output item (stdout, stderr, error, markdown, dataframe, image, or html)."""</div>
+      <div class="diff-line diff-remove">-    type: str  # 'stdout', 'stderr', 'error', 'markdown', 'dataframe', 'image', or 'html'</div>
+      <div class="diff-line diff-add">+    """Single output item with MIME type or stream type.</div>
+      <div class="diff-line diff-add">+</div>
+      <div class="diff-line diff-add">+    MIME types: 'text/plain', 'text/html', 'text/markdown', 'image/png', 'application/json'</div>
+      <div class="diff-line diff-add">+    Stream types: 'stdout', 'stderr', 'error'</div>
+      <div class="diff-line diff-add">+    """</div>
+      <div class="diff-line diff-add">+    type: str</div>
+      <div class="diff-line diff-context">     content: str</div>
+    </div>
+  </div>
+
+  <div class="diff">
+    <div class="diff-header">pdit/executor.py - Image output</div>
+    <div class="diff-content">
+      <div class="diff-hunk">@@ -375,10 +379,9 @@ capture_matplotlib_figures</div>
+      <div class="diff-line diff-context">             fig.savefig(buf, format='png', bbox_inches='tight')</div>
+      <div class="diff-line diff-context">             buf.seek(0)</div>
+      <div class="diff-line diff-context"> </div>
+      <div class="diff-line diff-remove">-            # Encode as base64 data URL</div>
+      <div class="diff-line diff-add">+            # Encode as base64</div>
+      <div class="diff-line diff-context">             img_base64 = base64.b64encode(buf.read()).decode('utf-8')</div>
+      <div class="diff-line diff-remove">-            img_data_url = f"data:image/png;base64,{img_base64}"</div>
+      <div class="diff-line diff-remove">-            images.append(OutputItem(type="image", content=img_data_url))</div>
+      <div class="diff-line diff-add">+            images.append(OutputItem(type="image/png", content=img_base64))</div>
+    </div>
+  </div>
+
+  <div class="diff">
+    <div class="diff-header">pdit/executor.py - Type changes</div>
+    <div class="diff-content">
+      <div class="diff-hunk">@@ -437,14 +440,14 @@ execute_statement</div>
+      <div class="diff-line diff-remove">-                    output.append(OutputItem(type="markdown", content=markdown_text))</div>
+      <div class="diff-line diff-add">+                    output.append(OutputItem(type="text/markdown", content=markdown_text))</div>
+      <div class="diff-line diff-context">                 ...</div>
+      <div class="diff-line diff-remove">-                    output.append(OutputItem(type="dataframe", content=json_data))</div>
+      <div class="diff-line diff-add">+                    output.append(OutputItem(type="application/json", content=json_data))</div>
+      <div class="diff-line diff-context">                 ...</div>
+      <div class="diff-line diff-remove">-                        output.append(OutputItem(type="html", content=html_content))</div>
+      <div class="diff-line diff-add">+                        output.append(OutputItem(type="text/html", content=html_content))</div>
+    </div>
+  </div>
+
+  <h3>Frontend: TypeScript Types</h3>
+  <p class="file-badge">web/src/execution-backend-python.ts</p>
+  <p>
+    Changed <code>OutputItem.type</code> from a union of string literals to <code>string</code>
+    to accept any MIME type.
+  </p>
+
+  <div class="diff">
+    <div class="diff-header">web/src/execution-backend-python.ts</div>
+    <div class="diff-content">
+      <div class="diff-hunk">@@ -4,7 +4,9 @@ OutputItem interface</div>
+      <div class="diff-line diff-context"> export interface OutputItem {</div>
+      <div class="diff-line diff-remove">-  type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message' | 'markdown' | 'dataframe' | 'image' | 'html';</div>
+      <div class="diff-line diff-add">+  // MIME types: 'text/plain', 'text/html', 'text/markdown', 'image/png', 'application/json'</div>
+      <div class="diff-line diff-add">+  // Stream types: 'stdout', 'stderr', 'error'</div>
+      <div class="diff-line diff-add">+  type: string;</div>
+      <div class="diff-line diff-context">   content: string;</div>
+      <div class="diff-line diff-context"> }</div>
+    </div>
+  </div>
+
+  <h3>Frontend: Output Rendering</h3>
+  <p class="file-badge">web/src/Output.tsx</p>
+  <p>
+    Updated rendering logic to match on MIME types. Added <code>sanitizeTypeForCss()</code> to
+    convert MIME types to valid CSS class names (e.g., <code>image/png</code> → <code>image-png</code>).
+    The <code>ImageOutput</code> component now builds the data URL from raw base64 content.
+  </p>
+
+  <div class="diff">
+    <div class="diff-header">web/src/Output.tsx - ImageOutput component</div>
+    <div class="diff-content">
+      <div class="diff-hunk">@@ -11,7 +11,9 @@ ImageOutput</div>
+      <div class="diff-line diff-context"> // Component for rendering a single image output item</div>
+      <div class="diff-line diff-remove">-const ImageOutput: React.FC&lt;{ dataUrl: string }&gt; = ({ dataUrl }) =&gt; {</div>
+      <div class="diff-line diff-add">+// content is base64-encoded data (not a data URL)</div>
+      <div class="diff-line diff-add">+const ImageOutput: React.FC&lt;{ content: string; mimeType: string }&gt; = ({ content, mimeType }) =&gt; {</div>
+      <div class="diff-line diff-add">+  const dataUrl = `data:${mimeType};base64,${content}`;</div>
+      <div class="diff-line diff-context">   return &lt;img src={dataUrl} className="output-image" alt="Plot output" /&gt;;</div>
+      <div class="diff-line diff-context"> };</div>
+    </div>
+  </div>
+
+  <div class="diff">
+    <div class="diff-header">web/src/Output.tsx - Type labels</div>
+    <div class="diff-content">
+      <div class="diff-hunk">@@ -53,17 +55,24 @@ getTypeLabel</div>
+      <div class="diff-line diff-add">+// Sanitize type for CSS class names (replace slashes with dashes)</div>
+      <div class="diff-line diff-add">+const sanitizeTypeForCss = (type: string): string =&gt; type.replace(/\//g, '-');</div>
+      <div class="diff-line diff-add">+</div>
+      <div class="diff-line diff-context"> // Get a fun type label for output items</div>
+      <div class="diff-line diff-context"> const getTypeLabel = (type: string): string =&gt; {</div>
+      <div class="diff-line diff-context">   switch (type) {</div>
+      <div class="diff-line diff-remove">-    case 'result': return 'out';</div>
+      <div class="diff-line diff-add">+    // Stream types</div>
+      <div class="diff-line diff-context">     case 'stdout': return '&gt;&gt;&gt;';</div>
+      <div class="diff-line diff-context">     case 'stderr': return 'err';</div>
+      <div class="diff-line diff-context">     case 'error': return '!!!';</div>
+      <div class="diff-line diff-remove">-    case 'dataframe': return 'df';</div>
+      <div class="diff-line diff-remove">-    case 'image': return 'fig';</div>
+      <div class="diff-line diff-remove">-    case 'markdown': return 'md';</div>
+      <div class="diff-line diff-remove">-    case 'html': return 'htm';</div>
+      <div class="diff-line diff-add">+    // MIME types</div>
+      <div class="diff-line diff-add">+    case 'text/plain': return 'out';</div>
+      <div class="diff-line diff-add">+    case 'text/markdown': return 'md';</div>
+      <div class="diff-line diff-add">+    case 'text/html': return 'htm';</div>
+      <div class="diff-line diff-add">+    case 'application/json': return 'df';</div>
+      <div class="diff-line diff-add">+    case 'image/png': return 'fig';</div>
+      <div class="diff-line diff-add">+    case 'image/jpeg': return 'fig';</div>
+      <div class="diff-line diff-add">+    case 'image/svg+xml': return 'svg';</div>
+      <div class="diff-line diff-context">     default: return '~~~';</div>
+      <div class="diff-line diff-context">   }</div>
+      <div class="diff-line diff-context"> };</div>
+    </div>
+  </div>
+
+  <div class="diff">
+    <div class="diff-header">web/src/Output.tsx - Rendering logic</div>
+    <div class="diff-content">
+      <div class="diff-hunk">@@ -84,19 +93,19 @@ rendering</div>
+      <div class="diff-line diff-remove">-            className={`output-item output-${item.type}`}</div>
+      <div class="diff-line diff-add">+            className={`output-item output-${sanitizeTypeForCss(item.type)}`}</div>
+      <div class="diff-line diff-context">           &gt;</div>
+      <div class="diff-line diff-remove">-            &lt;span className={`output-type-badge output-type-${item.type}`}&gt;</div>
+      <div class="diff-line diff-add">+            &lt;span className={`output-type-badge output-type-${sanitizeTypeForCss(item.type)}`}&gt;</div>
+      <div class="diff-line diff-context">               {getTypeLabel(item.type)}</div>
+      <div class="diff-line diff-context">             &lt;/span&gt;</div>
+      <div class="diff-line diff-context">             &lt;div className="output-content-wrapper"&gt;</div>
+      <div class="diff-line diff-remove">-              {item.type === 'markdown' ? (</div>
+      <div class="diff-line diff-add">+              {item.type === 'text/markdown' ? (</div>
+      <div class="diff-line diff-context">                 &lt;Markdown&gt;{item.content}&lt;/Markdown&gt;</div>
+      <div class="diff-line diff-remove">-              ) : item.type === 'dataframe' ? (</div>
+      <div class="diff-line diff-add">+              ) : item.type === 'application/json' ? (</div>
+      <div class="diff-line diff-context">                 &lt;DataframeTable jsonData={item.content} /&gt;</div>
+      <div class="diff-line diff-remove">-              ) : item.type === 'image' ? (</div>
+      <div class="diff-line diff-remove">-                &lt;ImageOutput dataUrl={item.content} /&gt;</div>
+      <div class="diff-line diff-add">+              ) : item.type.startsWith('image/') ? (</div>
+      <div class="diff-line diff-add">+                &lt;ImageOutput content={item.content} mimeType={item.type} /&gt;</div>
+      <div class="diff-line diff-remove">-              ) : item.type === 'html' ? (</div>
+      <div class="diff-line diff-add">+              ) : item.type === 'text/html' ? (</div>
+    </div>
+  </div>
+
+  <h3>Frontend: CSS Styles</h3>
+  <p class="file-badge">web/src/style.css</p>
+  <p>
+    Updated CSS class names to use sanitized MIME types (e.g., <code>.output-type-image-png</code>).
+  </p>
+
+  <div class="diff">
+    <div class="diff-header">web/src/style.css</div>
+    <div class="diff-content">
+      <div class="diff-hunk">@@ -422,24 +438,32 @@ output type badges</div>
+      <div class="diff-line diff-remove">-.output-type-result {</div>
+      <div class="diff-line diff-remove">-  color: #fff;</div>
+      <div class="diff-line diff-remove">-  background: #16a34a;</div>
+      <div class="diff-line diff-remove">-}</div>
+      <div class="diff-line diff-add">+/* Stream types */</div>
+      <div class="diff-line diff-context"> .output-type-stdout { ... }</div>
+      <div class="diff-line diff-context"> .output-type-stderr { ... }</div>
+      <div class="diff-line diff-context"> .output-type-error { ... }</div>
+      <div class="diff-line diff-context"> </div>
+      <div class="diff-line diff-remove">-.output-type-dataframe { ... }</div>
+      <div class="diff-line diff-remove">-.output-type-image { ... }</div>
+      <div class="diff-line diff-remove">-.output-type-markdown { ... }</div>
+      <div class="diff-line diff-remove">-.output-type-html { ... }</div>
+      <div class="diff-line diff-add">+/* MIME types (slashes replaced with dashes) */</div>
+      <div class="diff-line diff-add">+.output-type-text-plain { background: #16a34a; }</div>
+      <div class="diff-line diff-add">+.output-type-text-markdown { background: #78716c; }</div>
+      <div class="diff-line diff-add">+.output-type-text-html { background: #ea580c; }</div>
+      <div class="diff-line diff-add">+.output-type-application-json { background: #0891b2; }</div>
+      <div class="diff-line diff-add">+.output-type-image-png,</div>
+      <div class="diff-line diff-add">+.output-type-image-jpeg,</div>
+      <div class="diff-line diff-add">+.output-type-image-svg\+xml { background: #c026d3; }</div>
+    </div>
+  </div>
+
+  <h2>Notes</h2>
+  <ul>
+    <li>
+      <strong>Stream types preserved</strong>: <code>stdout</code>, <code>stderr</code>, and <code>error</code>
+      are kept as-is because they come from Jupyter stream messages, not MIME bundles.
+    </li>
+    <li>
+      <strong>CSS escaping</strong>: The <code>+</code> in <code>image/svg+xml</code> requires escaping in CSS
+      (<code>.output-type-image-svg\+xml</code>).
+    </li>
+    <li>
+      <strong>Future extensibility</strong>: New MIME types (e.g., <code>image/jpeg</code>, <code>video/mp4</code>)
+      can be added without backend changes—just update the frontend rendering.
+    </li>
+  </ul>
+
+</body>
+</html>
