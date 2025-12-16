@@ -54,8 +54,6 @@ class XeusPythonExecutor:
         # Wait for kernel to be ready
         self.kc.wait_for_ready(timeout=30)
 
-        # Set up matplotlib for non-interactive backend
-        self._execute_silent("import matplotlib; matplotlib.use('Agg')")
 
     def _execute_silent(self, code: str) -> None:
         """Execute code without capturing output (for setup)."""
@@ -259,8 +257,6 @@ class XeusPythonExecutor:
             self.kc = self.km.client()
             self.kc.start_channels()
             self.kc.wait_for_ready(timeout=30)
-            # Re-setup matplotlib
-            self._execute_silent("import matplotlib; matplotlib.use('Agg')")
 
     def shutdown(self) -> None:
         """Shutdown the kernel."""
