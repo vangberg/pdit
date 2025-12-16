@@ -22,6 +22,9 @@ from .executor import (
     _has_trailing_semicolon,
 )
 
+# Jupyter widget model reference prefix (e.g., 'IPY_MODEL_<model_id>')
+IPY_MODEL_PREFIX = 'IPY_MODEL_'
+
 
 @dataclass
 class Statement:
@@ -130,8 +133,8 @@ class XeusPythonExecutor:
                 # Check for referenced models (like layout)
                 widget_state = self._comm_registry[model_id].get('data', {}).get('state', {})
                 for key, value in widget_state.items():
-                    if isinstance(value, str) and value.startswith('IPY_MODEL_'):
-                        ref_model_id = value[10:]  # Strip 'IPY_MODEL_' prefix
+                    if isinstance(value, str) and value.startswith(IPY_MODEL_PREFIX):
+                        ref_model_id = value[len(IPY_MODEL_PREFIX):]
                         if ref_model_id in self._comm_registry:
                             comm_messages.append(self._comm_registry[ref_model_id])
             

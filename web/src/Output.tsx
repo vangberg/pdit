@@ -197,7 +197,8 @@ const WidgetOutput: React.FC<{ data: string }> = ({ data }) => {
     };
 
     iframe.addEventListener('load', resizeIframe);
-    const interval = setInterval(resizeIframe, 100);
+    // Use a longer interval (500ms) to reduce CPU usage while still catching dynamic content changes
+    const interval = setInterval(resizeIframe, 500);
 
     return () => {
       iframe.removeEventListener('load', resizeIframe);
@@ -213,14 +214,14 @@ const WidgetOutput: React.FC<{ data: string }> = ({ data }) => {
     <iframe
       ref={iframeRef}
       className="output-widget-iframe"
-      sandbox="allow-scripts"
+      sandbox="allow-scripts allow-same-origin"
       title="Widget output"
     />
   );
 };
 
-// Sanitize type for CSS class names (replace slashes with dashes)
-const sanitizeTypeForCss = (type: string): string => type.replace(/\//g, '-').replace(/\+/g, '-');
+// Sanitize type for CSS class names (replace slashes and plus signs with dashes)
+const sanitizeTypeForCss = (type: string): string => type.replace(/[/+]/g, '-');
 
 // Get a fun type label for output items
 const getTypeLabel = (type: string): string => {
