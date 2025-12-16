@@ -12,7 +12,10 @@ import time
 import threading
 import webbrowser
 from pathlib import Path
-import click
+from typing import Optional
+
+import typer
+from typing_extensions import Annotated
 import uvicorn
 
 
@@ -79,19 +82,33 @@ class Server(uvicorn.Server):
                 sys.exit(1)
 
 
-@click.command()
-@click.argument("script", required=False, type=click.Path(exists=True))
-@click.option("--port", default=None, type=int, help="Port to run server on (default: 8888, or next available)")
-@click.option("--host", default="127.0.0.1", help="Host to bind to")
-@click.option("--no-browser", is_flag=True, help="Don't open browser automatically")
-@click.option("--verbose", is_flag=True, help="Print all computation stdout/stderr to console")
-def main(script, port, host, no_browser, verbose):
-    """pdit - Interactive Python notebook.
+app = typer.Typer(help="pdit - Interactive Python notebook.")
 
-    Starts a local Python execution server and opens the web interface.
 
-    SCRIPT: Optional Python script file to open
-    """
+@app.command()
+def main(
+    script: Annotated[
+        Optional[Path],
+        typer.Argument(help="Python script file to open", exists=True, dir_okay=False)
+    ] = None,
+    port: Annotated[
+        Optional[int],
+        typer.Option(help="Port to run server on (default: 8888, or next available)")
+    ] = None,
+    host: Annotated[
+        str,
+        typer.Option(help="Host to bind to")
+    ] = "127.0.0.1",
+    no_browser: Annotated[
+        bool,
+        typer.Option("--no-browser", help="Don't open browser automatically")
+    ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option(help="Print all computation stdout/stderr to console")
+    ] = False,
+):
+    """Starts a local Python execution server and opens the web interface."""
     # Set verbose mode in executor
     from .executor import set_verbose_mode
     set_verbose_mode(verbose)
@@ -99,22 +116,22 @@ def main(script, port, host, no_browser, verbose):
     # Check if frontend is built
     static_dir = Path(__file__).parent / "_static"
     if not static_dir.exists() or not (static_dir / "index.html").exists():
-        click.echo("Warning: Frontend build not found at pdit/_static/", err=True)
-        click.echo("The server will start but the web interface won't be available.", err=True)
-        click.echo("Run './scripts/build-frontend.sh' to build and copy the frontend.", err=True)
-        click.echo()
+        typer.echo("Warning: Frontend build not found at pdit/_static/", err=True)
+        typer.echo("The server will start but the web interface won't be available.", err=True)
+        typer.echo("Run './scripts/build-frontend.sh' to build and copy the frontend.", err=True)
+        typer.echo()
 
     # Use script path as-is (relative to current directory)
     script_path = None
     if script:
-        script_path = script
+        script_path = str(script)
 
     # Determine port to use
     if port is None:
         # No port specified: find available port starting from 8888
         actual_port = find_available_port(start_port=8888)
         if actual_port != 8888:
-            click.echo(f"Port 8888 is already in use, using port {actual_port} instead")
+            typer.echo(f"Port 8888 is already in use, using port {actual_port} instead")
     else:
         # Port explicitly specified: use it or fail
         try:
@@ -124,7 +141,7 @@ def main(script, port, host, no_browser, verbose):
                 s.bind((host, port))
                 actual_port = port
         except OSError:
-            click.echo(f"Error: Port {port} is already in use", err=True)
+            typer.echo(f"Error: Port {port} is already in use", err=True)
             sys.exit(1)
 
     # Build URL
@@ -132,7 +149,7 @@ def main(script, port, host, no_browser, verbose):
     if script_path:
         url += f"?script={script_path}"
 
-    click.echo(f"Starting pdit server on {host}:{actual_port}")
+    typer.echo(f"Starting pdit server on {host}:{actual_port}")
 
     # Pass port to server via environment variable for CORS configuration
     import os
@@ -152,7 +169,7 @@ def main(script, port, host, no_browser, verbose):
         # Server is guaranteed to be ready here
         if not no_browser:
             webbrowser.open(url)
-            click.echo(f"Opening browser to {url}")
+            typer.echo(f"Opening browser to {url}")
 
         # Set up SIGTERM handler for graceful shutdown
         def handle_sigterm(signum, frame):
@@ -165,10 +182,10 @@ def main(script, port, host, no_browser, verbose):
         try:
             while not _shutdown_requested:
                 time.sleep(0.1)  # Check more frequently for shutdown
-            click.echo("\nShutting down...")
+            typer.echo("\nShutting down...")
         except KeyboardInterrupt:
-            click.echo("\nShutting down...")
+            typer.echo("\nShutting down...")
 
 
 if __name__ == "__main__":
-    main()
+    app()

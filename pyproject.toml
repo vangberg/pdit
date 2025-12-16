@@ -25,13 +25,13 @@ classifiers = [
 dependencies = [
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
-    "click>=8.0.0",
+    "typer>=0.9.0",
     "aiofiles>=23.0.0",
     "watchfiles>=0.20.0",
 ]
 
 [project.scripts]
-pdit = "pdit.cli:main"
+pdit = "pdit.cli:app"
 
 [project.optional-dependencies]
 dev = [
