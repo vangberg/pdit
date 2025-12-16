@@ -1283,6 +1283,39 @@ wheels = [
 ]
 
 [[package]]
+name = "itables"
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.8.1' and python_full_version < '3.9'",
+    "python_full_version < '3.8.1'",
+]
+dependencies = [
+    { name = "ipython", version = "8.12.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "numpy", version = "1.24.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "pandas", version = "2.0.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/84/e4/627d9c41d07a7117a2147e44c96e6bdc579c31d6889d3adb5630fbd189fa/itables-2.3.0.tar.gz", hash = "sha256:ce570e3f888e7baf5e9cb0416a2e1c981c09c49e81d2fb80e8bc574b169c250b", size = 2259074, upload-time = "2025-04-05T03:12:59.774Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e5/c7/ae4ddcae20b2a7cfafa40c737d0d003c94804b68f3c168653deb468427e7/itables-2.3.0-py3-none-any.whl", hash = "sha256:1d78a38d04c13d30437a0544c16b572d2f38f5e480810f3964c4f32e558b7ee3", size = 2289497, upload-time = "2025-04-05T03:12:57.502Z" },
+]
+
+[[package]]
+name = "itables"
+version = "2.6.1"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.12'",
+    "python_full_version == '3.11.*'",
+    "python_full_version == '3.10.*'",
+    "python_full_version == '3.9.*'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4c/b4/ca396845cd7cf4a47d5c39fb80119092b1a59a4cd73d7ac9e472ee45fa80/itables-2.6.1.tar.gz", hash = "sha256:3825c592fc4f083e0e544d94be1c0f8fc93fa92efdab31d31a8f77d527ec7fac", size = 2360674, upload-time = "2025-12-14T18:24:47.155Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/82/e1/45de3c80b97a977d40a6162edf3223b355ed477781475d690c0d5649a7b7/itables-2.6.1-py3-none-any.whl", hash = "sha256:214e43644d8aa4560b547a423233c80e63fb062c26dfa9cfedfd813957929f5d", size = 2393649, upload-time = "2025-12-14T18:24:45.415Z" },
+]
+
+[[package]]
 name = "jedi"
 version = "0.19.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2373,6 +2406,8 @@ dev = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "itables", version = "2.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "itables", version = "2.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "matplotlib", version = "3.7.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
     { name = "matplotlib", version = "3.10.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -2403,6 +2438,7 @@ provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "itables", specifier = ">=2.3.0" },
     { name = "matplotlib", specifier = ">=3.7.5" },
     { name = "pandas", specifier = ">=2.0.3" },
     { name = "polars", specifier = ">=1.8.2" },

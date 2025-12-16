@@ -85,6 +85,7 @@ disallow_untyped_defs = true
 
 [dependency-groups]
 dev = [
+    "itables>=2.3.0",
     "matplotlib>=3.7.5",
     "pandas>=2.0.3",
     "polars>=1.8.2",
