@@ -21,21 +21,22 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from .executor import PythonExecutor, ExecutionResult
+from .xeus_executor import XeusPythonExecutor
+from .executor import ExecutionResult
 from .sse import format_sse
 from .file_watcher import FileWatcher
 
 # Global shutdown event for SSE connections (threading.Event works across threads)
 shutdown_event = threading.Event()
 
-# Session registry: maps session_id -> PythonExecutor
-_sessions: dict[str, PythonExecutor] = {}
+# Session registry: maps session_id -> XeusPythonExecutor
+_sessions: dict[str, XeusPythonExecutor] = {}
 
 
-def get_or_create_session(session_id: str) -> PythonExecutor:
+def get_or_create_session(session_id: str) -> XeusPythonExecutor:
     """Get existing session or create a new one lazily."""
     if session_id not in _sessions:
-        _sessions[session_id] = PythonExecutor()
+        _sessions[session_id] = XeusPythonExecutor()
     return _sessions[session_id]
 
 
