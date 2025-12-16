@@ -31,7 +31,7 @@ dependencies = [
 ]
 
 [project.scripts]
-pdit = "pdit.cli:app"
+pdit = "pdit.cli:main"
 
 [project.optional-dependencies]
 dev = [
