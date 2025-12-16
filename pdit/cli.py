@@ -22,7 +22,7 @@ import uvicorn
 # Flag for graceful shutdown on SIGTERM
 _shutdown_requested = False
 
-app = typer.Typer(help="pdit - Interactive Python notebook.")
+app = typer.Typer(add_completion=False)
 
 
 def find_available_port(start_port=8888, max_tries=100):
@@ -170,12 +170,24 @@ def start(
             typer.echo("\nShutting down...")
 
 
-@app.command(name="start")
-def start_cmd(
+@app.command()
+def main_command(
     script: Annotated[
         Optional[Path],
         typer.Argument(help="Python script file to open", exists=True, dir_okay=False)
     ] = None,
+    export: Annotated[
+        bool,
+        typer.Option("--export", "-e", help="Export script to self-contained HTML file")
+    ] = False,
+    output: Annotated[
+        Optional[Path],
+        typer.Option("-o", "--output", help="Output file for export (default: script.html)")
+    ] = None,
+    stdout: Annotated[
+        bool,
+        typer.Option("--stdout", help="Write export to stdout instead of file")
+    ] = False,
     port: Annotated[
         Optional[int],
         typer.Option(help="Port to run server on (default: 8888, or next available)")
@@ -193,73 +205,32 @@ def start_cmd(
         typer.Option(help="Print all computation stdout/stderr to console")
     ] = False,
 ):
-    """Start the pdit server with optional script."""
-    start(script, port, host, no_browser, verbose)
+    """Start the pdit server, or export a script to HTML with --export."""
+    if export:
+        if not script:
+            typer.echo("Error: script is required for --export", err=True)
+            raise typer.Exit(1)
 
+        from .exporter import export_script
 
-@app.command()
-def export(
-    script: Annotated[
-        Path,
-        typer.Argument(help="Python script file to export", exists=True, dir_okay=False)
-    ],
-    output: Annotated[
-        Optional[Path],
-        typer.Option("-o", "--output", help="Output file (default: script.html)")
-    ] = None,
-    stdout: Annotated[
-        bool,
-        typer.Option("--stdout", help="Write to stdout instead of file")
-    ] = False,
-):
-    """Export a Python script to a self-contained HTML file.
+        try:
+            html_output = export_script(script)
+        except FileNotFoundError as e:
+            typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(1)
 
-    Executes the script and generates a static HTML file with the output.
-    The HTML file can be opened in any browser without a server.
-    """
-    from .exporter import export_script
-
-    try:
-        html_output = export_script(script)
-    except FileNotFoundError as e:
-        typer.echo(f"Error: {e}", err=True)
-        sys.exit(1)
-
-    if stdout:
-        typer.echo(html_output)
+        if stdout:
+            typer.echo(html_output)
+        else:
+            output_path = output if output else script.with_suffix('.html')
+            output_path.write_text(html_output)
+            typer.echo(f"Exported to {output_path}")
     else:
-        output_path = output if output else script.with_suffix('.html')
-        output_path.write_text(html_output)
-        typer.echo(f"Exported to {output_path}")
+        start(script, port, host, no_browser, verbose)
 
 
 def main():
     """Entry point for the CLI."""
-    # Intercept arguments to provide default command behavior
-    import sys
-
-    args = sys.argv[1:]
-    known_commands = ['start', 'export']
-
-    # If no args, show help
-    if not args:
-        app()
-        return
-
-    # Check if first non-option arg is a command or looks like a file
-    first_non_option = None
-    for arg in args:
-        if not arg.startswith('-'):
-            first_non_option = arg
-            break
-
-    # If first non-option arg is not a known command, assume it's a script for 'start'
-    if first_non_option and first_non_option not in known_commands:
-        # Check if it looks like a file path
-        if not first_non_option.startswith('-'):
-            # Insert 'start' as the command
-            sys.argv.insert(1, 'start')
-
     app()
 
 
