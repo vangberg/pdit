@@ -48,6 +48,14 @@ Options:
 
 Server runs on `localhost:8888`, browser opens automatically.
 
+**Exporting to HTML:**
+
+```bash
+uv run --with git+https://github.com/vangberg/pdit@dist pdit --export script.py
+```
+
+This executes the script and generates `script.html` - a self-contained HTML file that can be opened in any browser without a server.
+
 **What the user sees:**
 
 - Left pane: CodeMirror Python editor with syntax highlighting

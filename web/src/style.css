@@ -365,6 +365,10 @@ h1 {
   padding-right: 8px;
 }
 
+.output-content.reader-mode .output-type-badge {
+  display: none;
+}
+
 .output-group-invisible {
   background: transparent;
   border: none;
