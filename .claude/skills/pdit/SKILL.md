@@ -15,7 +15,7 @@ split-pane interface: code editor (left) and streaming execution results (right)
 pdit runs using `uv run --with` so it's available without modifying the project:
 
 ```bash
-uv run --with git+https://github.com/vangberg/pdit@dist pdit start script.py --verbose
+uv run --with git+https://github.com/vangberg/pdit@dist pdit script.py --verbose
 ```
 
 **Note:** The `@dist` branch contains pre-built frontend assets, so no Node.js or build step is needed.
@@ -51,7 +51,7 @@ Server runs on `localhost:8888`, browser opens automatically.
 **Exporting to HTML:**
 
 ```bash
-uv run --with git+https://github.com/vangberg/pdit@dist pdit export script.py
+uv run --with git+https://github.com/vangberg/pdit@dist pdit --export script.py
 ```
 
 This executes the script and generates `script.html` - a self-contained HTML file that can be opened in any browser without a server.
