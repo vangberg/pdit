@@ -41,14 +41,22 @@ def get_or_create_session(session_id: str) -> XeusPythonExecutor:
 
 
 def delete_session(session_id: str) -> None:
-    """Delete a session if it exists."""
+    """Delete a session if it exists, shutting down its kernel."""
     if session_id in _sessions:
-        del _sessions[session_id]
+        executor = _sessions.pop(session_id)
+        executor.shutdown()
+
+
+def shutdown_all_sessions() -> None:
+    """Shutdown all active sessions. Called on server shutdown."""
+    for session_id in list(_sessions.keys()):
+        delete_session(session_id)
 
 
 def signal_shutdown():
-    """Signal all SSE connections to close. Called by cli.py before server shutdown."""
+    """Signal all SSE connections to close and cleanup. Called by cli.py before server shutdown."""
     shutdown_event.set()
+    shutdown_all_sessions()
 
 
 # Pydantic models for API
@@ -104,10 +112,11 @@ class ResetRequest(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage app lifecycle - signal SSE connections to close on shutdown."""
+    """Manage app lifecycle - cleanup on shutdown."""
     yield
-    # Signal all SSE connections to close
+    # Signal all SSE connections to close and shutdown kernels
     shutdown_event.set()
+    shutdown_all_sessions()
 
 
 # FastAPI app
