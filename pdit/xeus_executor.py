@@ -42,6 +42,8 @@ class XeusPythonExecutor:
         """Initialize executor and start xeus-python kernel."""
         self.km: Optional[KernelManager] = None
         self.kc: Optional[BlockingKernelClient] = None
+        # Registry of comm messages keyed by comm_id for widget state
+        self._comm_registry: Dict[str, Dict] = {}
         self._start_kernel()
 
     def _start_kernel(self) -> None:
@@ -109,12 +111,41 @@ class XeusPythonExecutor:
         """Process MIME bundle data into OutputItems.
 
         Passes through MIME types directly instead of translating to custom types.
-        Uses priority order: image > html > json > plain text.
+        Uses priority order: widget > image > html > json > plain text.
         """
         output: List[OutputItem] = []
 
-        # Priority order for MIME types - pass through directly
-        if 'image/png' in data:
+        # Check for Jupyter widget MIME type first
+        if 'application/vnd.jupyter.widget-view+json' in data:
+            widget_data = data['application/vnd.jupyter.widget-view+json']
+            model_id = widget_data.get('model_id')
+            
+            # Collect all comm messages from registry for this widget
+            # Include the widget's own comm and any related comms (like layout)
+            comm_messages = []
+            if model_id and model_id in self._comm_registry:
+                # Add the widget's comm message
+                comm_messages.append(self._comm_registry[model_id])
+                
+                # Check for referenced models (like layout)
+                widget_state = self._comm_registry[model_id].get('data', {}).get('state', {})
+                for key, value in widget_state.items():
+                    if isinstance(value, str) and value.startswith('IPY_MODEL_'):
+                        ref_model_id = value[10:]  # Strip 'IPY_MODEL_' prefix
+                        if ref_model_id in self._comm_registry:
+                            comm_messages.append(self._comm_registry[ref_model_id])
+            
+            # Bundle comm messages with widget output for frontend rendering
+            widget_output = {
+                'widget': widget_data,
+                'comm_messages': comm_messages
+            }
+            output.append(OutputItem(
+                type="application/vnd.jupyter.widget-view+json",
+                content=json.dumps(widget_output)
+            ))
+        # Priority order for other MIME types
+        elif 'image/png' in data:
             output.append(OutputItem(type="image/png", content=data['image/png']))
         elif 'text/html' in data:
             output.append(OutputItem(type="text/html", content=data['text/html']))
@@ -157,6 +188,15 @@ class XeusPythonExecutor:
             if msg_type == 'status' and content['execution_state'] == 'idle':
                 # Execution complete
                 break
+            elif msg_type == 'comm_open':
+                # Store comm_open messages in registry for widget rendering
+                comm_id = content['comm_id']
+                self._comm_registry[comm_id] = {
+                    'type': 'comm_open',
+                    'comm_id': comm_id,
+                    'target_name': content.get('target_name'),
+                    'data': content['data']
+                }
             elif msg_type == 'stream':
                 # stdout/stderr
                 stream_name = content['name']  # 'stdout' or 'stderr'
@@ -250,6 +290,8 @@ class XeusPythonExecutor:
 
     def reset(self) -> None:
         """Reset the kernel (restart it)."""
+        # Clear the comm registry when resetting
+        self._comm_registry.clear()
         if self.km:
             self.km.restart_kernel()
             if self.kc:
