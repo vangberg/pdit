@@ -11,7 +11,9 @@ interface OutputProps {
 }
 
 // Component for rendering a single image output item
-const ImageOutput: React.FC<{ dataUrl: string }> = ({ dataUrl }) => {
+// content is base64-encoded data (not a data URL)
+const ImageOutput: React.FC<{ content: string; mimeType: string }> = ({ content, mimeType }) => {
+  const dataUrl = `data:${mimeType};base64,${content}`;
   return <img src={dataUrl} className="output-image" alt="Plot output" />;
 };
 
@@ -53,17 +55,24 @@ const HtmlOutput: React.FC<{ html: string }> = ({ html }) => {
   );
 };
 
+// Sanitize type for CSS class names (replace slashes with dashes)
+const sanitizeTypeForCss = (type: string): string => type.replace(/\//g, '-');
+
 // Get a fun type label for output items
 const getTypeLabel = (type: string): string => {
   switch (type) {
-    case 'result': return 'out';
+    // Stream types
     case 'stdout': return '>>>';
     case 'stderr': return 'err';
     case 'error': return '!!!';
-    case 'dataframe': return 'df';
-    case 'image': return 'fig';
-    case 'markdown': return 'md';
-    case 'html': return 'htm';
+    // MIME types
+    case 'text/plain': return 'out';
+    case 'text/markdown': return 'md';
+    case 'text/html': return 'htm';
+    case 'application/json': return 'df';
+    case 'image/png': return 'fig';
+    case 'image/jpeg': return 'fig';
+    case 'image/svg+xml': return 'svg';
     default: return '~~~';
   }
 };
@@ -84,19 +93,19 @@ export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible })
         {expression.result?.output.map((item, i) => (
           <div
             key={i}
-            className={`output-item output-${item.type}`}
+            className={`output-item output-${sanitizeTypeForCss(item.type)}`}
           >
-            <span className={`output-type-badge output-type-${item.type}`}>
+            <span className={`output-type-badge output-type-${sanitizeTypeForCss(item.type)}`}>
               {getTypeLabel(item.type)}
             </span>
             <div className="output-content-wrapper">
-              {item.type === 'markdown' ? (
+              {item.type === 'text/markdown' ? (
                 <Markdown>{item.content}</Markdown>
-              ) : item.type === 'dataframe' ? (
+              ) : item.type === 'application/json' ? (
                 <DataframeTable jsonData={item.content} />
-              ) : item.type === 'image' ? (
-                <ImageOutput dataUrl={item.content} />
-              ) : item.type === 'html' ? (
+              ) : item.type.startsWith('image/') ? (
+                <ImageOutput content={item.content} mimeType={item.type} />
+              ) : item.type === 'text/html' ? (
                 <HtmlOutput html={item.content} />
               ) : (
                 <pre>{item.content}</pre>

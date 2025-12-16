@@ -46,8 +46,12 @@ def set_script_name(script_name: Optional[str]) -> None:
 
 @dataclass
 class OutputItem:
-    """Single output item (stdout, stderr, error, markdown, dataframe, image, or html)."""
-    type: str  # 'stdout', 'stderr', 'error', 'markdown', 'dataframe', 'image', or 'html'
+    """Single output item with MIME type or stream type.
+
+    MIME types: 'text/plain', 'text/html', 'text/markdown', 'image/png', 'application/json'
+    Stream types: 'stdout', 'stderr', 'error'
+    """
+    type: str
     content: str
 
 
@@ -344,7 +348,7 @@ class PythonExecutor:
             mpl_object: A matplotlib Axes or Figure object
 
         Returns:
-            List containing one OutputItem with type='image' and base64-encoded PNG content
+            List containing one OutputItem with type='image/png' and base64-encoded PNG content
         """
         images = []
 
@@ -375,10 +379,9 @@ class PythonExecutor:
             fig.savefig(buf, format='png', bbox_inches='tight')
             buf.seek(0)
 
-            # Encode as base64 data URL
+            # Encode as base64
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-            img_data_url = f"data:image/png;base64,{img_base64}"
-            images.append(OutputItem(type="image", content=img_data_url))
+            images.append(OutputItem(type="image/png", content=img_base64))
 
             buf.close()
 
@@ -437,14 +440,14 @@ class PythonExecutor:
                 if is_markdown_cell and result is not None:
                     # Strip the string and output as markdown
                     markdown_text = str(result).strip()
-                    output.append(OutputItem(type="markdown", content=markdown_text))
+                    output.append(OutputItem(type="text/markdown", content=markdown_text))
                 # Skip output if semicolon suppression is active
                 elif suppress_output:
                     pass
                 # For DataFrames, output as serialized JSON
                 elif is_expr and result is not None and _is_dataframe(result):
                     json_data = _serialize_dataframe(result)
-                    output.append(OutputItem(type="dataframe", content=json_data))
+                    output.append(OutputItem(type="application/json", content=json_data))
                 # For matplotlib Axes/Figure, capture the plot immediately
                 elif is_expr and result is not None and _is_matplotlib_axes_or_figure(result):
                     # Capture happens here, inside the try block
@@ -455,7 +458,7 @@ class PythonExecutor:
                 elif is_expr and result is not None and _has_repr_html(result):
                     html_content = result._repr_html_()
                     if html_content is not None:
-                        output.append(OutputItem(type="html", content=html_content))
+                        output.append(OutputItem(type="text/html", content=html_content))
                     else:
                         # _repr_html_() returned None, fall back to repr()
                         print(repr(result))

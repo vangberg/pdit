@@ -108,27 +108,23 @@ class XeusPythonExecutor:
         return ansi_escape.sub('', text)
 
     def _process_mime_data(self, data: Dict) -> List[OutputItem]:
-        """Process MIME bundle data into OutputItems."""
+        """Process MIME bundle data into OutputItems.
+
+        Passes through MIME types directly instead of translating to custom types.
+        Uses priority order: image > html > json > plain text.
+        """
         output: List[OutputItem] = []
 
-        # Priority order for MIME types
+        # Priority order for MIME types - pass through directly
         if 'image/png' in data:
-            img_data = data['image/png']
-            # Already base64 encoded
-            output.append(OutputItem(type="image", content=f"data:image/png;base64,{img_data}"))
+            output.append(OutputItem(type="image/png", content=data['image/png']))
         elif 'text/html' in data:
-            html = data['text/html']
-            output.append(OutputItem(type="html", content=html))
+            output.append(OutputItem(type="text/html", content=data['text/html']))
         elif 'application/json' in data:
-            # Could be a DataFrame or other structured data
             json_data = data['application/json']
-            if isinstance(json_data, dict) and 'columns' in json_data and 'data' in json_data:
-                output.append(OutputItem(type="dataframe", content=json.dumps(json_data)))
-            else:
-                output.append(OutputItem(type="stdout", content=json.dumps(json_data, indent=2)))
+            output.append(OutputItem(type="application/json", content=json.dumps(json_data)))
         elif 'text/plain' in data:
-            text = data['text/plain']
-            output.append(OutputItem(type="stdout", content=text))
+            output.append(OutputItem(type="text/plain", content=data['text/plain']))
 
         return output
 
@@ -240,7 +236,7 @@ class XeusPythonExecutor:
                 try:
                     # Evaluate the string literal to get its value
                     value = ast.literal_eval(stmt.source)
-                    output = [OutputItem(type="markdown", content=str(value).strip())]
+                    output = [OutputItem(type="text/markdown", content=str(value).strip())]
                 except:
                     output = self._execute_code(stmt.source, stmt.suppress_output)
             else:

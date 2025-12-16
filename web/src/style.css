@@ -422,11 +422,7 @@ h1 {
   letter-spacing: 0.3px;
 }
 
-.output-type-result {
-  color: #fff;
-  background: #16a34a;
-}
-
+/* Stream types */
 .output-type-stdout {
   color: #fff;
   background: #6366f1;
@@ -442,24 +438,32 @@ h1 {
   background: #dc2626;
 }
 
-.output-type-dataframe {
+/* MIME types (slashes replaced with dashes) */
+.output-type-text-plain {
   color: #fff;
-  background: #0891b2;
+  background: #16a34a;
 }
 
-.output-type-image {
-  color: #fff;
-  background: #c026d3;
-}
-
-.output-type-markdown {
+.output-type-text-markdown {
   color: #fff;
   background: #78716c;
 }
 
-.output-type-html {
+.output-type-text-html {
   color: #fff;
   background: #ea580c;
+}
+
+.output-type-application-json {
+  color: #fff;
+  background: #0891b2;
+}
+
+.output-type-image-png,
+.output-type-image-jpeg,
+.output-type-image-svg\+xml {
+  color: #fff;
+  background: #c026d3;
 }
 
 .output-content-wrapper {
