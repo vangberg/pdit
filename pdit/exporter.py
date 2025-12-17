@@ -70,7 +70,7 @@ def generate_html(script_content: str, expressions: list[dict[str, Any]]) -> str
         "code": script_content,
         "expressions": expressions
     }
-    json_data = json.dumps(response_data)
+    json_data = json.dumps(response_data).replace("<", "\\u003c")
     injection_script = f'<script>window.__pdit_response__ = {json_data};</script>'
 
     return template.replace('</head>', f'{injection_script}\n</head>')
