@@ -19,7 +19,6 @@ from .executor import (
     ExpressionInfo,
     ExecutionResult,
     OutputItem,
-    _has_trailing_semicolon,
 )
 
 # Custom DataTables styling to match pdit design
@@ -221,7 +220,6 @@ class Statement:
     source: str
     is_expr: bool
     is_markdown_cell: bool = False
-    suppress_output: bool = False
 
 
 class XeusPythonExecutor:
@@ -297,7 +295,6 @@ IPython.get_ipython().display_formatter.formatters['text/html'].for_type_by_name
 
             is_expr = isinstance(node, ast.Expr)
             is_markdown_cell = is_expr and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)
-            suppress_output = _has_trailing_semicolon(lines, node)
 
             statements.append(Statement(
                 node_index=i,
@@ -305,8 +302,7 @@ IPython.get_ipython().display_formatter.formatters['text/html'].for_type_by_name
                 line_end=line_end,
                 source=source,
                 is_expr=is_expr,
-                is_markdown_cell=is_markdown_cell,
-                suppress_output=suppress_output
+                is_markdown_cell=is_markdown_cell
             ))
 
         return statements
@@ -337,16 +333,12 @@ IPython.get_ipython().display_formatter.formatters['text/html'].for_type_by_name
 
         return output
 
-    def _execute_code(self, code: str, suppress_output: bool = False) -> List[OutputItem]:
+    def _execute_code(self, code: str) -> List[OutputItem]:
         """Execute code in kernel and collect output."""
         if self.kc is None:
             return [OutputItem(type="error", content="Kernel not started")]
 
         output: List[OutputItem] = []
-
-        # Add semicolon to suppress output if needed (IPython convention)
-        if suppress_output and not code.rstrip().endswith(';'):
-            code = code.rstrip() + ';'
 
         msg_id = self.kc.execute(code)
 
@@ -447,9 +439,9 @@ IPython.get_ipython().display_formatter.formatters['text/html'].for_type_by_name
                     value = ast.literal_eval(stmt.source)
                     output = [OutputItem(type="text/markdown", content=str(value).strip())]
                 except:
-                    output = self._execute_code(stmt.source, stmt.suppress_output)
+                    output = self._execute_code(stmt.source)
             else:
-                output = self._execute_code(stmt.source, stmt.suppress_output)
+                output = self._execute_code(stmt.source)
 
             yield ExecutionResult(
                 node_index=stmt.node_index,
