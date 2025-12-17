@@ -1,7 +1,6 @@
 import React, { useImperativeHandle, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import { Expression } from "./execution";
-import { DataframeTable } from "./DataframeTable";
 
 interface OutputProps {
   expression: Expression;
@@ -70,7 +69,6 @@ const getTypeLabel = (type: string): string => {
     case 'text/plain': return 'out';
     case 'text/markdown': return 'md';
     case 'text/html': return 'htm';
-    case 'application/json': return 'df';
     case 'image/png': return 'fig';
     case 'image/jpeg': return 'fig';
     case 'image/svg+xml': return 'svg';
@@ -118,8 +116,6 @@ export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible, d
               <div className="output-content-wrapper">
                 {item.type === 'text/markdown' ? (
                   <Markdown>{item.content}</Markdown>
-                ) : item.type === 'application/json' ? (
-                  <DataframeTable jsonData={item.content} />
                 ) : item.type.startsWith('image/') ? (
                   <ImageOutput content={item.content} mimeType={item.type} />
                 ) : item.type === 'text/html' ? (
