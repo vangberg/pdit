@@ -472,6 +472,48 @@ h1 {
   overflow-x: auto;
 }
 
+.output-debug {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.output-debug-button {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  color: #6b7280;
+  transition: all 0.15s ease;
+}
+
+.output-debug-button:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.output-debug-info {
+  margin-top: 8px;
+  padding: 8px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  max-height: 400px;
+  overflow: auto;
+}
+
+.output-debug-info pre {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #374151;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+}
+
 .output-item.output-stdout .output-content-wrapper {
   color: #4b5563;
 }

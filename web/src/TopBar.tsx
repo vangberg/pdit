@@ -15,6 +15,8 @@ interface TopBarProps {
   onToggleReaderMode?: () => void;
   autorun?: boolean;
   onAutorunToggle?: (enabled: boolean) => void;
+  debugMode?: boolean;
+  onDebugModeToggle?: (enabled: boolean) => void;
   isFuzzyFinderOpen?: boolean;
   onFuzzyFinderOpenChange?: (open: boolean) => void;
   isExecuting?: boolean;
@@ -149,6 +151,8 @@ export function TopBar({
   onToggleReaderMode,
   autorun,
   onAutorunToggle,
+  debugMode,
+  onDebugModeToggle,
   isFuzzyFinderOpen,
   onFuzzyFinderOpenChange,
   isExecuting
@@ -200,6 +204,18 @@ export function TopBar({
             tooltip="Auto-execute script on save or file change"
             showTooltip={hoveredButton === "autorun"}
             onMouseEnter={() => setHoveredButton("autorun")}
+            onMouseLeave={() => setHoveredButton(null)}
+          />
+        )}
+
+        {onDebugModeToggle && (
+          <ToggleSwitch
+            enabled={debugMode ?? false}
+            onToggle={onDebugModeToggle}
+            label="DEBUG"
+            tooltip="Show debug buttons on outputs to inspect raw data"
+            showTooltip={hoveredButton === "debug"}
+            onMouseEnter={() => setHoveredButton("debug")}
             onMouseLeave={() => setHoveredButton(null)}
           />
         )}
