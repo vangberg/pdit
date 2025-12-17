@@ -646,12 +646,11 @@ h1 {
   background: #ffffff;
 }
 
-.output-html-iframe {
+.output-html {
   width: 100%;
-  min-height: 50px;
-  border: none;
   background: #ffffff;
   display: block;
+  overflow-x: auto;
 }
 
 .output-table {
