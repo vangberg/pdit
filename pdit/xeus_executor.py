@@ -53,6 +53,8 @@ class XeusPythonExecutor:
         self.kc.start_channels()
         # Wait for kernel to be ready
         self.kc.wait_for_ready(timeout=30)
+        # Register display formatters
+        self._register_display_formatters()
 
 
     def _execute_silent(self, code: str) -> None:
@@ -69,6 +71,18 @@ class XeusPythonExecutor:
                         break
             except Exception:
                 break
+
+    def _register_display_formatters(self) -> None:
+        """Register custom display formatters for DataFrames."""
+        formatter_code = """
+import IPython
+import itables
+formatter = lambda df, include=None, exclude=None: itables.to_html_datatable(df, display_logo_when_loading=False)
+IPython.get_ipython().display_formatter.formatters['text/html'].for_type_by_name('polars.dataframe.frame', 'DataFrame', formatter)
+IPython.get_ipython().display_formatter.formatters['text/html'].for_type_by_name('pandas.core.frame', 'DataFrame', formatter)
+del formatter
+"""
+        self._execute_silent(formatter_code)
 
     def _parse_script(self, script: str) -> List[Statement]:
         """Parse Python script into statements using AST."""
@@ -257,6 +271,8 @@ class XeusPythonExecutor:
             self.kc = self.km.client()
             self.kc.start_channels()
             self.kc.wait_for_ready(timeout=30)
+            # Re-register display formatters after restart
+            self._register_display_formatters()
 
     def shutdown(self) -> None:
         """Shutdown the kernel."""

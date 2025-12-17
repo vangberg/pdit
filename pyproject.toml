@@ -30,6 +30,8 @@ dependencies = [
     "watchfiles>=0.20.0",
     "jupyter_client>=8.0.0",
     "xeus-python>=0.17.0",
+    "itables>=2.6.1",
+    "ipython>=8.18.1",
 ]
 
 [project.scripts]
