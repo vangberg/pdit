@@ -92,9 +92,9 @@ def start(
     verbose: bool = False,
 ):
     """Start the pdit server with optional script."""
-    # Set verbose mode in executor
-    from .executor import set_verbose_mode
-    set_verbose_mode(verbose)
+    if verbose:
+        # Note: verbose mode is no longer supported with xeus-python executor
+        typer.echo("Warning: --verbose flag is no longer supported", err=True)
 
     # Check if frontend is built
     static_dir = Path(__file__).parent / "_static"

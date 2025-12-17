@@ -1,7 +1,7 @@
 import os
 import sys
 import pytest
-from pdit.executor import PythonExecutor
+from pdit.xeus_executor import XeusPythonExecutor
 
 class TestLocalImport:
     def test_local_import(self, tmp_path):
@@ -9,13 +9,13 @@ class TestLocalImport:
         # Create a dummy local module
         local_module = tmp_path / "local_bar.py"
         local_module.write_text("y = 100")
-        
+
         # Change to the temporary directory
         cwd = os.getcwd()
         os.chdir(tmp_path)
-        
+
         try:
-            executor = PythonExecutor()
+            executor = XeusPythonExecutor()
             
             script = "import local_bar\nprint(local_bar.y)"
             
@@ -36,6 +36,7 @@ class TestLocalImport:
                 pytest.fail(f"Import failed with error: {error_found}")
             
             assert output_found, "Did not find expected output '100'"
-            
+
         finally:
+            executor.shutdown()
             os.chdir(cwd)
