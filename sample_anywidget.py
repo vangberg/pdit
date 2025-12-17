@@ -2,8 +2,12 @@
 AnyWidget Example - Counter Widget
 
 This demonstrates how to use AnyWidget to create interactive widgets.
-Currently, pdit does not render AnyWidget widgets interactively.
-See plans/016-anywidget-integration.md for the implementation plan.
+
+pdit renders AnyWidget widgets with read-only state (MVP). The widget's initial
+state from Python is displayed, but bidirectional communication (clicking buttons
+to update Python state) is not yet implemented.
+
+See plans/016-anywidget-integration.md for Phase 3 (bidirectional communication).
 """
 
 import anywidget
