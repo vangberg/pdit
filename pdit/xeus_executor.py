@@ -21,195 +21,6 @@ from .executor import (
     OutputItem,
 )
 
-# Custom DataTables styling to match pdit design
-DATATABLE_STYLES = """
-/* pdit custom styling for DataTables */
-body {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  background: #ffffff;
-  margin: 20px;
-}
-
-/* Table styling */
-table.dataTable {
-  border-collapse: collapse !important;
-  font-size: 13px !important;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-  border: 1px solid #e5e7eb !important;
-}
-
-/* Header styling */
-table.dataTable thead th {
-  background: #f9fafb !important;
-  font-weight: 600 !important;
-  color: #374151 !important;
-  border: 1px solid #e5e7eb !important;
-  padding: 6px 8px !important;
-  font-size: 12px !important;
-  text-align: left !important;
-}
-
-/* Cell styling */
-table.dataTable tbody td {
-  padding: 4px 8px !important;
-  border: 1px solid #e5e7eb !important;
-  color: #4b5563 !important;
-  background: #ffffff !important;
-}
-
-/* Row hover */
-table.dataTable tbody tr:hover td {
-  background: #f3f4f6 !important;
-}
-
-/* Striped rows - remove default striping */
-table.dataTable.stripe tbody tr.odd,
-table.dataTable.display tbody tr.odd {
-  background: #ffffff !important;
-}
-
-table.dataTable.stripe tbody tr.odd:hover,
-table.dataTable.display tbody tr.odd:hover {
-  background: #f3f4f6 !important;
-}
-
-/* DataTables controls wrapper */
-div.dt-container {
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-  font-size: 11px !important;
-}
-
-/* Search input */
-div.dt-search input {
-  background: transparent !important;
-  border: 1px solid #d1d5db !important;
-  border-radius: 2px !important;
-  padding: 2px 6px !important;
-  font-size: 11px !important;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-  color: #4b5563 !important;
-  height: 22px !important;
-}
-
-div.dt-search input:hover {
-  border-color: #9ca3af !important;
-}
-
-div.dt-search input:focus {
-  outline: none !important;
-  border-color: #3b82f6 !important;
-  background: #f0f9ff !important;
-}
-
-/* Page length select */
-div.dt-length select {
-  background: transparent !important;
-  border: 1px solid #d1d5db !important;
-  border-radius: 2px !important;
-  padding: 2px 6px !important;
-  font-size: 11px !important;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-  color: #4b5563 !important;
-  height: 22px !important;
-}
-
-div.dt-length select:hover {
-  border-color: #9ca3af !important;
-}
-
-div.dt-length select:focus {
-  outline: none !important;
-  border-color: #3b82f6 !important;
-  background: #f0f9ff !important;
-}
-
-/* Pagination buttons */
-div.dt-paging button {
-  background: transparent !important;
-  border: 1px solid #d1d5db !important;
-  border-radius: 2px !important;
-  padding: 2px 8px !important;
-  font-size: 11px !important;
-  cursor: pointer !important;
-  color: #4b5563 !important;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-  transition: all 0.15s !important;
-  height: 22px !important;
-  margin: 0 1px !important;
-}
-
-div.dt-paging button:hover:not(.disabled) {
-  background: #e5e7eb !important;
-  border-color: #9ca3af !important;
-  color: #374151 !important;
-}
-
-div.dt-paging button.disabled {
-  cursor: not-allowed !important;
-  color: #d1d5db !important;
-  border-color: #e5e7eb !important;
-  opacity: 0.6 !important;
-}
-
-div.dt-paging button.current {
-  background: #3b82f6 !important;
-  border-color: #3b82f6 !important;
-  color: #ffffff !important;
-}
-
-/* Info text */
-div.dt-info {
-  color: #6b7280 !important;
-  font-size: 11px !important;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-}
-
-/* Layout adjustments */
-div.dt-layout-row {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  padding: 4px 0 !important;
-}
-
-div.dt-layout-cell {
-  padding: 2px !important;
-}
-
-/* Remove default table styles that might conflict */
-table.dataTable.no-footer {
-  border-bottom: 1px solid #e5e7eb !important;
-}
-
-/* Sort icons */
-table.dataTable thead th.dt-orderable-asc,
-table.dataTable thead th.dt-orderable-desc,
-table.dataTable thead th.dt-ordering-asc,
-table.dataTable thead th.dt-ordering-desc {
-  background: #f3f4f6 !important;
-}
-
-/* Small type labels under headers */
-small.itables-dtype {
-  color: #9ca3af !important;
-  font-size: 10px !important;
-}
-
-/* Loading message styling */
-table tbody td {
-  vertical-align: middle !important;
-}
-
-table tbody td a {
-  color: #2563eb !important;
-  text-decoration: none !important;
-}
-
-table tbody td a:hover {
-  text-decoration: underline !important;
-}
-"""
-
 
 @dataclass
 class Statement:
@@ -261,28 +72,23 @@ class XeusPythonExecutor:
 
     def _register_display_formatters(self) -> None:
         """Register custom display formatters for DataFrames."""
-        # Escape the CSS for safe embedding in Python code
-        css_escaped = DATATABLE_STYLES.replace('\\', '\\\\').replace("'", "\\'")
-
-        formatter_code = f"""
+        formatter_code = """
 def _register_pdit_formatter():
     import IPython
     import itables
 
-    STYLES = '''{css_escaped}'''
-
     # Generate offline bundle
     OFFLINE_INIT = itables.javascript.generate_init_offline_itables_html(itables.options.dt_bundle)
 
-    def format_with_styles(df, include=None, exclude=None):
+    def format_datatable(df, include=None, exclude=None):
         html = itables.to_html_datatable(df, display_logo_when_loading=False, connected=False)
-        return f'{{OFFLINE_INIT}}<style>{{STYLES}}</style>{{html}}'
+        return f'{OFFLINE_INIT}{html}'
 
     ip = IPython.get_ipython()
     if ip:
         formatter = ip.display_formatter.formatters['text/html']
-        formatter.for_type_by_name('polars.dataframe.frame', 'DataFrame', format_with_styles)
-        formatter.for_type_by_name('pandas.core.frame', 'DataFrame', format_with_styles)
+        formatter.for_type_by_name('polars.dataframe.frame', 'DataFrame', format_datatable)
+        formatter.for_type_by_name('pandas.core.frame', 'DataFrame', format_datatable)
 
 _register_pdit_formatter()
 del _register_pdit_formatter

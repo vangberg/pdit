@@ -932,3 +932,168 @@ h1 {
   font-size: 11px;
   font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
+
+/* DataTables styling for pandas/polars output */
+table.dataTable {
+  border-collapse: collapse !important;
+  font-size: 13px !important;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+table.dataTable thead th {
+  background: #f9fafb !important;
+  font-weight: 600 !important;
+  color: #374151 !important;
+  border: 1px solid #e5e7eb !important;
+  padding: 6px 8px !important;
+  font-size: 12px !important;
+  text-align: left !important;
+}
+
+table.dataTable tbody td {
+  padding: 4px 8px !important;
+  border: 1px solid #e5e7eb !important;
+  color: #4b5563 !important;
+  background: #ffffff !important;
+}
+
+table.dataTable tbody tr:hover td {
+  background: #f3f4f6 !important;
+}
+
+table.dataTable.stripe tbody tr.odd,
+table.dataTable.display tbody tr.odd {
+  background: #ffffff !important;
+}
+
+table.dataTable.stripe tbody tr.odd:hover,
+table.dataTable.display tbody tr.odd:hover {
+  background: #f3f4f6 !important;
+}
+
+div.dt-container {
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-size: 11px !important;
+}
+
+div.dt-search input {
+  background: transparent !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 2px !important;
+  padding: 2px 6px !important;
+  font-size: 11px !important;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  color: #4b5563 !important;
+  height: 22px !important;
+}
+
+div.dt-search input:hover {
+  border-color: #9ca3af !important;
+}
+
+div.dt-search input:focus {
+  outline: none !important;
+  border-color: #3b82f6 !important;
+  background: #f0f9ff !important;
+}
+
+div.dt-length select {
+  background: transparent !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 2px !important;
+  padding: 2px 6px !important;
+  font-size: 11px !important;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  color: #4b5563 !important;
+  height: 22px !important;
+}
+
+div.dt-length select:hover {
+  border-color: #9ca3af !important;
+}
+
+div.dt-length select:focus {
+  outline: none !important;
+  border-color: #3b82f6 !important;
+  background: #f0f9ff !important;
+}
+
+div.dt-paging button {
+  background: transparent !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 2px !important;
+  padding: 2px 8px !important;
+  font-size: 11px !important;
+  cursor: pointer !important;
+  color: #4b5563 !important;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  transition: all 0.15s !important;
+  height: 22px !important;
+  margin: 0 1px !important;
+}
+
+div.dt-paging button:hover:not(.disabled) {
+  background: #e5e7eb !important;
+  border-color: #9ca3af !important;
+  color: #374151 !important;
+}
+
+div.dt-paging button.disabled {
+  cursor: not-allowed !important;
+  color: #d1d5db !important;
+  border-color: #e5e7eb !important;
+  opacity: 0.6 !important;
+}
+
+div.dt-paging button.current {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+div.dt-info {
+  color: #6b7280 !important;
+  font-size: 11px !important;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+}
+
+div.dt-layout-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 4px 0 !important;
+}
+
+div.dt-layout-cell {
+  padding: 2px !important;
+}
+
+table.dataTable.no-footer {
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+table.dataTable thead th.dt-orderable-asc,
+table.dataTable thead th.dt-orderable-desc,
+table.dataTable thead th.dt-ordering-asc,
+table.dataTable thead th.dt-ordering-desc {
+  background: #f3f4f6 !important;
+}
+
+small.itables-dtype {
+  color: #9ca3af !important;
+  font-size: 10px !important;
+}
+
+table tbody td {
+  vertical-align: middle !important;
+}
+
+table tbody td a {
+  color: #2563eb !important;
+  text-decoration: none !important;
+}
+
+table tbody td a:hover {
+  text-decoration: underline !important;
+}
