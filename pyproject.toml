@@ -7,7 +7,7 @@ name = "pdit"
 version = "0.1.0"
 description = "Interactive Python code editor with inline execution results"
 readme = "README.md"
-requires-python = ">=3.8,<3.14"
+requires-python = ">=3.9,<3.14"
 license = {text = "Private"}
 authors = [
     {name = "Harry Vangberg"},
