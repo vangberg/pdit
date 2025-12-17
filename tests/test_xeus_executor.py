@@ -136,13 +136,25 @@ class TestCodeExecution:
         results = list(executor.execute_script(script))
 
         result = results[1]
-        # xeus-python may split output into multiple items
-        assert len(result.output) >= 1
-        # Check that stdout is present and contains our text
+        # Should have exactly one stdout output (merged)
+        assert len(result.output) == 1
+        assert result.output[0].type == "stdout"
+        assert "Hello, World!" in result.output[0].content
+
+    def test_stdout_merging(self, executor):
+        """Test that consecutive stdout outputs are merged."""
+        script = """for i in range(3):
+    print(i)"""
+        results = list(executor.execute_script(script))
+
+        result = results[1]
+        # Should have exactly one stdout output containing all prints
         stdout_outputs = [o for o in result.output if o.type == "stdout"]
-        assert len(stdout_outputs) >= 1
-        combined_output = "".join(o.content for o in stdout_outputs)
-        assert "Hello, World!" in combined_output
+        assert len(stdout_outputs) == 1
+        content = stdout_outputs[0].content
+        assert "0" in content
+        assert "1" in content
+        assert "2" in content
 
     def test_execute_multiple_statements(self, executor):
         """Test executing multiple statements in sequence."""

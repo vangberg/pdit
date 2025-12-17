@@ -177,10 +177,13 @@ del _register_pdit_formatter
                 # Execution complete
                 break
             elif msg_type == 'stream':
-                # stdout/stderr
+                # stdout/stderr - merge consecutive outputs of same type
                 stream_name = content['name']  # 'stdout' or 'stderr'
                 text = content['text']
-                output.append(OutputItem(type=stream_name, content=text))
+                if output and output[-1].type == stream_name:
+                    output[-1] = OutputItem(type=stream_name, content=output[-1].content + text)
+                else:
+                    output.append(OutputItem(type=stream_name, content=text))
             elif msg_type == 'execute_result':
                 # Expression result
                 data = content['data']
