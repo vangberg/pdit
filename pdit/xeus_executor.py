@@ -291,6 +291,27 @@ class XeusPythonExecutor:
                 is_invisible=len(output) == 0
             )
 
+    def send_comm_msg(self, comm_id: str, data: Dict) -> None:
+        """Send a comm_msg to the kernel for widget communication.
+        
+        Args:
+            comm_id: The comm channel ID (widget model_id)
+            data: The data to send (typically contains 'method' and state updates)
+        """
+        if self.kc is None:
+            return
+        
+        # Send comm_msg using shell channel
+        msg_content = {
+            'comm_id': comm_id,
+            'data': data
+        }
+        self.kc.session.send(
+            self.kc.shell_channel.socket,
+            'comm_msg',
+            msg_content
+        )
+
     def reset(self) -> None:
         """Reset the kernel (restart it)."""
         # Clear the comm registry when resetting

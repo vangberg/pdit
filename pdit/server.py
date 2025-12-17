@@ -7,15 +7,17 @@ Provides HTTP endpoints for:
 - Resetting execution state
 - Health checks
 - Serving static frontend files
+- WebSocket for widget bidirectional communication
 """
 
+import asyncio
 import os
 import threading
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
@@ -251,6 +253,64 @@ async def reset(request: ResetRequest):
     executor = get_or_create_session(request.sessionId)
     executor.reset()
     return {"status": "ok"}
+
+
+@app.websocket("/api/comm/{session_id}")
+async def comm_websocket(websocket: WebSocket, session_id: str):
+    """WebSocket endpoint for bidirectional widget communication.
+    
+    Allows widgets to send state updates to the kernel and receive
+    updates back from the kernel.
+    
+    Args:
+        websocket: WebSocket connection
+        session_id: Session ID to identify the executor
+    
+    Message format (frontend -> backend):
+        {
+            "type": "comm_msg",
+            "comm_id": "<widget_model_id>",
+            "data": {
+                "method": "update",
+                "state": { ... }
+            }
+        }
+    """
+    await websocket.accept()
+    
+    try:
+        executor = get_or_create_session(session_id)
+        
+        while True:
+            # Receive messages from frontend
+            data = await websocket.receive_json()
+            
+            if data.get('type') == 'comm_msg':
+                comm_id = data.get('comm_id')
+                comm_data = data.get('data', {})
+                
+                if comm_id:
+                    # Forward comm_msg to kernel
+                    executor.send_comm_msg(comm_id, comm_data)
+                    
+                    # Update local comm registry with new state
+                    if comm_id in executor._comm_registry:
+                        state = comm_data.get('state', {})
+                        if state and 'data' in executor._comm_registry[comm_id]:
+                            current_state = executor._comm_registry[comm_id]['data'].get('state', {})
+                            current_state.update(state)
+                    
+                    # Acknowledge the message
+                    await websocket.send_json({
+                        "type": "comm_msg_ack",
+                        "comm_id": comm_id
+                    })
+                    
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        # Log error but don't crash
+        print(f"WebSocket error: {e}")
 
 
 @app.get("/api/watch-file")

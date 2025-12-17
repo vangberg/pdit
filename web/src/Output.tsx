@@ -2,12 +2,14 @@ import React, { useImperativeHandle, useRef, useEffect, useState } from "react";
 import Markdown from "react-markdown";
 import { Expression } from "./execution";
 import { DataframeTable } from "./DataframeTable";
+import { getCommManager } from "./comm-manager";
 
 interface OutputProps {
   expression: Expression;
   index: number;
   ref?: (element: HTMLDivElement | null) => void;
   allInvisible?: boolean;
+  sessionId?: string;
 }
 
 // Component for rendering a single image output item
@@ -77,8 +79,8 @@ interface WidgetData {
 }
 
 // Component for rendering AnyWidget widgets
-// Uses ESM code from widget state to render in an iframe
-const WidgetOutput: React.FC<{ data: string }> = ({ data }) => {
+// Uses ESM code from widget state to render in an iframe with bidirectional comm
+const WidgetOutput: React.FC<{ data: string; sessionId?: string }> = ({ data, sessionId }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,7 +108,9 @@ const WidgetOutput: React.FC<{ data: string }> = ({ data }) => {
         return;
       }
 
-      // Create HTML document for iframe
+      const modelId = widget.model_id;
+
+      // Create HTML document for iframe with bidirectional communication via postMessage
       const html = `
 <!DOCTYPE html>
 <html>
@@ -124,28 +128,79 @@ const WidgetOutput: React.FC<{ data: string }> = ({ data }) => {
   <script type="module">
     // Widget state from Python
     const initialState = ${JSON.stringify(state)};
+    const modelId = ${JSON.stringify(modelId)};
     
-    // Simple model implementation (read-only for now)
+    // Model implementation with bidirectional communication
     const model = {
       _state: { ...initialState },
-      _callbacks: {},
+      _callbacks: new Map(),
+      _pendingChanges: {},
+      
       get(key) {
         return this._state[key];
       },
+      
       set(key, value) {
-        this._state[key] = value;
-        // Trigger callbacks
-        const cb = this._callbacks['change:' + key];
-        if (cb) cb();
+        const oldValue = this._state[key];
+        if (oldValue !== value) {
+          this._state[key] = value;
+          this._pendingChanges[key] = value;
+          // Trigger local callbacks
+          this._triggerCallbacks('change:' + key);
+        }
       },
+      
       save_changes() {
-        // In full implementation, this would send to kernel
-        console.log('[Widget] save_changes called - bidirectional comm not implemented');
+        // Send state update to parent window (which forwards to kernel)
+        if (Object.keys(this._pendingChanges).length > 0) {
+          window.parent.postMessage({
+            type: 'widget_state_update',
+            modelId: modelId,
+            state: this._pendingChanges
+          }, '*');
+          this._pendingChanges = {};
+        }
       },
+      
       on(event, callback) {
-        this._callbacks[event] = callback;
+        const callbacks = this._callbacks.get(event) || [];
+        callbacks.push(callback);
+        this._callbacks.set(event, callbacks);
+      },
+      
+      off(event, callback) {
+        if (!callback) {
+          this._callbacks.delete(event);
+        } else {
+          const callbacks = this._callbacks.get(event) || [];
+          const index = callbacks.indexOf(callback);
+          if (index >= 0) callbacks.splice(index, 1);
+        }
+      },
+      
+      _triggerCallbacks(event) {
+        const callbacks = this._callbacks.get(event) || [];
+        for (const cb of callbacks) {
+          try { cb(); } catch (err) { console.error('Callback error:', err); }
+        }
+      },
+      
+      _updateFromParent(state) {
+        for (const [key, value] of Object.entries(state)) {
+          if (this._state[key] !== value) {
+            this._state[key] = value;
+            this._triggerCallbacks('change:' + key);
+          }
+        }
       }
     };
+    
+    // Listen for state updates from parent
+    window.addEventListener('message', (event) => {
+      if (event.data?.type === 'widget_state_from_kernel' && event.data?.modelId === modelId) {
+        model._updateFromParent(event.data.state);
+      }
+    });
     
     // Load and execute the ESM code
     const esm = ${JSON.stringify(esm)};
@@ -176,10 +231,27 @@ const WidgetOutput: React.FC<{ data: string }> = ({ data }) => {
       if (iframe) {
         iframe.srcdoc = html;
       }
+
+      // Set up message handler to forward widget state updates to CommManager
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data?.type === 'widget_state_update' && event.data?.modelId === modelId) {
+          // Forward to kernel via CommManager
+          if (sessionId) {
+            const commManager = getCommManager(sessionId);
+            commManager.sendCommMsg(modelId, {
+              method: 'update',
+              state: event.data.state
+            });
+          }
+        }
+      };
+
+      window.addEventListener('message', handleMessage);
+      return () => window.removeEventListener('message', handleMessage);
     } catch (e) {
       setError(`Failed to parse widget data: ${e}`);
     }
-  }, [data]);
+  }, [data, sessionId]);
 
   // Auto-resize iframe
   useEffect(() => {
@@ -243,7 +315,7 @@ const getTypeLabel = (type: string): string => {
   }
 };
 
-export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible }) => {
+export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible, sessionId }) => {
   const elementRef = useRef<HTMLDivElement | null>(null);
 
   useImperativeHandle(ref, () => elementRef.current as HTMLDivElement, []);
@@ -274,7 +346,7 @@ export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible })
               ) : item.type === 'text/html' ? (
                 <HtmlOutput html={item.content} />
               ) : item.type === 'application/vnd.jupyter.widget-view+json' ? (
-                <WidgetOutput data={item.content} />
+                <WidgetOutput data={item.content} sessionId={sessionId} />
               ) : (
                 <pre>{item.content}</pre>
               )}

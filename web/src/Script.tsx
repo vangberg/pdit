@@ -402,6 +402,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
             lineGroupLayouts={lineGroupLayouts}
             lineGroupHeights={lineGroupHeights}
             readerMode={readerMode}
+            sessionId={sessionId}
           />
         </div>
       </div>

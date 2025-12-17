@@ -276,9 +276,9 @@ This allows widgets to be displayed but not interactive.
 
 ### Full Support (Interactive Widgets)
 
-3. ⬜ **Backend**: WebSocket endpoint for comm messages
-4. ⬜ **Frontend**: CommManager for bidirectional communication
-5. ⬜ **Frontend**: Proper model/view binding with state updates
+3. ✅ **Backend**: WebSocket endpoint for comm messages
+4. ✅ **Frontend**: CommManager for bidirectional communication
+5. ✅ **Frontend**: Proper model/view binding with state updates
 
 ## Alternative Approaches
 
