@@ -265,17 +265,27 @@ class XeusPythonExecutor:
         css_escaped = DATATABLE_STYLES.replace('\\', '\\\\').replace("'", "\\'")
 
         formatter_code = f"""
-import IPython
-import itables
+def _register_pdit_formatter():
+    import IPython
+    import itables
 
-STYLES = '''{css_escaped}'''
+    STYLES = '''{css_escaped}'''
 
-def format_with_styles(df, include=None, exclude=None):
-    html = itables.to_html_datatable(df, display_logo_when_loading=False)
-    return f'<style>{{STYLES}}</style>{{html}}'
+    # Generate offline bundle
+    OFFLINE_INIT = itables.javascript.generate_init_offline_itables_html(itables.options.dt_bundle)
 
-IPython.get_ipython().display_formatter.formatters['text/html'].for_type_by_name('polars.dataframe.frame', 'DataFrame', format_with_styles)
-IPython.get_ipython().display_formatter.formatters['text/html'].for_type_by_name('pandas.core.frame', 'DataFrame', format_with_styles)
+    def format_with_styles(df, include=None, exclude=None):
+        html = itables.to_html_datatable(df, display_logo_when_loading=False, connected=False)
+        return f'{{OFFLINE_INIT}}<style>{{STYLES}}</style>{{html}}'
+
+    ip = IPython.get_ipython()
+    if ip:
+        formatter = ip.display_formatter.formatters['text/html']
+        formatter.for_type_by_name('polars.dataframe.frame', 'DataFrame', format_with_styles)
+        formatter.for_type_by_name('pandas.core.frame', 'DataFrame', format_with_styles)
+
+_register_pdit_formatter()
+del _register_pdit_formatter
 """
         self._execute_silent(formatter_code)
 
