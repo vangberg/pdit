@@ -26,6 +26,7 @@ export class WidgetModel {
   private _state: Record<string, unknown>;
   private _callbacks: Map<string, StateChangeCallback[]> = new Map();
   private _commManager: CommManager;
+  private _pendingChanges: Record<string, unknown> = {};
   readonly commId: string;
 
   constructor(commId: string, initialState: Record<string, unknown>, commManager: CommManager) {
@@ -49,19 +50,23 @@ export class WidgetModel {
     const oldValue = this._state[key];
     if (oldValue !== value) {
       this._state[key] = value;
+      this._pendingChanges[key] = value;
       this._triggerCallbacks(`change:${key}`);
     }
   }
 
   /**
    * Save changes to the kernel.
-   * Sends all pending state changes via the CommManager.
+   * Sends only the pending state changes via the CommManager.
    */
   save_changes(): void {
-    this._commManager.sendCommMsg(this.commId, {
-      method: 'update',
-      state: this._state
-    });
+    if (Object.keys(this._pendingChanges).length > 0) {
+      this._commManager.sendCommMsg(this.commId, {
+        method: 'update',
+        state: this._pendingChanges
+      });
+      this._pendingChanges = {};
+    }
   }
 
   /**

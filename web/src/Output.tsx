@@ -152,12 +152,13 @@ const WidgetOutput: React.FC<{ data: string; sessionId?: string }> = ({ data, se
       
       save_changes() {
         // Send state update to parent window (which forwards to kernel)
+        // Use window.location.origin for security (same-origin only)
         if (Object.keys(this._pendingChanges).length > 0) {
           window.parent.postMessage({
             type: 'widget_state_update',
             modelId: modelId,
             state: this._pendingChanges
-          }, '*');
+          }, window.location.origin);
           this._pendingChanges = {};
         }
       },

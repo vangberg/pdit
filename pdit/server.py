@@ -11,6 +11,7 @@ Provides HTTP endpoints for:
 """
 
 import asyncio
+import logging
 import os
 import threading
 from contextlib import asynccontextmanager
@@ -27,6 +28,9 @@ from .xeus_executor import XeusPythonExecutor
 from .executor import ExecutionResult
 from .sse import format_sse
 from .file_watcher import FileWatcher
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 # Global shutdown event for SSE connections (threading.Event works across threads)
 shutdown_event = threading.Event()
@@ -310,7 +314,7 @@ async def comm_websocket(websocket: WebSocket, session_id: str):
         pass
     except Exception as e:
         # Log error but don't crash
-        print(f"WebSocket error: {e}")
+        logger.error(f"WebSocket error for session {session_id}: {e}")
 
 
 @app.get("/api/watch-file")
