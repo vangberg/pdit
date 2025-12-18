@@ -19,3 +19,4 @@ When a todo is done, delete it.
 5. Render top-level f-strings as Markdown.
 6. Text-wrap output, even when there's no whitespace.
 7. `"""` should trigger `"""\n[CURSOR]\n"""`
+8. Disable CodeMirror code folding
