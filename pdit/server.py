@@ -157,6 +157,23 @@ async def health():
     return {"status": "ok"}
 
 
+@app.post("/api/init-session")
+async def init_session(request: ResetRequest):
+    """Initialize a session and start its kernel.
+
+    This endpoint is called on page load to start the kernel immediately,
+    so it's ready when the user first runs code.
+
+    Args:
+        request: Session ID to initialize
+
+    Returns:
+        Status OK
+    """
+    get_or_create_session(request.sessionId)
+    return {"status": "ok"}
+
+
 @app.post("/api/execute-script")
 async def execute_script(request: ExecuteScriptRequest):
     """Stream execution results as Server-Sent Events.

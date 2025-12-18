@@ -53,7 +53,14 @@ export function useScriptFile(
 
   // Single effect for both loading AND watching
   useEffect(() => {
-    // No script path → use default
+    // Initialize session to start kernel immediately (all modes)
+    fetch("/api/init-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId }),
+    }).catch((err) => console.error("Failed to init session:", err));
+
+    // No script path → use default (scratchpad mode)
     if (!scriptPath) {
       setCode(defaultCode);
       setDiskContent(defaultCode);
