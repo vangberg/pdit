@@ -530,18 +530,18 @@ h1 {
   color: #4b5563;
 }
 
-.output-item.output-markdown {
+.output-item.output-text-markdown {
   color: #374151;
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.6;
 }
 
-.output-item.output-markdown h1,
-.output-item.output-markdown h2,
-.output-item.output-markdown h3,
-.output-item.output-markdown h4,
-.output-item.output-markdown h5,
-.output-item.output-markdown h6 {
+.output-item.output-text-markdown h1,
+.output-item.output-text-markdown h2,
+.output-item.output-text-markdown h3,
+.output-item.output-text-markdown h4,
+.output-item.output-text-markdown h5,
+.output-item.output-text-markdown h6 {
   margin-top: 0.5em;
   margin-bottom: 0.25em;
   font-weight: 600;
@@ -549,43 +549,43 @@ h1 {
   text-align: left;
 }
 
-.output-item.output-markdown h1:first-child,
-.output-item.output-markdown h2:first-child,
-.output-item.output-markdown h3:first-child,
-.output-item.output-markdown h4:first-child,
-.output-item.output-markdown h5:first-child,
-.output-item.output-markdown h6:first-child {
+.output-item.output-text-markdown h1:first-child,
+.output-item.output-text-markdown h2:first-child,
+.output-item.output-text-markdown h3:first-child,
+.output-item.output-text-markdown h4:first-child,
+.output-item.output-text-markdown h5:first-child,
+.output-item.output-text-markdown h6:first-child {
   margin-top: 0;
 }
 
-.output-item.output-markdown h1 { font-size: 1.5em; }
-.output-item.output-markdown h2 { font-size: 1.3em; }
-.output-item.output-markdown h3 { font-size: 1.1em; }
+.output-item.output-text-markdown h1 { font-size: 1.5em; }
+.output-item.output-text-markdown h2 { font-size: 1.3em; }
+.output-item.output-text-markdown h3 { font-size: 1.1em; }
 
-.output-item.output-markdown p {
+.output-item.output-text-markdown p {
   margin: 0.5em 0;
 }
 
-.output-item.output-markdown p:first-child {
+.output-item.output-text-markdown p:first-child {
   margin-top: 0;
 }
 
-.output-item.output-markdown ul,
-.output-item.output-markdown ol {
+.output-item.output-text-markdown ul,
+.output-item.output-text-markdown ol {
   margin: 0.5em 0;
   padding-left: 1.5em;
 }
 
-.output-item.output-markdown ul:first-child,
-.output-item.output-markdown ol:first-child {
+.output-item.output-text-markdown ul:first-child,
+.output-item.output-text-markdown ol:first-child {
   margin-top: 0;
 }
 
-.output-item.output-markdown li {
+.output-item.output-text-markdown li {
   margin: 0.25em 0;
 }
 
-.output-item.output-markdown code {
+.output-item.output-text-markdown code {
   font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   background: #f3f4f6;
   padding: 0.1em 0.3em;
@@ -593,7 +593,7 @@ h1 {
   font-size: 0.9em;
 }
 
-.output-item.output-markdown pre {
+.output-item.output-text-markdown pre {
   background: #f3f4f6;
   padding: 0.75em;
   border-radius: 4px;
@@ -601,28 +601,28 @@ h1 {
   margin: 0.5em 0;
 }
 
-.output-item.output-markdown pre code {
+.output-item.output-text-markdown pre code {
   background: none;
   padding: 0;
 }
 
-.output-item.output-markdown blockquote {
+.output-item.output-text-markdown blockquote {
   border-left: 3px solid #d1d5db;
   margin: 0.5em 0;
   padding-left: 1em;
   color: #6b7280;
 }
 
-.output-item.output-markdown a {
+.output-item.output-text-markdown a {
   color: #2563eb;
   text-decoration: underline;
 }
 
-.output-item.output-markdown strong {
+.output-item.output-text-markdown strong {
   font-weight: 600;
 }
 
-.output-item.output-markdown em {
+.output-item.output-text-markdown em {
   font-style: italic;
 }
 
