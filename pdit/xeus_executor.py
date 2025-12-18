@@ -7,6 +7,7 @@ Uses xeus-python kernel with jupyter_client for reliable messaging.
 import ast
 import io
 import json
+import logging
 import re
 import traceback
 from dataclasses import dataclass
@@ -20,6 +21,9 @@ from .executor import (
     ExecutionResult,
     OutputItem,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -56,19 +60,23 @@ class XeusPythonExecutor:
 
 
     def _execute_silent(self, code: str) -> None:
-        """Execute code without capturing output (for setup)."""
+        """Execute code without capturing output (for setup).
+
+        Raises:
+            Exception: If execution fails or times out
+        """
         if self.kc is None:
-            return
+            raise RuntimeError("Kernel client not initialized")
         msg_id = self.kc.execute(code, silent=True)
         # Wait for execution to complete
         while True:
-            try:
-                msg = self.kc.get_iopub_msg(timeout=5)
-                if msg['parent_header'].get('msg_id') == msg_id:
-                    if msg['msg_type'] == 'status' and msg['content']['execution_state'] == 'idle':
-                        break
-            except Exception:
-                break
+            msg = self.kc.get_iopub_msg(timeout=5)
+            if msg['parent_header'].get('msg_id') == msg_id:
+                if msg['msg_type'] == 'status' and msg['content']['execution_state'] == 'idle':
+                    break
+                elif msg['msg_type'] == 'error':
+                    # Formatter registration or other setup failed
+                    raise RuntimeError(f"Silent execution failed: {msg['content']['ename']}: {msg['content']['evalue']}")
 
     def _register_display_formatters(self) -> None:
         """Register custom display formatters for DataFrames."""
@@ -293,5 +301,6 @@ del _register_pdit_formatter
         """Cleanup on deletion."""
         try:
             self.shutdown()
-        except:
-            pass
+        except Exception as e:
+            # Suppress exceptions during cleanup to avoid issues during interpreter shutdown
+            logger.debug(f"Exception during executor cleanup: {e}")
