@@ -51,24 +51,6 @@ const HtmlOutput: React.FC<{ html: string }> = ({ html }) => {
 // Sanitize type for CSS class names (replace slashes with dashes)
 const sanitizeTypeForCss = (type: string): string => type.replace(/\//g, '-');
 
-// Get a fun type label for output items
-const getTypeLabel = (type: string): string => {
-  switch (type) {
-    // Stream types
-    case 'stdout': return '>>>';
-    case 'stderr': return 'err';
-    case 'error': return '!!!';
-    // MIME types
-    case 'text/plain': return 'out';
-    case 'text/markdown': return 'md';
-    case 'text/html': return 'htm';
-    case 'image/png': return 'fig';
-    case 'image/jpeg': return 'fig';
-    case 'image/svg+xml': return 'svg';
-    default: return '~~~';
-  }
-};
-
 export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible, debugMode }) => {
   const elementRef = useRef<HTMLDivElement | null>(null);
   const [expandedDebugItems, setExpandedDebugItems] = useState<Set<number>>(new Set());
@@ -103,9 +85,6 @@ export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible, d
               key={i}
               className={`output-item output-${sanitizeTypeForCss(item.type)}`}
             >
-              <span className={`output-type-badge output-type-${sanitizeTypeForCss(item.type)}`}>
-                {getTypeLabel(item.type)}
-              </span>
               <div className="output-content-wrapper">
                 {item.type === 'text/markdown' ? (
                   <Markdown>{item.content}</Markdown>

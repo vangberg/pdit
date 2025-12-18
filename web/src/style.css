@@ -365,9 +365,7 @@ h1 {
   padding-right: 8px;
 }
 
-.output-content.reader-mode .output-type-badge {
-  display: none;
-}
+
 
 .output-group-invisible {
   background: transparent;
@@ -410,33 +408,7 @@ h1 {
   gap: 6px;
 }
 
-.output-type-badge {
-  font-size: 9px;
-  font-weight: 500;
-  padding: 1px 4px;
-  border-radius: 3px;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
-  flex-shrink: 0;
-  margin-top: 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
 
-/* Stream types */
-.output-type-stdout {
-  color: #fff;
-  background: #6366f1;
-}
-
-.output-type-stderr {
-  color: #fff;
-  background: #dc2626;
-}
-
-.output-type-error {
-  color: #fff;
-  background: #dc2626;
-}
 
 /* MIME types (slashes replaced with dashes) */
 .output-type-text-plain {
