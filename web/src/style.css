@@ -892,7 +892,7 @@ h1 {
 }
 
 .fuzzy-match-highlight {
-  color: var(--accent);
+  color: #fff;
   font-weight: 700;
 }
 
