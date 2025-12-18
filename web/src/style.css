@@ -1,17 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&display=swap');
+
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  line-height: 1.4;
   font-weight: 400;
 
   color-scheme: light;
-  color: rgba(0, 0, 0, 0.87);
-  background-color: #ffffff;
+  color: #000;
+  background-color: #fff;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+
+  /* Neobrutal palette - light theme */
+  --bg-primary: #fff;
+  --bg-secondary: #f5f5f5;
+  --bg-tertiary: #efefef;
+  --border: #000;
+  --accent: #ff6b35;
+  --accent-alt: #0088cc;
+  --text-primary: #000;
+  --text-secondary: #333;
+  --text-dim: #666;
+  --error: #cc0000;
+  --warning: #cc8800;
 }
 
 body {
@@ -29,18 +44,18 @@ body {
 }
 
 .top-bar {
-  background: #374151;
+  background: #2d3748;
   padding: 0.5rem 1rem;
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  border-bottom: 1px solid #4b5563;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  border-bottom: 1px solid #1f2937;
 }
 
 .top-bar-content {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
   align-items: center;
   width: 100%;
 }
@@ -51,24 +66,28 @@ body {
 
 .top-bar-button {
   background: transparent;
-  color: #93c5fd;
-  border: 1px solid #93c5fd;
-  border-radius: 4px;
-  padding: 0.3rem 0.6rem;
+  color: #e5e7eb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0;
+  padding: 0.4rem 0.8rem;
   font-size: 0.75rem;
   cursor: pointer;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  transition: all 0.2s;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  transition: all 0.1s;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .top-bar-button:hover:not(:disabled) {
-  background: rgba(147, 197, 253, 0.2);
+  background: #93c5fd;
+  color: #1f2937;
 }
 
 .top-bar-button:disabled {
   cursor: not-allowed;
-  color: #9ca3af;
-  border-color: #9ca3af;
+  color: #6b7280;
+  border-color: #6b7280;
 }
 
 .top-bar-tooltip {
@@ -76,15 +95,15 @@ body {
   top: calc(100% + 4px);
   left: 50%;
   transform: translateX(-50%);
-  background: #f9fafb;
-  color: #374151;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  background: #2d3748;
+  color: #e5e7eb;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0;
   font-size: 0.7rem;
   font-weight: 500;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border: 1px solid #e5e7eb;
   z-index: 1000;
   pointer-events: none;
 }
@@ -97,13 +116,13 @@ body {
 }
 
 .top-bar-status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+  width: 8px;
+  height: 8px;
+  border: 1px solid #e5e7eb;
 }
 
 .top-bar-status-dot.ready {
-  background: #60a5fa;
+  background: #93c5fd;
 }
 
 .top-bar-status-dot.initializing {
@@ -114,68 +133,72 @@ body {
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
-  border-radius: 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--warning);
+  border-radius: 0;
   padding: 0.25rem 0.375rem;
   font-size: 0.7rem;
   margin-left: 0.75rem;
 }
 
 .top-bar-conflict-compact-message {
-  color: #92400e;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  color: var(--warning);
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
   white-space: nowrap;
   font-size: 0.875rem;
 }
 
 .top-bar-conflict-button-primary {
   position: relative;
-  background: #0066cc;
-  color: white;
-  border: none;
-  border-radius: 4px;
+  background: var(--accent);
+  color: var(--bg-primary);
+  border: 1px solid var(--accent);
+  border-radius: 0;
   padding: 0.25rem 0.5rem;
   font-size: 0.7rem;
   cursor: pointer;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  transition: background 0.2s;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  transition: all 0.1s;
+  font-weight: 600;
 }
 
 .top-bar-conflict-button-primary:hover {
-  background: #0052a3;
+  background: var(--accent-alt);
+  border-color: var(--accent-alt);
 }
 
 .top-bar-conflict-button-secondary {
   position: relative;
-  background: white;
-  color: #333;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 0;
   padding: 0.25rem 0.5rem;
   font-size: 0.7rem;
   cursor: pointer;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  transition: all 0.2s;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  transition: all 0.1s;
+  font-weight: 500;
 }
 
 .top-bar-conflict-button-secondary:hover {
-  background: #f5f5f5;
-  border-color: #999;
+  background: var(--accent);
+  color: var(--bg-primary);
 }
 
 .top-bar-status-text {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  font-weight: 500;
 }
 
 .top-bar-status-text.ready {
-  color: #60a5fa;
+  color: var(--accent);
 }
 
 .top-bar-status-text.initializing {
-  color: #f97316;
+  color: var(--warning);
 }
 
 /* Toggle switch styles */
@@ -188,83 +211,86 @@ body {
   align-items: center;
   gap: 0.5rem;
   background: transparent;
-  border: 1px solid #93c5fd;
-  border-radius: 4px;
-  padding: 0.3rem 0.6rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0;
+  padding: 0.4rem 0.8rem;
   cursor: pointer;
   font-size: 0.75rem;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  transition: all 0.2s;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  transition: all 0.1s;
+  font-weight: 500;
+  color: #e5e7eb;
 }
 
 .top-bar-toggle:hover {
-  background: rgba(147, 197, 253, 0.2);
+  background: #93c5fd;
+  color: #1f2937;
 }
 
 .top-bar-toggle.enabled {
-  border-color: #22c55e;
-  background: rgba(34, 197, 94, 0.1);
+  border-color: #93c5fd;
+  background: transparent;
+  color: #93c5fd;
 }
 
 .top-bar-toggle-label {
   font-size: 0.75rem;
-  color: #93c5fd;
+  color: currentColor;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .top-bar-toggle.enabled .top-bar-toggle-label {
-  color: #22c55e;
+  color: #93c5fd;
 }
 
 .top-bar-toggle-switch {
-  width: 28px;
-  height: 14px;
-  background: #4b5563;
-  border-radius: 7px;
+  width: 24px;
+  height: 12px;
+  background: #6b7280;
+  border: 1px solid #6b7280;
+  border-radius: 0;
   position: relative;
-  transition: background 0.2s;
+  transition: all 0.1s;
 }
 
 .top-bar-toggle.enabled .top-bar-toggle-switch {
-  background: #22c55e;
+  background: #6b7280;
+  border-color: #93c5fd;
 }
 
 .top-bar-toggle-knob {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 10px;
-  height: 10px;
-  background: #fff;
-  border-radius: 50%;
-  transition: transform 0.2s;
+  top: 1px;
+  left: 1px;
+  width: 8px;
+  height: 8px;
+  background: #e5e7eb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0;
+  transition: transform 0.1s;
 }
 
 .top-bar-toggle.enabled .top-bar-toggle-knob {
-  transform: translateX(14px);
+  transform: translateX(12px);
 }
 
-/* Grid layout ensures both columns match the height of the tallest content.
-   - flex: 1 makes container fill remaining space after top-bar
-   - Grid columns automatically stretch to match each other's height
-   - overflow-y: auto provides scrolling when content exceeds viewport
-   - This allows editor-half to grow beyond viewport while output-half stretches to match */
- .split-container {
-   display: grid;
-   grid-template-columns: 1fr 1fr;
-   flex: 1;
-   min-height: 0;
-   overflow-y: auto;
-   overflow-x: hidden;
- }
-
+.split-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-top: 1px solid var(--border);
+}
 
 .editor-half {
   display: flex;
   flex-direction: column;
   flex: 0 0 50%;
   min-width: 0;
+  border-right: 1px solid var(--border);
 }
 
 .output-half {
@@ -304,10 +330,12 @@ h1 {
   display: flex;
   flex-direction: row;
   width: 100%;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
+  border: none;
+  border-left: 4px solid var(--border);
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
+  background: var(--bg-primary);
 }
 
 #editor {
@@ -318,14 +346,15 @@ h1 {
 
 #editor-preview {
   flex: 1;
-  border-left: 1px solid #e5e5e5;
+  border-left: 1px solid var(--border);
   padding-left: 0.5rem;
 }
-
 
 .cm-editor {
   font-size: 14px;
   min-width: 0;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .cm-focused {
@@ -334,28 +363,33 @@ h1 {
 
 #output {
   font-size: 13px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
   width: 100%;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  background: #f8f8f8;
-  border-left: 1px solid #e0e0e0;
+  background: #fff;
+  border-left: none;
+  padding-right: 12px;
+  scrollbar-gutter: stable;
 }
 
 .output-content {
   display: flex;
   flex-direction: column;
   position: relative;
-  padding: 2px 0;
+  padding: 6px;
+  gap: 4px;
 }
 
 .output-group {
-  background: #ffffff;
-  border: 1px solid #d0d0d0;
-  margin: 1px 6px;
-  padding: 4px 8px;
-  border-radius: 6px;
+  background: transparent;
+  border: none;
+  border-left: 3px solid #93c5fd;
+  margin: 0;
+  padding: 0 6px;
+  padding-left: 8px;
+  border-radius: 0;
 }
 
 .output-content.reader-mode .output-group {
@@ -363,9 +397,8 @@ h1 {
   border: none;
   padding-left: 8px;
   padding-right: 8px;
+  border-left: 2px solid var(--border);
 }
-
-
 
 .output-group-invisible {
   background: transparent;
@@ -379,7 +412,7 @@ h1 {
 }
 
 .output-container {
-  padding: 2px 0;
+  padding: 0;
 }
 
 .output-container-invisible {
@@ -397,78 +430,60 @@ h1 {
 .output-line pre {
   margin: 0;
   padding: 0;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.4;
+  color: var(--text-primary);
 }
 
 .output-item {
-  color: #374151;
+  color: var(--text-primary);
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: 0;
+  margin: 0;
 }
 
 
-
-/* MIME types (slashes replaced with dashes) */
-.output-type-text-plain {
-  color: #fff;
-  background: #16a34a;
-}
-
-.output-type-text-markdown {
-  color: #fff;
-  background: #78716c;
-}
-
-.output-type-text-html {
-  color: #fff;
-  background: #ea580c;
-}
-
-.output-type-image-png,
-.output-type-image-jpeg,
-.output-type-image-svg\+xml {
-  color: #fff;
-  background: #c026d3;
-}
 
 .output-content-wrapper {
   flex: 1;
   min-width: 0;
   overflow-x: auto;
+  width: 100%;
 }
 
 .output-debug {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #e5e7eb;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--text-dim);
 }
 
 .output-debug-button {
   font-size: 10px;
   padding: 2px 6px;
-  background: #f3f4f6;
-  border: 1px solid #d1d5db;
-  border-radius: 3px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 0;
   cursor: pointer;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-  color: #6b7280;
-  transition: all 0.15s ease;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  color: var(--text-primary);
+  transition: all 0.1s;
+  font-weight: 500;
 }
 
 .output-debug-button:hover {
-  background: #e5e7eb;
-  border-color: #9ca3af;
-  color: #374151;
+  background: var(--accent);
+  color: var(--bg-primary);
+  border-color: var(--accent);
 }
 
 .output-debug-info {
-  margin-top: 8px;
-  padding: 8px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
+  margin-top: 6px;
+  padding: 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 0;
   max-height: 400px;
   overflow: auto;
 }
@@ -476,126 +491,99 @@ h1 {
 .output-debug-info pre {
   margin: 0;
   font-size: 11px;
-  line-height: 1.5;
-  color: #374151;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
 }
 
 .output-item.output-stdout .output-content-wrapper {
-  color: #4b5563;
+  color: var(--text-primary);
+  font-family: monospace;
 }
 
 .output-item.output-stderr .output-content-wrapper {
-  color: #dc2626;
-  font-weight: 500;
+  color: var(--error);
+  font-weight: 600;
 }
 
 .output-item.output-error .output-content-wrapper {
-  color: #dc2626;
+  color: var(--error);
+  font-weight: 600;
 }
 
 .output-item.output-warning .output-content-wrapper {
-  color: #9ca3af;
-}
-
-.output-item.output-message .output-content-wrapper {
-  color: #4b5563;
-}
-
-.output-item.output-text-markdown {
-  color: #374151;
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.6;
-}
-
-.output-item.output-text-markdown h1,
-.output-item.output-text-markdown h2,
-.output-item.output-text-markdown h3,
-.output-item.output-text-markdown h4,
-.output-item.output-text-markdown h5,
-.output-item.output-text-markdown h6 {
-  margin-top: 0.5em;
-  margin-bottom: 0.25em;
+  color: var(--warning);
   font-weight: 600;
-  line-height: 1.3;
-  text-align: left;
 }
 
-.output-item.output-text-markdown h1:first-child,
-.output-item.output-text-markdown h2:first-child,
-.output-item.output-text-markdown h3:first-child,
-.output-item.output-text-markdown h4:first-child,
-.output-item.output-text-markdown h5:first-child,
-.output-item.output-text-markdown h6:first-child {
-  margin-top: 0;
+.output-item pre {
+  color: var(--text-primary);
+  font-family: monospace;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+  border: none;
+  white-space: pre;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
-.output-item.output-text-markdown h1 { font-size: 1.5em; }
-.output-item.output-text-markdown h2 { font-size: 1.3em; }
-.output-item.output-text-markdown h3 { font-size: 1.1em; }
-
-.output-item.output-text-markdown p {
-  margin: 0.5em 0;
+.output-item code {
+  color: var(--text-primary);
+  background: transparent;
+  padding: 0;
+  border: none;
+  font-family: monospace;
 }
 
-.output-item.output-text-markdown p:first-child {
-  margin-top: 0;
+.output-text-markdown code {
+  color: var(--accent);
+  font-weight: 600;
 }
 
-.output-item.output-text-markdown ul,
-.output-item.output-text-markdown ol {
-  margin: 0.5em 0;
-  padding-left: 1.5em;
-}
-
-.output-item.output-text-markdown ul:first-child,
-.output-item.output-text-markdown ol:first-child {
-  margin-top: 0;
-}
-
-.output-item.output-text-markdown li {
-  margin: 0.25em 0;
-}
-
-.output-item.output-text-markdown code {
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  background: #f3f4f6;
-  padding: 0.1em 0.3em;
-  border-radius: 3px;
-  font-size: 0.9em;
-}
-
-.output-item.output-text-markdown pre {
-  background: #f3f4f6;
-  padding: 0.75em;
-  border-radius: 4px;
+.output-text-markdown pre {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  padding: 6px;
   overflow-x: auto;
   margin: 0.5em 0;
 }
 
-.output-item.output-text-markdown pre code {
+.output-text-markdown pre code {
   background: none;
   padding: 0;
+  color: var(--text-secondary);
 }
 
-.output-item.output-text-markdown blockquote {
-  border-left: 3px solid #d1d5db;
+.output-text-markdown blockquote {
+  border-left: 2px solid var(--border);
   margin: 0.5em 0;
   padding-left: 1em;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
-.output-item.output-text-markdown a {
-  color: #2563eb;
+.output-text-markdown a {
+  color: var(--accent-alt);
   text-decoration: underline;
 }
 
-.output-item.output-text-markdown strong {
-  font-weight: 600;
+.output-text-markdown strong {
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
-.output-item.output-text-markdown em {
+.output-text-markdown em {
   font-style: italic;
+}
+
+.output-text-markdown .output-content-wrapper > *:first-child {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.output-text-markdown .output-content-wrapper > *:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .output-item.output-plot {
@@ -604,10 +592,10 @@ h1 {
 
 .output-plot canvas {
   display: block;
-  background: #ffffff;
+  background: var(--bg-secondary);
   width: 400px;
   height: 300px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border);
 }
 
 .output-image {
@@ -615,12 +603,12 @@ h1 {
   max-width: min(100%, 1200px);
   height: auto;
   display: block;
-  background: #ffffff;
+  background: var(--bg-secondary);
 }
 
 .output-html {
   width: 100%;
-  background: #ffffff;
+  background: transparent;
   display: block;
   overflow-x: auto;
 }
@@ -628,17 +616,21 @@ h1 {
 .output-table {
   width: 100%;
   border-collapse: collapse;
-  color: #666;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
 }
 
 .output-table td {
-  padding: 0.15rem 0.3rem;
-  border: none;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--text-dim);
+  color: var(--text-secondary);
 }
 
 .output-table .header-row td {
-  font-weight: 500;
-  color: #555;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
 }
 
 .output-table td:last-child {
@@ -647,7 +639,7 @@ h1 {
 }
 
 .empty-line {
-  height: 18px;
+  height: 16px;
 }
 
 .plot-chart {
@@ -659,8 +651,8 @@ h1 {
 
 .plot-bar {
   min-width: 6px;
-  background-color: #ccc;
-  opacity: 0.6;
+  background-color: var(--accent);
+  opacity: 0.8;
 }
 
 .array-items {
@@ -670,10 +662,11 @@ h1 {
 }
 
 .array-item {
-  background: #f0f0f0;
-  color: #666;
-  padding: 1px 4px;
-  border-radius: 3px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  padding: 2px 4px;
+  border: 1px solid var(--border);
+  border-radius: 0;
   font-family: monospace;
 }
 
@@ -691,8 +684,8 @@ h1 {
   bottom: 0;
   left: 0;
   right: 0;
-  background: #f8f9fa;
-  border-top: 1px solid #e5e7eb;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
   padding: 1rem;
   max-height: 300px;
   overflow-y: auto;
@@ -708,46 +701,49 @@ h1 {
 
 .debug-header h3 {
   margin: 0;
-  color: #374151;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .debug-status {
-  color: #6b7280;
+  color: var(--text-dim);
   font-size: 0.75rem;
 }
 
 .debug-table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
-  border-radius: 6px;
+  background: var(--bg-primary);
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
 }
 
 .debug-table th {
-  background: #f3f4f6;
-  color: #374151;
-  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 0.5rem 1rem;
   text-align: right;
   font-weight: 600;
   font-size: 0.75rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border);
 }
 
 .debug-table td {
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--text-dim);
   font-size: 0.75rem;
+  color: var(--text-secondary);
 }
 
 .debug-table tbody tr:hover {
-  background: #f9fafb;
+  background: var(--bg-secondary);
 }
 
 .line-number {
   font-weight: 600;
-  color: #6b7280;
+  color: var(--text-dim);
   text-align: center;
   width: 60px;
 }
@@ -755,36 +751,38 @@ h1 {
 .height-value {
   font-family: monospace;
   text-align: right;
-  color: #374151;
+  color: var(--text-primary);
 }
 
 .debug-tabs {
   display: flex;
-  gap: 4px;
+  gap: 0;
   margin-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border);
 }
 
 .debug-tab {
   background: none;
   border: none;
+  border-bottom: 1px solid transparent;
   padding: 0.5rem 1rem;
   cursor: pointer;
   font-size: 0.75rem;
   font-weight: 500;
-  color: #6b7280;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s;
+  color: var(--text-dim);
+  transition: all 0.1s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .debug-tab:hover {
-  color: #374151;
-  background: #f9fafb;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
 }
 
 .debug-tab.active {
-  color: #2563eb;
-  border-bottom-color: #2563eb;
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
 .debug-tab-content {
@@ -793,14 +791,14 @@ h1 {
 
 .debug-empty {
   text-align: center;
-  color: #6b7280;
+  color: var(--text-dim);
   padding: 2rem;
   font-style: italic;
 }
 
 .range-id {
   font-weight: 600;
-  color: #6b7280;
+  color: var(--text-dim);
   text-align: center;
   width: 60px;
 }
@@ -808,7 +806,7 @@ h1 {
 .range-value {
   font-family: monospace;
   text-align: right;
-  color: #374151;
+  color: var(--text-primary);
 }
 
 @keyframes pulse {
@@ -820,18 +818,16 @@ h1 {
   }
 }
 
-
-
 /* Fuzzy Finder styles */
 .fuzzy-finder-dropdown {
   position: absolute;
   top: 100%;
   left: 0;
   margin-top: 4px;
-  background: #374151;
-  border: 1px solid #4b5563;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
   width: 320px;
   max-height: 300px;
   display: flex;
@@ -841,22 +837,23 @@ h1 {
 }
 
 .fuzzy-finder-input {
-  background: #2d3748;
-  color: #e5e7eb;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   border: none;
-  border-bottom: 1px solid #4b5563;
+  border-bottom: 1px solid var(--border);
   padding: 8px 10px;
   font-size: 12px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
   outline: none;
 }
 
 .fuzzy-finder-input:focus {
-  background: #1f2937;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
 }
 
 .fuzzy-finder-input::placeholder {
-  color: #6b7280;
+  color: var(--text-dim);
 }
 
 .fuzzy-finder-list {
@@ -870,164 +867,94 @@ h1 {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  border-bottom: 1px solid var(--text-dim);
 }
 
 .fuzzy-finder-item.selected {
-  background: rgba(147, 197, 253, 0.2);
+  background: var(--accent);
+  color: var(--bg-primary);
 }
 
 .fuzzy-finder-filename {
-  color: #e5e7eb;
+  color: var(--text-primary);
   font-size: 12px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
   flex-shrink: 0;
 }
 
 .fuzzy-finder-path {
-  color: #6b7280;
+  color: var(--text-dim);
   font-size: 10px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .fuzzy-match-highlight {
-  color: #93c5fd;
-  font-weight: 600;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.fuzzy-finder-item.selected .fuzzy-match-highlight {
+  color: #fff;
 }
 
 .fuzzy-finder-empty {
   padding: 12px 10px;
   text-align: center;
-  color: #6b7280;
+  color: var(--text-dim);
   font-size: 11px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
 }
 
-/* DataTables styling for pandas/polars output */
+/* DataTables styling for pandas/polars output - booktabs style */
 table.dataTable {
-  border-collapse: collapse !important;
-  font-size: 13px !important;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-  border: 1px solid #e5e7eb !important;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  border: none;
+  background: #fff;
+  border-top: 2px solid var(--border);
+  border-bottom: 2px solid var(--border);
+  width: 100%;
 }
 
 table.dataTable thead th {
-  background: #f9fafb !important;
-  font-weight: 600 !important;
-  color: #374151 !important;
-  border: 1px solid #e5e7eb !important;
-  padding: 6px 8px !important;
-  font-size: 12px !important;
-  text-align: left !important;
+  background: #fff;
+  font-weight: 700;
+  color: var(--text-primary);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 8px;
+  font-size: 12px;
+  text-align: left;
 }
 
 table.dataTable tbody td {
-  padding: 4px 8px !important;
-  border: 1px solid #e5e7eb !important;
-  color: #4b5563 !important;
-  background: #ffffff !important;
+  padding: 6px 8px;
+  border: none;
+  color: var(--text-secondary);
+  background: #fff;
 }
 
 table.dataTable tbody tr:hover td {
-  background: #f3f4f6 !important;
+  background: var(--bg-secondary);
 }
 
 table.dataTable.stripe tbody tr.odd,
 table.dataTable.display tbody tr.odd {
-  background: #ffffff !important;
+  background: #fff;
 }
 
 table.dataTable.stripe tbody tr.odd:hover,
 table.dataTable.display tbody tr.odd:hover {
-  background: #f3f4f6 !important;
+  background: var(--bg-secondary);
 }
 
 div.dt-container {
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-  font-size: 11px !important;
-}
-
-div.dt-search input {
-  background: transparent !important;
-  border: 1px solid #d1d5db !important;
-  border-radius: 2px !important;
-  padding: 2px 6px !important;
-  font-size: 11px !important;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-  color: #4b5563 !important;
-  height: 22px !important;
-}
-
-div.dt-search input:hover {
-  border-color: #9ca3af !important;
-}
-
-div.dt-search input:focus {
-  outline: none !important;
-  border-color: #3b82f6 !important;
-  background: #f0f9ff !important;
-}
-
-div.dt-length select {
-  background: transparent !important;
-  border: 1px solid #d1d5db !important;
-  border-radius: 2px !important;
-  padding: 2px 6px !important;
-  font-size: 11px !important;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-  color: #4b5563 !important;
-  height: 22px !important;
-}
-
-div.dt-length select:hover {
-  border-color: #9ca3af !important;
-}
-
-div.dt-length select:focus {
-  outline: none !important;
-  border-color: #3b82f6 !important;
-  background: #f0f9ff !important;
-}
-
-div.dt-paging button {
-  background: transparent !important;
-  border: 1px solid #d1d5db !important;
-  border-radius: 2px !important;
-  padding: 2px 8px !important;
-  font-size: 11px !important;
-  cursor: pointer !important;
-  color: #4b5563 !important;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-  transition: all 0.15s !important;
-  height: 22px !important;
-  margin: 0 1px !important;
-}
-
-div.dt-paging button:hover:not(.disabled) {
-  background: #e5e7eb !important;
-  border-color: #9ca3af !important;
-  color: #374151 !important;
-}
-
-div.dt-paging button.disabled {
-  cursor: not-allowed !important;
-  color: #d1d5db !important;
-  border-color: #e5e7eb !important;
-  opacity: 0.6 !important;
-}
-
-div.dt-paging button.current {
-  background: #3b82f6 !important;
-  border-color: #3b82f6 !important;
-  color: #ffffff !important;
-}
-
-div.dt-info {
-  color: #6b7280 !important;
-  font-size: 11px !important;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-size: 11px;
 }
 
 div.dt-layout-row {
@@ -1041,31 +968,125 @@ div.dt-layout-cell {
   padding: 2px !important;
 }
 
+div.dt-search input {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  color: var(--text-primary);
+  height: 22px;
+}
+
+div.dt-search input:hover {
+  border-color: var(--accent);
+}
+
+div.dt-search input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg-secondary);
+}
+
+div.dt-length select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  color: var(--text-primary);
+  height: 22px;
+}
+
+div.dt-length select:hover {
+  border-color: var(--accent);
+}
+
+div.dt-length select:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg-secondary);
+}
+
+div.dt-paging button {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  transition: all 0.1s;
+  height: 22px;
+  margin: 0 1px;
+  font-weight: 500;
+}
+
+div.dt-paging button:hover:not(.disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg-primary);
+}
+
+div.dt-paging button.disabled {
+  cursor: not-allowed;
+  color: var(--text-dim);
+  border-color: var(--text-dim);
+  opacity: 0.5;
+}
+
+div.dt-paging button.current {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg-primary);
+  font-weight: 700;
+}
+
+div.dt-info {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
+}
+
+div.dt-layout-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+div.dt-layout-cell {
+  padding: 2px;
+}
+
 table.dataTable.no-footer {
-  border-bottom: 1px solid #e5e7eb !important;
+  border-bottom: 1px solid var(--border);
 }
 
 table.dataTable thead th.dt-orderable-asc,
 table.dataTable thead th.dt-orderable-desc,
 table.dataTable thead th.dt-ordering-asc,
 table.dataTable thead th.dt-ordering-desc {
-  background: #f3f4f6 !important;
+  background: var(--bg-secondary);
 }
 
 small.itables-dtype {
-  color: #9ca3af !important;
-  font-size: 10px !important;
+  color: var(--text-dim);
+  font-size: 10px;
 }
 
 table tbody td {
-  vertical-align: middle !important;
+  vertical-align: middle;
 }
 
 table tbody td a {
-  color: #2563eb !important;
-  text-decoration: none !important;
+  color: var(--accent-alt);
+  text-decoration: none;
 }
 
 table tbody td a:hover {
-  text-decoration: underline !important;
+  text-decoration: underline;
 }
