@@ -516,7 +516,7 @@ h1 {
 
 .output-item pre {
   color: var(--text-primary);
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: monospace;
   background: transparent;
   margin: 0;
   padding: 0;
@@ -531,7 +531,7 @@ h1 {
   background: transparent;
   padding: 0;
   border: none;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: monospace;
 }
 
 .output-text-markdown code {
