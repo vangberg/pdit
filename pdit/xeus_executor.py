@@ -265,7 +265,8 @@ del _register_pdit_formatter
                     # Evaluate the string literal to get its value
                     value = ast.literal_eval(stmt.source)
                     output = [OutputItem(type="text/markdown", content=str(value).strip())]
-                except:
+                except (ValueError, SyntaxError):
+                    # If it's not a valid literal, execute it as code
                     output = self._execute_code(stmt.source)
             else:
                 output = self._execute_code(stmt.source)
