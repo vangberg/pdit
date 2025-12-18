@@ -89,12 +89,8 @@ def start(
     port: Optional[int] = None,
     host: str = "127.0.0.1",
     no_browser: bool = False,
-    verbose: bool = False,
 ):
     """Start the pdit server with optional script."""
-    # Set verbose mode in executor
-    from .executor import set_verbose_mode
-    set_verbose_mode(verbose)
 
     # Check if frontend is built
     static_dir = Path(__file__).parent / "_static"
@@ -200,10 +196,6 @@ def main_command(
         bool,
         typer.Option("--no-browser", help="Don't open browser automatically")
     ] = False,
-    verbose: Annotated[
-        bool,
-        typer.Option(help="Print all computation stdout/stderr to console")
-    ] = False,
 ):
     """Start the pdit server, or export a script to HTML with --export."""
     if export:
@@ -226,7 +218,7 @@ def main_command(
             output_path.write_text(html_output)
             typer.echo(f"Exported to {output_path}")
     else:
-        start(script, port, host, no_browser, verbose)
+        start(script, port, host, no_browser)
 
 
 def main():

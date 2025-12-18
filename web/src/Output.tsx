@@ -1,79 +1,93 @@
-import React, { useImperativeHandle, useRef } from "react";
+import React, { useImperativeHandle, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import { Expression } from "./execution";
-import { DataframeTable } from "./DataframeTable";
 
 interface OutputProps {
   expression: Expression;
   index: number;
   ref?: (element: HTMLDivElement | null) => void;
   allInvisible?: boolean;
+  debugMode?: boolean;
 }
 
 // Component for rendering a single image output item
-const ImageOutput: React.FC<{ dataUrl: string }> = ({ dataUrl }) => {
+// content is base64-encoded data (not a data URL)
+const ImageOutput: React.FC<{ content: string; mimeType: string }> = ({ content, mimeType }) => {
+  const dataUrl = `data:${mimeType};base64,${content}`;
   return <img src={dataUrl} className="output-image" alt="Plot output" />;
 };
 
 // Component for rendering HTML output (from _repr_html_())
-// Uses iframe with srcdoc for DOM isolation and security
 const HtmlOutput: React.FC<{ html: string }> = ({ html }) => {
-  const iframeRef = React.useRef<HTMLIFrameElement>(null);
+  const ref = React.useRef<HTMLDivElement>(null);
 
-  // Auto-resize iframe to fit content
   React.useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
+    if (!ref.current) return;
 
-    const resizeIframe = () => {
-      if (iframe.contentDocument?.body) {
-        // Get the content height
-        const height = iframe.contentDocument.body.scrollHeight;
-        iframe.style.height = `${height}px`;
-      }
-    };
+    // Set the HTML content
+    ref.current.innerHTML = html;
 
-    // Resize when iframe loads
-    iframe.addEventListener('load', resizeIframe);
-
-    // Also try to resize immediately in case content is already loaded
-    resizeIframe();
-
-    return () => iframe.removeEventListener('load', resizeIframe);
+    // Execute scripts by creating new script elements
+    // This is necessary because setting innerHTML does not execute scripts
+    const scripts = ref.current.querySelectorAll('script');
+    scripts.forEach((script) => {
+      const newScript = document.createElement('script');
+      Array.from(script.attributes).forEach((attr) => {
+        newScript.setAttribute(attr.name, attr.value);
+      });
+      newScript.textContent = script.textContent;
+      script.parentNode?.replaceChild(newScript, script);
+    });
   }, [html]);
 
   return (
-    <iframe
-      ref={iframeRef}
-      srcDoc={html}
-      className="output-html-iframe"
-      sandbox="allow-scripts allow-same-origin"
-      title="HTML output"
+    <div
+      ref={ref}
+      className="output-html"
     />
   );
 };
 
+// Sanitize type for CSS class names (replace slashes with dashes)
+const sanitizeTypeForCss = (type: string): string => type.replace(/\//g, '-');
+
 // Get a fun type label for output items
 const getTypeLabel = (type: string): string => {
   switch (type) {
-    case 'result': return 'out';
+    // Stream types
     case 'stdout': return '>>>';
     case 'stderr': return 'err';
     case 'error': return '!!!';
-    case 'dataframe': return 'df';
-    case 'image': return 'fig';
-    case 'markdown': return 'md';
-    case 'html': return 'htm';
+    // MIME types
+    case 'text/plain': return 'out';
+    case 'text/markdown': return 'md';
+    case 'text/html': return 'htm';
+    case 'image/png': return 'fig';
+    case 'image/jpeg': return 'fig';
+    case 'image/svg+xml': return 'svg';
     default: return '~~~';
   }
 };
 
-export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible }) => {
+export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible, debugMode }) => {
   const elementRef = useRef<HTMLDivElement | null>(null);
+  const [expandedDebugItems, setExpandedDebugItems] = useState<Set<number>>(new Set());
 
   useImperativeHandle(ref, () => elementRef.current as HTMLDivElement, []);
 
   const containerClassName = allInvisible ? "output-container output-container-invisible" : "output-container";
+
+  const toggleDebugInfo = (index: number) => {
+    setExpandedDebugItems(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
 
   return (
     <div
@@ -81,29 +95,57 @@ export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible })
       className={containerClassName}
     >
       <div className="output-line">
-        {expression.result?.output.map((item, i) => (
-          <div
-            key={i}
-            className={`output-item output-${item.type}`}
-          >
-            <span className={`output-type-badge output-type-${item.type}`}>
-              {getTypeLabel(item.type)}
-            </span>
-            <div className="output-content-wrapper">
-              {item.type === 'markdown' ? (
-                <Markdown>{item.content}</Markdown>
-              ) : item.type === 'dataframe' ? (
-                <DataframeTable jsonData={item.content} />
-              ) : item.type === 'image' ? (
-                <ImageOutput dataUrl={item.content} />
-              ) : item.type === 'html' ? (
-                <HtmlOutput html={item.content} />
-              ) : (
-                <pre>{item.content}</pre>
-              )}
+        {expression.result?.output.map((item, i) => {
+          const isDebugExpanded = expandedDebugItems.has(i);
+
+          return (
+            <div
+              key={i}
+              className={`output-item output-${sanitizeTypeForCss(item.type)}`}
+            >
+              <span className={`output-type-badge output-type-${sanitizeTypeForCss(item.type)}`}>
+                {getTypeLabel(item.type)}
+              </span>
+              <div className="output-content-wrapper">
+                {item.type === 'text/markdown' ? (
+                  <Markdown>{item.content}</Markdown>
+                ) : item.type.startsWith('image/') ? (
+                  <ImageOutput content={item.content} mimeType={item.type} />
+                ) : item.type === 'text/html' ? (
+                  <HtmlOutput html={item.content} />
+                ) : (
+                  <pre>{item.content}</pre>
+                )}
+                {debugMode && (
+                  <div className="output-debug">
+                    <button
+                      className="output-debug-button"
+                      onClick={() => toggleDebugInfo(i)}
+                      title="Toggle debug info"
+                    >
+                      {isDebugExpanded ? '▼' : '▶'} debug
+                    </button>
+                    {isDebugExpanded && (
+                      <div className="output-debug-info">
+                        <pre>{JSON.stringify({
+                          type: item.type,
+                          content: item.content,
+                          expression: {
+                            id: expression.id,
+                            lineStart: expression.lineStart,
+                            lineEnd: expression.lineEnd,
+                            state: expression.state,
+                            isInvisible: expression.result?.isInvisible,
+                          }
+                        }, null, 2)}</pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

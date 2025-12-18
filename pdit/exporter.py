@@ -4,7 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .executor import PythonExecutor, ExecutionResult
+from .executor import ExecutionResult
+from .xeus_executor import XeusPythonExecutor
 
 
 def execute_script(script_content: str, script_name: str) -> list[dict[str, Any]]:
@@ -17,26 +18,29 @@ def execute_script(script_content: str, script_name: str) -> list[dict[str, Any]
     Returns:
         List of expression dicts ready for frontend consumption
     """
-    executor = PythonExecutor()
+    executor = XeusPythonExecutor()
     expressions = []
     expression_id = 0
 
-    for result in executor.execute_script(script_content, script_name=script_name):
-        if isinstance(result, list):
-            # First yield is list of ExpressionInfo - skip
-            continue
-        elif isinstance(result, ExecutionResult):
-            expressions.append({
-                "id": expression_id,
-                "lineStart": result.line_start,
-                "lineEnd": result.line_end,
-                "state": "done",
-                "result": {
-                    "output": [{"type": item.type, "content": item.content} for item in result.output],
-                    "isInvisible": result.is_invisible
-                }
-            })
-            expression_id += 1
+    try:
+        for result in executor.execute_script(script_content, script_name=script_name):
+            if isinstance(result, list):
+                # First yield is list of ExpressionInfo - skip
+                continue
+            elif isinstance(result, ExecutionResult):
+                expressions.append({
+                    "id": expression_id,
+                    "lineStart": result.line_start,
+                    "lineEnd": result.line_end,
+                    "state": "done",
+                    "result": {
+                        "output": [{"type": item.type, "content": item.content} for item in result.output],
+                        "isInvisible": result.is_invisible
+                    }
+                })
+                expression_id += 1
+    finally:
+        executor.shutdown()
 
     return expressions
 
@@ -66,7 +70,7 @@ def generate_html(script_content: str, expressions: list[dict[str, Any]]) -> str
         "code": script_content,
         "expressions": expressions
     }
-    json_data = json.dumps(response_data)
+    json_data = json.dumps(response_data).replace("<", "\\u003c")
     injection_script = f'<script>window.__pdit_response__ = {json_data};</script>'
 
     return template.replace('</head>', f'{injection_script}\n</head>')

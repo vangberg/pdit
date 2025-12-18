@@ -140,7 +140,8 @@ class TestExecuteScriptEndpoint:
         assert result["lineEnd"] == 1
         assert result["isInvisible"] is False
         assert len(result["output"]) == 1
-        assert result["output"][0]["type"] == "stdout"
+        # xeus-python returns expression results as text/plain
+        assert result["output"][0]["type"] == "text/plain"
         assert "4" in result["output"][0]["content"]
 
     def test_execute_statement(self):
@@ -297,9 +298,12 @@ class TestExecuteScriptEndpoint:
         results = self._parse_sse_response(response)
 
         result = results[0]
-        assert len(result["output"]) == 1
-        assert result["output"][0]["type"] == "stdout"
-        assert "Hello, World!" in result["output"][0]["content"]
+        # xeus-python may split output into multiple items
+        assert len(result["output"]) >= 1
+        stdout_outputs = [o for o in result["output"] if o["type"] == "stdout"]
+        assert len(stdout_outputs) >= 1
+        combined_output = "".join(o["content"] for o in stdout_outputs)
+        assert "Hello, World!" in combined_output
 
 
 class TestReadFileEndpoint:

@@ -422,11 +422,7 @@ h1 {
   letter-spacing: 0.3px;
 }
 
-.output-type-result {
-  color: #fff;
-  background: #16a34a;
-}
-
+/* Stream types */
 .output-type-stdout {
   color: #fff;
   background: #6366f1;
@@ -442,30 +438,75 @@ h1 {
   background: #dc2626;
 }
 
-.output-type-dataframe {
+/* MIME types (slashes replaced with dashes) */
+.output-type-text-plain {
   color: #fff;
-  background: #0891b2;
+  background: #16a34a;
 }
 
-.output-type-image {
-  color: #fff;
-  background: #c026d3;
-}
-
-.output-type-markdown {
+.output-type-text-markdown {
   color: #fff;
   background: #78716c;
 }
 
-.output-type-html {
+.output-type-text-html {
   color: #fff;
   background: #ea580c;
+}
+
+.output-type-image-png,
+.output-type-image-jpeg,
+.output-type-image-svg\+xml {
+  color: #fff;
+  background: #c026d3;
 }
 
 .output-content-wrapper {
   flex: 1;
   min-width: 0;
   overflow-x: auto;
+}
+
+.output-debug {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.output-debug-button {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  color: #6b7280;
+  transition: all 0.15s ease;
+}
+
+.output-debug-button:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.output-debug-info {
+  margin-top: 8px;
+  padding: 8px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  max-height: 400px;
+  overflow: auto;
+}
+
+.output-debug-info pre {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #374151;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
 }
 
 .output-item.output-stdout .output-content-wrapper {
@@ -605,12 +646,11 @@ h1 {
   background: #ffffff;
 }
 
-.output-html-iframe {
+.output-html {
   width: 100%;
-  min-height: 50px;
-  border: none;
   background: #ffffff;
   display: block;
+  overflow-x: auto;
 }
 
 .output-table {
@@ -808,247 +848,7 @@ h1 {
   }
 }
 
-/* Dataframe table styles */
-.dataframe-table-container {
-  overflow-x: auto;
-  max-width: 100%;
-}
 
-.dataframe-table {
-  border-collapse: collapse;
-  font-size: 13px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  min-width: 100%;
-}
-
-.dataframe-table th,
-.dataframe-table td {
-  padding: 4px 8px;
-  text-align: left;
-  border: 1px solid #e5e7eb;
-  white-space: nowrap;
-}
-
-.dataframe-table th {
-  background: #f9fafb;
-  font-weight: 600;
-  color: #374151;
-  position: sticky;
-  top: 0;
-}
-
-.dataframe-table tbody tr:hover {
-  background: #f3f4f6;
-}
-
-.dataframe-table td {
-  color: #4b5563;
-}
-
-/* Right-align numeric columns */
-.dataframe-table td:not(:first-child) {
-  text-align: right;
-}
-
-/* Pagination controls */
-.dataframe-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 1px;
-  padding: 2px 4px;
-  border-top: 1px solid #e5e7eb;
-  background: #f9fafb;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 11px;
-}
-
-.pagination-input-group {
-  margin-left: 0;
-}
-
-.dataframe-pagination button {
-  background: transparent;
-  border: 1px solid #d1d5db;
-  border-radius: 2px;
-  padding: 0;
-  font-size: 11px;
-  cursor: pointer;
-  color: #4b5563;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  transition: all 0.15s;
-  min-width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.dataframe-pagination button:hover:not(:disabled) {
-  background: #e5e7eb;
-  border-color: #9ca3af;
-  color: #374151;
-}
-
-.dataframe-pagination button:disabled {
-  cursor: not-allowed;
-  color: #d1d5db;
-  border-color: #e5e7eb;
-  opacity: 0.6;
-}
-
-.pagination-input-group {
-  display: flex;
-  align-items: center;
-  gap: 1px;
-  margin: 0 4px;
-}
-
-.pagination-input-group input {
-  background: transparent;
-  border: 1px solid #d1d5db;
-  border-radius: 2px;
-  padding: 1px 3px;
-  font-size: 11px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  color: #4b5563;
-  width: 32px;
-  text-align: center;
-  transition: all 0.15s;
-  height: 20px;
-}
-
-.pagination-input-group input:hover {
-  border-color: #9ca3af;
-}
-
-.pagination-input-group input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  background: #f0f9ff;
-}
-
-.pagination-separator {
-  color: #9ca3af;
-  padding: 0 2px;
-}
-
-.pagination-total {
-  color: #6b7280;
-  min-width: 0;
-}
-
-.dataframe-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 1px;
-  padding: 2px 4px;
-  border-top: 1px solid #e5e7eb;
-  background: #f9fafb;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 11px;
-}
-
-.dataframe-filter-input {
-  padding: 1px 3px;
-  border: 1px solid #d1d5db;
-  border-radius: 2px;
-  font-size: 11px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  color: #4b5563;
-  background: transparent;
-  min-width: 150px;
-  height: 20px;
-  transition: all 0.15s;
-}
-
-.dataframe-filter-input:hover {
-  border-color: #9ca3af;
-}
-
-.dataframe-filter-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  background: #f0f9ff;
-}
-
-.dataframe-toolbar-pagination {
-  display: flex;
-  align-items: center;
-  gap: 1px;
-  margin-left: auto;
-}
-
-.dataframe-toolbar button {
-  background: transparent;
-  border: 1px solid #d1d5db;
-  border-radius: 2px;
-  padding: 0;
-  font-size: 11px;
-  cursor: pointer;
-  color: #4b5563;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  transition: all 0.15s;
-  min-width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.dataframe-toolbar button:hover:not(:disabled) {
-  background: #e5e7eb;
-  border-color: #9ca3af;
-  color: #374151;
-}
-
-.dataframe-toolbar button:disabled {
-  cursor: not-allowed;
-  color: #d1d5db;
-  border-color: #e5e7eb;
-  opacity: 0.6;
-}
-
-.dataframe-toolbar-pagination-group {
-  display: flex;
-  align-items: center;
-  gap: 1px;
-  margin: 0 4px;
-}
-
-.dataframe-toolbar-pagination-group input {
-  background: transparent;
-  border: 1px solid #d1d5db;
-  border-radius: 2px;
-  padding: 1px 3px;
-  font-size: 11px;
-  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  color: #4b5563;
-  width: 32px;
-  text-align: center;
-  transition: all 0.15s;
-  height: 20px;
-}
-
-.dataframe-toolbar-pagination-group input:hover {
-  border-color: #9ca3af;
-}
-
-.dataframe-toolbar-pagination-group input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  background: #f0f9ff;
-}
-
-.dataframe-toolbar-pagination-separator {
-  color: #9ca3af;
-  padding: 0 2px;
-}
-
-.dataframe-toolbar-pagination-total {
-  color: #6b7280;
-  min-width: 0;
-}
 
 /* Fuzzy Finder styles */
 .fuzzy-finder-dropdown {
@@ -1131,4 +931,169 @@ h1 {
   color: #6b7280;
   font-size: 11px;
   font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* DataTables styling for pandas/polars output */
+table.dataTable {
+  border-collapse: collapse !important;
+  font-size: 13px !important;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+table.dataTable thead th {
+  background: #f9fafb !important;
+  font-weight: 600 !important;
+  color: #374151 !important;
+  border: 1px solid #e5e7eb !important;
+  padding: 6px 8px !important;
+  font-size: 12px !important;
+  text-align: left !important;
+}
+
+table.dataTable tbody td {
+  padding: 4px 8px !important;
+  border: 1px solid #e5e7eb !important;
+  color: #4b5563 !important;
+  background: #ffffff !important;
+}
+
+table.dataTable tbody tr:hover td {
+  background: #f3f4f6 !important;
+}
+
+table.dataTable.stripe tbody tr.odd,
+table.dataTable.display tbody tr.odd {
+  background: #ffffff !important;
+}
+
+table.dataTable.stripe tbody tr.odd:hover,
+table.dataTable.display tbody tr.odd:hover {
+  background: #f3f4f6 !important;
+}
+
+div.dt-container {
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-size: 11px !important;
+}
+
+div.dt-search input {
+  background: transparent !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 2px !important;
+  padding: 2px 6px !important;
+  font-size: 11px !important;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  color: #4b5563 !important;
+  height: 22px !important;
+}
+
+div.dt-search input:hover {
+  border-color: #9ca3af !important;
+}
+
+div.dt-search input:focus {
+  outline: none !important;
+  border-color: #3b82f6 !important;
+  background: #f0f9ff !important;
+}
+
+div.dt-length select {
+  background: transparent !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 2px !important;
+  padding: 2px 6px !important;
+  font-size: 11px !important;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  color: #4b5563 !important;
+  height: 22px !important;
+}
+
+div.dt-length select:hover {
+  border-color: #9ca3af !important;
+}
+
+div.dt-length select:focus {
+  outline: none !important;
+  border-color: #3b82f6 !important;
+  background: #f0f9ff !important;
+}
+
+div.dt-paging button {
+  background: transparent !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 2px !important;
+  padding: 2px 8px !important;
+  font-size: 11px !important;
+  cursor: pointer !important;
+  color: #4b5563 !important;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  transition: all 0.15s !important;
+  height: 22px !important;
+  margin: 0 1px !important;
+}
+
+div.dt-paging button:hover:not(.disabled) {
+  background: #e5e7eb !important;
+  border-color: #9ca3af !important;
+  color: #374151 !important;
+}
+
+div.dt-paging button.disabled {
+  cursor: not-allowed !important;
+  color: #d1d5db !important;
+  border-color: #e5e7eb !important;
+  opacity: 0.6 !important;
+}
+
+div.dt-paging button.current {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+div.dt-info {
+  color: #6b7280 !important;
+  font-size: 11px !important;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+}
+
+div.dt-layout-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 4px 0 !important;
+}
+
+div.dt-layout-cell {
+  padding: 2px !important;
+}
+
+table.dataTable.no-footer {
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+table.dataTable thead th.dt-orderable-asc,
+table.dataTable thead th.dt-orderable-desc,
+table.dataTable thead th.dt-ordering-asc,
+table.dataTable thead th.dt-ordering-desc {
+  background: #f3f4f6 !important;
+}
+
+small.itables-dtype {
+  color: #9ca3af !important;
+  font-size: 10px !important;
+}
+
+table tbody td {
+  vertical-align: middle !important;
+}
+
+table tbody td a {
+  color: #2563eb !important;
+  text-decoration: none !important;
+}
+
+table tbody td a:hover {
+  text-decoration: underline !important;
 }

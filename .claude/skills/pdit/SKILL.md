@@ -15,7 +15,7 @@ split-pane interface: code editor (left) and streaming execution results (right)
 pdit runs using `uv run --with` so it's available without modifying the project:
 
 ```bash
-uv run --with git+https://github.com/vangberg/pdit@dist pdit script.py --verbose
+uv run --with git+https://github.com/vangberg/pdit@dist pdit script.py
 ```
 
 **Note:** The `@dist` branch contains pre-built frontend assets, so no Node.js or build step is needed.
@@ -30,19 +30,8 @@ uv cache clean pdit
 
 **IMPORTANT: Run with `run_in_background: true` in the Bash tool so you can continue editing.**
 
-**IMPORTANT: Always use `--verbose` when Claude is running pdit.**
-
-Verbose mode prints all execution output to the console where pdit is running:
-
-- Shows each line being executed (with `>>>` prefix like Python REPL)
-- Displays all stdout/stderr output in real-time
-- Shows script name with `[script.py]` prefix
-- Allows Claude to see what's happening in the user's browser without waiting for feedback
-- Essential for debugging and validating code changes
-
 Options:
 
-- `--verbose` - Print all computation stdout/stderr to console (REQUIRED for Claude)
 - `--port 9000` - Use different port (default: 8888)
 - `--no-browser` - Don't auto-open browser
 
@@ -112,7 +101,6 @@ in the user's editor automatically.
 1. Write/edit the `.py` file
 2. Run `uv run script.py` to validate - fix any errors
 3. User sees clean code and runs with Cmd+Enter
-4. With `--verbose`, you can see execution output in your console and validate without user feedback
 
 **When user shares output:**
 

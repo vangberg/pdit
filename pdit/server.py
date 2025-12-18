@@ -21,33 +21,42 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from .executor import PythonExecutor, ExecutionResult
+from .xeus_executor import XeusPythonExecutor
+from .executor import ExecutionResult
 from .sse import format_sse
 from .file_watcher import FileWatcher
 
 # Global shutdown event for SSE connections (threading.Event works across threads)
 shutdown_event = threading.Event()
 
-# Session registry: maps session_id -> PythonExecutor
-_sessions: dict[str, PythonExecutor] = {}
+# Session registry: maps session_id -> XeusPythonExecutor
+_sessions: dict[str, XeusPythonExecutor] = {}
 
 
-def get_or_create_session(session_id: str) -> PythonExecutor:
+def get_or_create_session(session_id: str) -> XeusPythonExecutor:
     """Get existing session or create a new one lazily."""
     if session_id not in _sessions:
-        _sessions[session_id] = PythonExecutor()
+        _sessions[session_id] = XeusPythonExecutor()
     return _sessions[session_id]
 
 
 def delete_session(session_id: str) -> None:
-    """Delete a session if it exists."""
+    """Delete a session if it exists, shutting down its kernel."""
     if session_id in _sessions:
-        del _sessions[session_id]
+        executor = _sessions.pop(session_id)
+        executor.shutdown()
+
+
+def shutdown_all_sessions() -> None:
+    """Shutdown all active sessions. Called on server shutdown."""
+    for session_id in list(_sessions.keys()):
+        delete_session(session_id)
 
 
 def signal_shutdown():
-    """Signal all SSE connections to close. Called by cli.py before server shutdown."""
+    """Signal all SSE connections to close and cleanup. Called by cli.py before server shutdown."""
     shutdown_event.set()
+    shutdown_all_sessions()
 
 
 # Pydantic models for API
@@ -103,10 +112,11 @@ class ResetRequest(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage app lifecycle - signal SSE connections to close on shutdown."""
+    """Manage app lifecycle - cleanup on shutdown."""
     yield
-    # Signal all SSE connections to close
+    # Signal all SSE connections to close and shutdown kernels
     shutdown_event.set()
+    shutdown_all_sessions()
 
 
 # FastAPI app
@@ -144,6 +154,23 @@ async def health():
     Returns:
         Status OK if server is running
     """
+    return {"status": "ok"}
+
+
+@app.post("/api/init-session")
+async def init_session(request: ResetRequest):
+    """Initialize a session and start its kernel.
+
+    This endpoint is called on page load to start the kernel immediately,
+    so it's ready when the user first runs code.
+
+    Args:
+        request: Session ID to initialize
+
+    Returns:
+        Status OK
+    """
+    get_or_create_session(request.sessionId)
     return {"status": "ok"}
 
 

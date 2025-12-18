@@ -5,11 +5,13 @@ const STORAGE_PREFIX = "pdit-settings-";
 interface ScriptSettings {
   autorun: boolean;
   readerMode: boolean;
+  debugMode: boolean;
 }
 
 const DEFAULT_SETTINGS: ScriptSettings = {
   autorun: false,
   readerMode: false,
+  debugMode: false,
 };
 
 export function useScriptSettings(scriptPath: string | null) {
@@ -48,5 +50,7 @@ export function useScriptSettings(scriptPath: string | null) {
     setAutorun: (val: boolean) => updateSettings({ autorun: val }),
     readerMode: settings.readerMode,
     setReaderMode: (val: boolean) => updateSettings({ readerMode: val }),
+    debugMode: settings.debugMode,
+    setDebugMode: (val: boolean) => updateSettings({ debugMode: val }),
   };
 }

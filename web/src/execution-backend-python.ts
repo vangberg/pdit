@@ -4,7 +4,9 @@
  */
 
 export interface OutputItem {
-  type: 'stdout' | 'stderr' | 'error' | 'warning' | 'message' | 'markdown' | 'dataframe' | 'image' | 'html';
+  // MIME types: 'text/plain', 'text/html', 'text/markdown', 'image/png', 'application/json'
+  // Stream types: 'stdout', 'stderr', 'error'
+  type: string;
   content: string;
 }
 

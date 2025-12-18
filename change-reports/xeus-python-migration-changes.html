@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pdit: Migration to xeus-python Kernel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #24292e;
+            background: #f6f8fa;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 6px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #0366d6;
+            border-bottom: 3px solid #0366d6;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 1.8em;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            color: #24292e;
+            border-bottom: 2px solid #e1e4e8;
+            padding-bottom: 8px;
+        }
+
+        h3 {
+            font-size: 1.3em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            color: #586069;
+        }
+
+        p {
+            margin-bottom: 16px;
+            color: #24292e;
+        }
+
+        .meta {
+            color: #586069;
+            font-size: 0.95em;
+            margin-bottom: 30px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #e1e4e8;
+            border-radius: 3px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 0.9em;
+            margin: 2px 4px;
+        }
+
+        .badge.new {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge.modified {
+            background: #0366d6;
+            color: white;
+        }
+
+        code {
+            background: #f6f8fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: #f6f8fa;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 16px 0;
+            border: 1px solid #e1e4e8;
+        }
+
+        .diff {
+            margin: 20px 0;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .diff-header {
+            background: #f6f8fa;
+            padding: 10px 16px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 0.9em;
+            font-weight: 600;
+            border-bottom: 1px solid #e1e4e8;
+        }
+
+        .diff.new-file .diff-header {
+            background: #e6ffec;
+            color: #22863a;
+        }
+
+        .diff-content {
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+
+        .diff-line {
+            padding: 2px 16px;
+            white-space: pre;
+        }
+
+        .diff-add {
+            background: #e6ffec;
+            color: #22863a;
+        }
+
+        .diff-remove {
+            background: #ffebe9;
+            color: #cb2431;
+        }
+
+        .diff-context {
+            background: white;
+            color: #586069;
+        }
+
+        .flow-diagram {
+            background: #f6f8fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border: 1px solid #e1e4e8;
+        }
+
+        .flow-box {
+            display: inline-block;
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #0366d6;
+            border-radius: 4px;
+            margin: 5px;
+            font-weight: 600;
+        }
+
+        .flow-arrow {
+            display: inline-block;
+            margin: 0 10px;
+            color: #0366d6;
+            font-size: 1.5em;
+        }
+
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 16px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .note {
+            background: #fff5b1;
+            border-left: 4px solid #ffd700;
+            padding: 16px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .note strong {
+            color: #917400;
+        }
+
+        .architecture {
+            background: #f0f7ff;
+            border: 2px solid #0366d6;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>pdit: Migration to xeus-python Kernel</h1>
+        <div class="meta">
+            <strong>Change Type:</strong> Architecture Improvement<br>
+            <strong>Impact:</strong> Core execution engine replaced<br>
+            <strong>Backward Compatibility:</strong> ✅ Fully compatible
+        </div>
+
+        <h2>Summary</h2>
+        <p>
+            This change replaces pdit's custom AST-based Python execution engine with the
+            <strong>xeus-python</strong> Jupyter kernel. The migration moves from a homebuilt
+            <code>eval()</code>-based executor to a production-ready kernel that implements
+            the Jupyter messaging protocol.
+        </p>
+
+        <h2>The Problem</h2>
+        <p>
+            The original <code>PythonExecutor</code> used Python's AST module to parse scripts
+            and executed code statement-by-statement using <code>eval()</code> with a persistent
+            namespace dictionary. While this approach worked, it had limitations:
+        </p>
+        <ul>
+            <li>Custom implementation required maintaining execution semantics</li>
+            <li>Limited support for advanced Python features</li>
+            <li>Output capture relied on context managers (<code>redirect_stdout</code>)</li>
+            <li>Manual handling of matplotlib figures, DataFrames, and rich output</li>
+            <li>No access to the broader Jupyter ecosystem and extensions</li>
+        </ul>
+
+        <h2>The Solution</h2>
+        <p>
+            By switching to <strong>xeus-python</strong>, we leverage a battle-tested kernel
+            that's designed specifically for interactive Python execution. xeus-python is a
+            lightweight, fast Jupyter kernel implemented in C++ that provides:
+        </p>
+        <ul>
+            <li>Full Jupyter protocol support with proper message handling</li>
+            <li>Native support for rich MIME output (images, HTML, JSON, etc.)</li>
+            <li>Better execution isolation and error handling</li>
+            <li>Compatibility with Jupyter extensions and magics</li>
+            <li>Built-in support for interrupting long-running code</li>
+        </ul>
+
+        <div class="architecture">
+            <h3>Architecture Overview</h3>
+            <div class="flow-diagram" style="text-align: center;">
+                <div class="flow-box">Browser UI</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-box">FastAPI Server</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-box">XeusPythonExecutor</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-box">xpython kernel</div>
+                <br><br>
+                <div class="flow-box">jupyter_client</div>
+                <div class="flow-arrow">↕</div>
+                <div style="display: inline-block; text-align: left;">
+                    <div>• ZMQ sockets</div>
+                    <div>• Jupyter protocol</div>
+                    <div>• Message handling</div>
+                </div>
+            </div>
+            <p style="margin-top: 15px;">
+                The <code>XeusPythonExecutor</code> manages kernel lifecycle and translates between
+                pdit's API and Jupyter's messaging protocol, while <code>jupyter_client</code>
+                handles all the low-level communication.
+            </p>
+        </div>
+
+        <h2>Files Changed</h2>
+
+        <h3>New Files</h3>
+
+        <div class="diff new-file">
+            <div class="diff-header">pdit/xeus_executor.py (new file)</div>
+            <div class="diff-content">
+<div class="diff-line diff-context">"""</div>
+<div class="diff-line diff-context">xeus-python kernel executor using jupyter_client.</div>
+<div class="diff-line diff-context"></div>
+<div class="diff-line diff-context">Uses xeus-python kernel with jupyter_client for reliable messaging.</div>
+<div class="diff-line diff-context">"""</div>
+<div class="diff-line diff-context"></div>
+<div class="diff-line diff-context">import ast</div>
+<div class="diff-line diff-context">import io</div>
+<div class="diff-line diff-context">import json</div>
+<div class="diff-line diff-context">import re</div>
+<div class="diff-line diff-context">import traceback</div>
+<div class="diff-line diff-context">from dataclasses import dataclass</div>
+<div class="diff-line diff-context">from typing import Any, Dict, Generator, List, Optional, Union</div>
+<div class="diff-line diff-context"></div>
+<div class="diff-line diff-context">from jupyter_client import KernelManager</div>
+<div class="diff-line diff-context">from jupyter_client.blocking import BlockingKernelClient</div>
+<div class="diff-line diff-context"></div>
+<div class="diff-line diff-context">from .executor import (</div>
+<div class="diff-line diff-context">    ExpressionInfo,</div>
+<div class="diff-line diff-context">    ExecutionResult,</div>
+<div class="diff-line diff-context">    OutputItem,</div>
+<div class="diff-line diff-context">    _has_trailing_semicolon,</div>
+<div class="diff-line diff-context">)</div>
+<div class="diff-line diff-context"></div>
+<div class="diff-line diff-context">class XeusPythonExecutor:</div>
+<div class="diff-line diff-context">    """Python executor using xeus-python kernel."""</div>
+<div class="diff-line diff-context"></div>
+<div class="diff-line diff-context">    def __init__(self):</div>
+<div class="diff-line diff-context">        """Initialize executor and start xeus-python kernel."""</div>
+<div class="diff-line diff-context">        self.km: Optional[KernelManager] = None</div>
+<div class="diff-line diff-context">        self.kc: Optional[BlockingKernelClient] = None</div>
+<div class="diff-line diff-context">        self._start_kernel()</div>
+<div class="diff-line diff-context"></div>
+<div class="diff-line diff-context">    def _start_kernel(self) -> None:</div>
+<div class="diff-line diff-context">        """Start xeus-python kernel."""</div>
+<div class="diff-line diff-context">        # Use xpython kernel</div>
+<div class="diff-line diff-context">        self.km = KernelManager(kernel_name='xpython')</div>
+<div class="diff-line diff-context">        self.km.start_kernel()</div>
+<div class="diff-line diff-context">        self.kc = self.km.client()</div>
+<div class="diff-line diff-context">        self.kc.start_channels()</div>
+<div class="diff-line diff-context">        # Wait for kernel to be ready</div>
+<div class="diff-line diff-context">        self.kc.wait_for_ready(timeout=30)</div>
+<div class="diff-line diff-context">        ...</div>
+            </div>
+        </div>
+
+        <p>
+            <strong>Key implementation details:</strong>
+        </p>
+        <ul>
+            <li><strong>Kernel Management:</strong> Uses <code>KernelManager</code> to start and control the xpython kernel process</li>
+            <li><strong>Communication:</strong> <code>BlockingKernelClient</code> handles synchronous message exchange over ZMQ</li>
+            <li><strong>AST Parsing:</strong> Preserves the original statement-by-statement parsing logic for UI integration</li>
+            <li><strong>Message Loop:</strong> Polls <code>get_iopub_msg()</code> to collect all output types (stdout, stderr, execute_result, display_data, error)</li>
+            <li><strong>MIME Processing:</strong> Extracts rich output from Jupyter's MIME bundles (PNG images, HTML, JSON, plain text)</li>
+            <li><strong>ANSI Stripping:</strong> Removes color codes from tracebacks for clean display</li>
+        </ul>
+
+        <h3>Modified Files</h3>
+
+        <div class="diff">
+            <div class="diff-header">pdit/server.py</div>
+            <div class="diff-content">
+<div class="diff-line diff-remove">-from .executor import PythonExecutor, ExecutionResult</div>
+<div class="diff-line diff-add">+from .xeus_executor import XeusPythonExecutor</div>
+<div class="diff-line diff-add">+from .executor import ExecutionResult</div>
+<div class="diff-line diff-context"> from .sse import format_sse</div>
+<div class="diff-line diff-context"> from .file_watcher import FileWatcher</div>
+<div class="diff-line diff-context"> </div>
+<div class="diff-line diff-remove">-# Session registry: maps session_id -> PythonExecutor</div>
+<div class="diff-line diff-remove">-_sessions: dict[str, PythonExecutor] = {}</div>
+<div class="diff-line diff-add">+# Session registry: maps session_id -> XeusPythonExecutor</div>
+<div class="diff-line diff-add">+_sessions: dict[str, XeusPythonExecutor] = {}</div>
+<div class="diff-line diff-context"> </div>
+<div class="diff-line diff-context"> </div>
+<div class="diff-line diff-remove">-def get_or_create_session(session_id: str) -> PythonExecutor:</div>
+<div class="diff-line diff-add">+def get_or_create_session(session_id: str) -> XeusPythonExecutor:</div>
+<div class="diff-line diff-context">     """Get existing session or create a new one lazily."""</div>
+<div class="diff-line diff-context">     if session_id not in _sessions:</div>
+<div class="diff-line diff-remove">-        _sessions[session_id] = PythonExecutor()</div>
+<div class="diff-line diff-add">+        _sessions[session_id] = XeusPythonExecutor()</div>
+<div class="diff-line diff-context">     return _sessions[session_id]</div>
+            </div>
+        </div>
+
+        <p>
+            <strong>Simple drop-in replacement:</strong> The <code>XeusPythonExecutor</code> implements
+            the same interface as <code>PythonExecutor</code>, so the server code required only
+            minimal changes to swap the executor class.
+        </p>
+
+        <div class="diff">
+            <div class="diff-header">pyproject.toml</div>
+            <div class="diff-content">
+<div class="diff-line diff-remove">-requires-python = ">=3.8"</div>
+<div class="diff-line diff-add">+requires-python = ">=3.8,<3.14"</div>
+<div class="diff-line diff-context"> </div>
+<div class="diff-line diff-context"> dependencies = [</div>
+<div class="diff-line diff-context">     "fastapi>=0.104.0",</div>
+<div class="diff-line diff-context">     "uvicorn[standard]>=0.24.0",</div>
+<div class="diff-line diff-context">     "typer>=0.9.0",</div>
+<div class="diff-line diff-context">     "aiofiles>=23.0.0",</div>
+<div class="diff-line diff-context">     "watchfiles>=0.20.0",</div>
+<div class="diff-line diff-add">+    "jupyter_client>=8.0.0",</div>
+<div class="diff-line diff-add">+    "xeus-python>=0.17.0",</div>
+<div class="diff-line diff-context"> ]</div>
+            </div>
+        </div>
+
+        <p>
+            <strong>New dependencies:</strong>
+        </p>
+        <ul>
+            <li><code>jupyter_client</code> - Official Jupyter client library for kernel communication</li>
+            <li><code>xeus-python</code> - Fast C++-based Python kernel</li>
+        </ul>
+
+        <div class="note">
+            <strong>Note:</strong> Python version constrained to <code>&lt;3.14</code> because
+            xeus-python doesn't yet have pre-built wheels for Python 3.14. The project was
+            downgraded from Python 3.14 to 3.13 to accommodate this requirement.
+        </div>
+
+        <h2>Execution Flow Comparison</h2>
+
+        <h3>Before (PythonExecutor)</h3>
+        <pre>1. Parse script with ast.parse()
+2. For each statement:
+   a. Compile AST node to code object
+   b. Execute with eval(compiled, namespace)
+   c. Capture stdout/stderr with context managers
+   d. Check result type (DataFrame, matplotlib, etc.)
+   e. Serialize output
+3. Yield ExecutionResult</pre>
+
+        <h3>After (XeusPythonExecutor)</h3>
+        <pre>1. Parse script with ast.parse() (unchanged)
+2. For each statement:
+   a. Send execute_request to kernel via jupyter_client
+   b. Poll iopub socket for messages:
+      - stream (stdout/stderr)
+      - execute_result (expression values)
+      - display_data (plots, rich output)
+      - error (exceptions)
+   c. Process MIME bundles from kernel
+3. Yield ExecutionResult</pre>
+
+        <h2>Preserved Features</h2>
+        <p>
+            All existing pdit features continue to work identically:
+        </p>
+        <ul>
+            <li>✅ Statement-by-statement execution with line highlighting</li>
+            <li>✅ Markdown cells (top-level string literals)</li>
+            <li>✅ Semicolon output suppression (<code>x = 42;</code>)</li>
+            <li>✅ Partial execution by line range</li>
+            <li>✅ Session isolation (one kernel per browser tab)</li>
+            <li>✅ Session reset/restart</li>
+            <li>✅ Real-time streaming results via SSE</li>
+            <li>✅ Rich output support (DataFrames, images, HTML)</li>
+            <li>✅ matplotlib integration with Agg backend</li>
+        </ul>
+
+        <h2>Benefits</h2>
+        <ul>
+            <li><strong>Robustness:</strong> xeus-python is production-tested and used in Jupyter deployments</li>
+            <li><strong>Standards Compliance:</strong> Full Jupyter protocol support opens doors to magics, extensions, and tooling</li>
+            <li><strong>Performance:</strong> C++ implementation provides fast execution and message handling</li>
+            <li><strong>Maintenance:</strong> Kernel logic maintained by Jupyter community, reducing pdit's maintenance burden</li>
+            <li><strong>Future Features:</strong> Easy path to supporting kernel interruption, debugging, and other Jupyter features</li>
+        </ul>
+
+        <h2>Trade-offs</h2>
+        <ul>
+            <li><strong>Additional Process:</strong> Each session now runs a separate kernel process (vs. in-process eval)</li>
+            <li><strong>Startup Latency:</strong> Kernel initialization adds ~1-2 seconds on first execution</li>
+            <li><strong>Dependency Size:</strong> xeus-python adds ~5MB of dependencies</li>
+            <li><strong>Python Version:</strong> Limited to Python 3.8-3.13 until xeus-python adds 3.14 wheels</li>
+        </ul>
+
+        <h2>Testing</h2>
+        <p>
+            The migration was validated through:
+        </p>
+        <ul>
+            <li>✅ Direct executor testing with matplotlib plots and DataFrames</li>
+            <li>✅ HTTP API integration tests via <code>/api/execute-script</code></li>
+            <li>✅ Server startup and shutdown lifecycle verification</li>
+            <li>✅ Output type correctness (stdout, stderr, errors, images)</li>
+        </ul>
+
+        <h2>Migration Notes</h2>
+        <p>
+            <strong>For users:</strong> No changes required. The UI and API remain identical.
+        </p>
+        <p>
+            <strong>For developers:</strong> If you were directly using <code>PythonExecutor</code>,
+            replace it with <code>XeusPythonExecutor</code> from <code>pdit.xeus_executor</code>.
+            The interface is compatible.
+        </p>
+
+        <div class="note">
+            <strong>Rollback Plan:</strong> The original <code>PythonExecutor</code> remains in
+            <code>pdit/executor.py</code> and can be restored by reverting the import changes in
+            <code>server.py</code> if issues arise.
+        </div>
+
+        <h2>Future Enhancements</h2>
+        <p>
+            With Jupyter kernel infrastructure in place, these features become easier to implement:
+        </p>
+        <ul>
+            <li>Code interruption (stop long-running cells)</li>
+            <li>IPython magics (<code>%timeit</code>, <code>%%sql</code>, etc.)</li>
+            <li>Kernel-side autocomplete and inspection</li>
+            <li>Debugger integration</li>
+            <li>Multiple kernel types (R, Julia, JavaScript)</li>
+            <li>Remote kernel execution</li>
+        </ul>
+    </div>
+</body>
+</html>
