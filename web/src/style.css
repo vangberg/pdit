@@ -361,7 +361,7 @@ h1 {
 
 #output {
   font-size: 13px;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: 'Fira Code', Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   width: 100%;
   min-width: 0;
   overflow-x: auto;
