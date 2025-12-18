@@ -21,7 +21,7 @@ class ExpressionInfo:
 class OutputItem:
     """Single output item with MIME type or stream type.
 
-    MIME types: 'text/plain', 'text/html', 'text/markdown', 'image/png', 'image/jpeg', 'application/json'
+    MIME types: 'text/plain', 'text/html', 'text/markdown', 'image/*', 'application/json'
     Stream types: 'stdout', 'stderr', 'error'
     """
     type: str

@@ -145,8 +145,12 @@ del _register_pdit_formatter
         output: List[OutputItem] = []
 
         # Priority order for MIME types - pass through directly
-        if 'image/png' in data:
-            output.append(OutputItem(type="image/png", content=data['image/png']))
+        # Check for any image type
+        image_types = [k for k in data.keys() if k.startswith('image/')]
+        if image_types:
+            # Use first image type found (they're usually in priority order)
+            mime_type = image_types[0]
+            output.append(OutputItem(type=mime_type, content=data[mime_type]))
         elif 'text/html' in data:
             output.append(OutputItem(type="text/html", content=data['text/html']))
         elif 'application/json' in data:
