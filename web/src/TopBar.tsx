@@ -77,24 +77,7 @@ function ActionButton({
   );
 }
 
-interface StatusIndicatorProps {
-  isReady: boolean;
-  message?: string;
-}
 
-function StatusIndicator({ isReady, message }: StatusIndicatorProps) {
-  const statusClass = isReady ? "ready" : "initializing";
-  const statusText = isReady ? "Ready" : (message || "Initializing");
-
-  return (
-    <div className="top-bar-status">
-      <div className={`top-bar-status-dot ${statusClass}`} />
-      <span className={`top-bar-status-text ${statusClass}`}>
-        {statusText}
-      </span>
-    </div>
-  );
-}
 
 interface ToggleSwitchProps {
   enabled: boolean;
@@ -238,8 +221,6 @@ export function TopBar({
           isFuzzyFinderOpen={isFuzzyFinderOpen}
           onFuzzyFinderOpenChange={onFuzzyFinderOpenChange}
         />
-
-        <StatusIndicator isReady={true} />
 
         {hasConflict && (
           <div className="top-bar-conflict-compact">
