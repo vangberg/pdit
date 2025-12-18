@@ -361,7 +361,7 @@ h1 {
 
 #output {
   font-size: 13px;
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Fira Code', Monaco, Consolas, monospace;
   width: 100%;
   min-width: 0;
   overflow-x: auto;
