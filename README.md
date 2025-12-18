@@ -82,6 +82,21 @@ uv run pdit --export script.py
 
 This executes the script and generates `script.html` with the output. The HTML file can be opened in any browser without a server.
 
+## Matplotlib Integration
+
+pdit automatically captures and displays matplotlib plots inline. Always wrap plotting code in a `plt.ioff()` context manager:
+
+```python
+import matplotlib.pyplot as plt
+
+with plt.ioff():
+    plt.plot([1, 2, 3], [1, 4, 9])
+    plt.title("My Plot")
+    plt.show()  # Standard matplotlib display
+```
+
+The `plt.ioff()` context manager disables interactive mode and enables proper plot capture with standard `plt.show()`.
+
 ## Development
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for development setup and testing.

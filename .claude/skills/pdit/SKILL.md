@@ -149,21 +149,23 @@ df.describe()
 
 ## Matplotlib Plots
 
-pdit captures matplotlib plots automatically:
+**IMPORTANT:** Always wrap matplotlib plotting code in a `plt.ioff()` context manager:
 
 ```python
 import matplotlib.pyplot as plt
 
-plt.plot([1, 2, 3], [1, 4, 9])
-plt.title("My Plot")
-plt.gca()  # ✅ This triggers plot capture
+with plt.ioff():
+    plt.plot([1, 2, 3], [1, 4, 9])
+    plt.title("My Plot")
+    plt.show()  # ✅ Standard matplotlib display
 ```
 
-**IMPORTANT:** Use `plt.gca()` to display plots, NOT `plt.show()`:
+**Key points:**
 
-- `plt.gca()` returns the Axes object, which pdit captures and renders
-- `plt.show()` is for interactive displays and won't work in pdit
+- Use `with plt.ioff():` to disable interactive mode
+- Use standard `plt.show()` to display plots
 - Plots appear inline in the output pane automatically
+- The context manager prevents interactive mode issues while capturing plots
 
 ## Output Suppression
 
@@ -264,7 +266,7 @@ This pattern is powerful for building dashboards and custom visualizations.
 - Long-running code streams results as each statement completes
 - User has full filesystem and package access (local Python execution)
 - Use docstring-style markdown cells to document your analysis
-- Use `plt.gca()` to display matplotlib plots inline
+- Always wrap matplotlib plotting code in `with plt.ioff():` and use `plt.show()`
 - Use `;` to suppress unwanted output like `plt.figure()` return values
 
 ## Dependencies
