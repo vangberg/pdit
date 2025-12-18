@@ -892,8 +892,12 @@ h1 {
 }
 
 .fuzzy-match-highlight {
-  color: #fff;
+  color: var(--accent);
   font-weight: 700;
+}
+
+.fuzzy-finder-item.selected .fuzzy-match-highlight {
+  color: #fff;
 }
 
 .fuzzy-finder-empty {

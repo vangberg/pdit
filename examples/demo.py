@@ -10,10 +10,6 @@ import polars as pl
 
 df = pl.read_csv("https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv")
 
-from great_tables import GT
-
-GT(df[:2])
-
 print(df[:1])
 
 df
