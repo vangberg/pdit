@@ -53,7 +53,6 @@ Options:
   --port INTEGER      Port to run server on (default: 8888)
   --host TEXT         Host to bind to (default: 127.0.0.1)
   --no-browser        Don't open browser automatically
-  --verbose           Print all computation stdout/stderr to console
   --help              Show help message
 ```
 
