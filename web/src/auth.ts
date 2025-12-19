@@ -19,8 +19,10 @@ export function setAuthErrorCallback(callback: (hasError: boolean) => void): voi
 /**
  * Trigger auth error state.
  * Called when a 401 response is received.
+ * Clears the stale token so user can refresh with new URL.
  */
 export function triggerAuthError(): void {
+  clearAuthToken(); // Clear stale token from localStorage
   if (authErrorCallback) {
     authErrorCallback(true);
   }

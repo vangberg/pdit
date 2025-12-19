@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import * as apiClient from "./api-client";
-import { triggerAuthError } from "./auth";
 
 interface UseScriptFileOptions {
   onFileChange?: (newContent: string) => void; // Callback when file changes (enables watching)
@@ -117,11 +116,9 @@ export function useScriptFile(
         // Close the connection to prevent automatic reconnection
         eventSource.close();
 
-        // EventSource doesn't expose status codes, but if we haven't
-        // received initial content yet, it's likely an auth error
+        // EventSource doesn't expose status codes, so we can't reliably
+        // distinguish auth errors from other failures (network issues, file not found, etc.)
         if (!hasReceivedInitialContent.current) {
-          // Could be 401 - trigger auth error as a precaution
-          triggerAuthError();
           setError(new Error("Failed to load file"));
           setIsLoading(false);
         } else {

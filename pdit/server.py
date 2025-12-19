@@ -10,6 +10,7 @@ Provides HTTP endpoints for:
 """
 
 import os
+import secrets
 import threading
 from contextlib import asynccontextmanager
 from dataclasses import asdict
@@ -138,16 +139,6 @@ allowed_origins = [
     f"http://127.0.0.1:{port}",
 ]
 
-# Enable CORS for browser access
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
 # Token authentication middleware
 class TokenAuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -169,7 +160,8 @@ class TokenAuthMiddleware(BaseHTTPMiddleware):
             # Try query parameter (for EventSource which can't set custom headers)
             token = request.query_params.get("token")
 
-        if not token or token != expected_token:
+        # Use constant-time comparison to prevent timing attacks
+        if not token or not secrets.compare_digest(token, expected_token):
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Invalid or missing authentication token"}
@@ -178,8 +170,18 @@ class TokenAuthMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-# Add token auth middleware
+# Add token auth middleware first, then CORS
+# Middleware added last executes first, so CORS will handle OPTIONS before auth checks
 app.add_middleware(TokenAuthMiddleware)
+
+# Enable CORS for browser access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/api/health")

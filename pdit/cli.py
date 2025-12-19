@@ -14,6 +14,7 @@ import threading
 import webbrowser
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlencode
 
 import typer
 from typing_extensions import Annotated
@@ -129,16 +130,16 @@ def start(
     # Generate secure token for this server instance (unless disabled)
     auth_token = None if disable_token_auth else secrets.token_urlsafe(32)
 
-    # Build URL with token (if enabled)
+    # Build URL with properly encoded query parameters
+    params = {}
     if script_path:
-        url = f"http://{host}:{actual_port}?script={script_path}"
-        if auth_token:
-            url += f"&token={auth_token}"
-    else:
-        if auth_token:
-            url = f"http://{host}:{actual_port}?token={auth_token}"
-        else:
-            url = f"http://{host}:{actual_port}"
+        params["script"] = script_path
+    if auth_token:
+        params["token"] = auth_token
+
+    url = f"http://{host}:{actual_port}"
+    if params:
+        url += f"?{urlencode(params)}"
 
     # Pretty startup output
     typer.echo()

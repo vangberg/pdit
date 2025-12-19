@@ -114,7 +114,7 @@ function ToggleSwitch({
     >
       <button
         className={`top-bar-toggle ${enabled ? "enabled" : ""}`}
-        onClick={() => !disabled && onToggle(!enabled)}
+        onClick={() => onToggle(!enabled)}
         role="switch"
         aria-checked={enabled}
         disabled={disabled}

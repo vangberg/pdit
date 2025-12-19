@@ -78,6 +78,7 @@ export async function reset(): Promise<void> {
 
   if (!response.ok) {
     handleResponseError(response);
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
   }
 }
 
