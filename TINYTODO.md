@@ -17,3 +17,4 @@ When a todo is done, delete it.
 * Disable CodeMirror code folding
 * itables: left align everything
 * remove debug
+* Disable entire TopBar instead of individual buttons
