@@ -5,6 +5,7 @@ Provides the `pdit` command to start the server and open the web interface.
 """
 
 import contextlib
+import secrets
 import signal
 import socket
 import sys
@@ -123,16 +124,21 @@ def start(
             typer.echo(f"Error: Port {port} is already in use", err=True)
             sys.exit(1)
 
-    # Build URL
-    url = f"http://{host}:{actual_port}"
+    # Generate secure token for this server instance
+    auth_token = secrets.token_urlsafe(32)
+
+    # Build URL with token
+    url = f"http://{host}:{actual_port}?token={auth_token}"
     if script_path:
-        url += f"?script={script_path}"
+        url += f"&script={script_path}"
 
     typer.echo(f"Starting pdit server on {host}:{actual_port}")
+    typer.echo(f"Access URL: {url}")
 
-    # Pass port to server via environment variable for CORS configuration
+    # Pass port and token to server via environment variables
     import os
     os.environ["PDIT_PORT"] = str(actual_port)
+    os.environ["PDIT_AUTH_TOKEN"] = auth_token
 
     # Configure and create server
     config = uvicorn.Config(

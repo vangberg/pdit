@@ -150,6 +150,10 @@ export function Editor({
           {
             key: "Cmd-Enter",
             run: (view: EditorView) => {
+              // Don't execute if editor is read-only (e.g., auth error)
+              if (view.state.readOnly) {
+                return false;
+              }
               executeCurrentSelection(view);
               return true;
             },
@@ -157,6 +161,10 @@ export function Editor({
           {
             key: "Cmd-Shift-Enter",
             run: (view: EditorView) => {
+              // Don't execute if editor is read-only (e.g., auth error)
+              if (view.state.readOnly) {
+                return false;
+              }
               const currentText = view.state.doc.toString();
               onExecuteAllRef.current?.(currentText);
               return true;

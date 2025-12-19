@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from "react";
+import { getAuthToken, triggerAuthError } from "./auth";
 
 interface UseScriptFileOptions {
   onFileChange?: (newContent: string) => void; // Callback when file changes (enables watching)
@@ -53,12 +54,26 @@ export function useScriptFile(
 
   // Single effect for both loading AND watching
   useEffect(() => {
+    // Get auth token
+    const token = getAuthToken();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+
+    if (token) {
+      headers["X-Auth-Token"] = token;
+    }
+
     // Initialize session to start kernel immediately (all modes)
     fetch("/api/init-session", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ sessionId }),
-    }).catch((err) => console.error("Failed to init session:", err));
+    })
+      .then((response) => {
+        if (!response.ok && response.status === 401) {
+          triggerAuthError();
+        }
+      })
+      .catch((err) => console.error("Failed to init session:", err));
 
     // No script path → use default (scratchpad mode)
     if (!scriptPath) {
@@ -74,10 +89,16 @@ export function useScriptFile(
     setError(null);
 
     try {
+      // Build EventSource URL with token (EventSource doesn't support custom headers)
+      const url = new URL('/api/watch-file', window.location.origin);
+      url.searchParams.set('path', scriptPath);
+      url.searchParams.set('sessionId', sessionId);
+      if (token) {
+        url.searchParams.set('token', token);
+      }
+
       // Create EventSource - handles both initial load AND watching!
-      const eventSource = new EventSource(
-        `/api/watch-file?path=${encodeURIComponent(scriptPath)}&sessionId=${encodeURIComponent(sessionId)}`
-      );
+      const eventSource = new EventSource(url.toString());
 
       eventSourceRef.current = eventSource;
 
@@ -119,8 +140,11 @@ export function useScriptFile(
         // Close the connection to prevent automatic reconnection
         eventSource.close();
 
-        // Only set error if we haven't received initial content yet
+        // EventSource doesn't expose status codes, but if we haven't
+        // received initial content yet, it's likely an auth error
         if (!hasReceivedInitialContent.current) {
+          // Could be 401 - trigger auth error as a precaution
+          triggerAuthError();
           setError(new Error("Failed to load file"));
           setIsLoading(false);
         } else {

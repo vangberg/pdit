@@ -1,8 +1,26 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Script } from "./Script";
+import { extractAndStoreToken, removeTokenFromUrl, setAuthErrorCallback } from "./auth";
+import { AuthErrorProvider, useAuthError } from "./auth-error-context";
 import "./style.css";
 
-function App() {
+function AppContent() {
+  const { hasAuthError, setAuthError } = useAuthError();
+
+  // Register auth error callback
+  useEffect(() => {
+    setAuthErrorCallback(setAuthError);
+  }, [setAuthError]);
+
+  // Extract and store auth token from URL
+  useEffect(() => {
+    const hasToken = extractAndStoreToken();
+    if (hasToken) {
+      // Remove token from URL for security (it's now in localStorage)
+      removeTokenFromUrl();
+    }
+  }, []);
+
   // Parse URL params once on mount
   const [{ scriptPath: initialScriptPath }] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -38,7 +56,16 @@ function App() {
       key={scriptPath || "no-script"}
       scriptPath={scriptPath}
       onPathChange={handlePathChange}
+      hasAuthError={hasAuthError}
     />
+  );
+}
+
+function App() {
+  return (
+    <AuthErrorProvider>
+      <AppContent />
+    </AuthErrorProvider>
   );
 }
 

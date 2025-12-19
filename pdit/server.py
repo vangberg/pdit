@@ -15,11 +15,12 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from .xeus_executor import XeusPythonExecutor
 from .executor import ExecutionResult
@@ -145,6 +146,40 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Token authentication middleware
+class TokenAuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Skip token validation for:
+        # 1. Static files (non-API routes)
+        # 2. Health check endpoint (for monitoring)
+        if not request.url.path.startswith("/api") or request.url.path == "/api/health":
+            return await call_next(request)
+
+        # Get expected token from environment
+        expected_token = os.environ.get("PDIT_AUTH_TOKEN")
+        if not expected_token:
+            # Token auth not configured (shouldn't happen in normal use)
+            return await call_next(request)
+
+        # Check token in header (preferred) or query parameter (for EventSource)
+        token = request.headers.get("X-Auth-Token")
+        if not token:
+            # Try query parameter (for EventSource which can't set custom headers)
+            token = request.query_params.get("token")
+
+        if not token or token != expected_token:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid or missing authentication token"}
+            )
+
+        return await call_next(request)
+
+
+# Add token auth middleware
+app.add_middleware(TokenAuthMiddleware)
 
 
 @app.get("/api/health")

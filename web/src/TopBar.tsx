@@ -20,6 +20,7 @@ interface TopBarProps {
   isFuzzyFinderOpen?: boolean;
   onFuzzyFinderOpenChange?: (open: boolean) => void;
   isExecuting?: boolean;
+  hasAuthError?: boolean;
 }
 
 function detectMacOS(): boolean {
@@ -87,6 +88,7 @@ interface ToggleSwitchProps {
   showTooltip: boolean;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
+  disabled?: boolean;
 }
 
 function ToggleSwitch({
@@ -96,7 +98,8 @@ function ToggleSwitch({
   tooltip,
   showTooltip,
   onMouseEnter,
-  onMouseLeave
+  onMouseLeave,
+  disabled
 }: ToggleSwitchProps) {
   return (
     <div
@@ -106,9 +109,10 @@ function ToggleSwitch({
     >
       <button
         className={`top-bar-toggle ${enabled ? "enabled" : ""}`}
-        onClick={() => onToggle(!enabled)}
+        onClick={() => !disabled && onToggle(!enabled)}
         role="switch"
         aria-checked={enabled}
+        disabled={disabled}
       >
         <span className="top-bar-toggle-label">{label}</span>
         <span className="top-bar-toggle-switch">
@@ -138,7 +142,8 @@ export function TopBar({
   onDebugModeToggle,
   isFuzzyFinderOpen,
   onFuzzyFinderOpenChange,
-  isExecuting
+  isExecuting,
+  hasAuthError
 }: TopBarProps) {
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
@@ -152,7 +157,7 @@ export function TopBar({
         <ActionButton
           label="▶ RUN CURRENT"
           onClick={onRunCurrent || (() => {})}
-          disabled={isExecuting || false}
+          disabled={isExecuting || hasAuthError || false}
           onMouseEnter={() => setHoveredButton("current")}
           onMouseLeave={() => setHoveredButton(null)}
           tooltip={shortcuts.current}
@@ -162,7 +167,7 @@ export function TopBar({
         <ActionButton
           label="▶ RUN ALL"
           onClick={onRunAll}
-          disabled={isExecuting || false}
+          disabled={isExecuting || hasAuthError || false}
           onMouseEnter={() => setHoveredButton("all")}
           onMouseLeave={() => setHoveredButton(null)}
           tooltip={shortcuts.all}
@@ -177,6 +182,7 @@ export function TopBar({
           showTooltip={hoveredButton === "reader"}
           onMouseEnter={() => setHoveredButton("reader")}
           onMouseLeave={() => setHoveredButton(null)}
+          disabled={hasAuthError}
         />
 
         {onAutorunToggle && (
@@ -188,6 +194,7 @@ export function TopBar({
             showTooltip={hoveredButton === "autorun"}
             onMouseEnter={() => setHoveredButton("autorun")}
             onMouseLeave={() => setHoveredButton(null)}
+            disabled={hasAuthError}
           />
         )}
 
@@ -200,6 +207,7 @@ export function TopBar({
             showTooltip={hoveredButton === "debug"}
             onMouseEnter={() => setHoveredButton("debug")}
             onMouseLeave={() => setHoveredButton(null)}
+            disabled={hasAuthError}
           />
         )}
 
@@ -207,7 +215,7 @@ export function TopBar({
           <ActionButton
             label="SAVE"
             onClick={onSave || (() => {})}
-            disabled={!(hasUnsavedChanges ?? false)}
+            disabled={!(hasUnsavedChanges ?? false) || hasAuthError || false}
             onMouseEnter={() => setHoveredButton("save")}
             onMouseLeave={() => setHoveredButton(null)}
             tooltip={saveShortcut}
@@ -252,6 +260,19 @@ export function TopBar({
               Keep
               {hoveredButton === "keep" && <Tooltip text="Keep your changes and dismiss this warning" />}
             </button>
+          </div>
+        )}
+
+        {hasAuthError && (
+          <div
+            className="top-bar-button-wrapper"
+            onMouseEnter={() => setHoveredButton("auth-error")}
+            onMouseLeave={() => setHoveredButton(null)}
+          >
+            <span className="top-bar-auth-error">⚠️ Auth failed</span>
+            {hoveredButton === "auth-error" && (
+              <Tooltip text="Copy the full URL from your terminal (including ?token=...) and paste it into your browser" />
+            )}
           </div>
         )}
       </div>

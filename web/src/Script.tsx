@@ -11,15 +11,17 @@ import { useResults } from "./results";
 import { useScriptFile } from "./use-script-file";
 import { LineGroupLayout } from "./line-group-layout";
 import { useScriptSettings } from "./use-script-settings";
+import { getAuthToken, triggerAuthError } from "./auth";
 
 const DEFAULT_CODE = ``;
 
 interface ScriptProps {
   scriptPath: string | null;
   onPathChange?: (newPath: string) => void;
+  hasAuthError?: boolean;
 }
 
-export function Script({ scriptPath, onPathChange }: ScriptProps) {
+export function Script({ scriptPath, onPathChange, hasAuthError }: ScriptProps) {
   const [hasConflict, setHasConflict] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [doc, setDoc] = useState<Text>();
@@ -262,11 +264,18 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
     }
 
     try {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (token) {
+        headers["X-Auth-Token"] = token;
+      }
+
       const response = await fetch("/api/save-file", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           path: scriptPath,
           content: doc.toString(),
@@ -282,6 +291,9 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
           handleExecute(doc.toString());
         }
       } else {
+        if (response.status === 401) {
+          triggerAuthError();
+        }
         console.error("Failed to save file:", await response.text());
       }
     } catch (error) {
@@ -292,6 +304,11 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
   // Handle keyboard shortcuts (Cmd+S save, Cmd+P fuzzy finder)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Disable all keyboard shortcuts when auth error is present
+      if (hasAuthError) {
+        return;
+      }
+
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
         if (hasUnsavedChanges) {
@@ -307,7 +324,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [hasUnsavedChanges, handleSave, onPathChange]);
+  }, [hasUnsavedChanges, handleSave, onPathChange, hasAuthError]);
 
   // Process pending autorun (triggered by file change from disk)
   useEffect(() => {
@@ -374,6 +391,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
         isFuzzyFinderOpen={isFuzzyFinderOpen}
         onFuzzyFinderOpenChange={setIsFuzzyFinderOpen}
         isExecuting={isExecuting}
+        hasAuthError={hasAuthError}
       />
       <div
         className={
@@ -393,7 +411,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
             onLineGroupsChange={handleLineGroupsChange}
             onLineGroupLayoutChange={handleLineGroupLayoutChange}
             lineGroupHeights={lineGroupHeights}
-            readOnly={isExecuting}
+            readOnly={isExecuting || hasAuthError}
           />
         </div>
         <div className={readerMode ? "output-half output-full" : "output-half"}>
