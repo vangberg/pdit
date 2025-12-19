@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { PathEditor } from "./PathEditor";
 import { useDropdownNavigation, DropdownList } from "./Dropdown";
+import { Play, BookOpen, Zap, Bug, Save } from "lucide-react";
 
 interface TopBarProps {
   onRunAll: () => void;
@@ -51,6 +52,7 @@ interface ActionButtonProps {
   onMouseLeave: () => void;
   tooltip?: string;
   showTooltip: boolean;
+  icon?: React.ReactNode;
 }
 
 function ActionButton({
@@ -60,7 +62,8 @@ function ActionButton({
   onMouseEnter,
   onMouseLeave,
   tooltip,
-  showTooltip
+  showTooltip,
+  icon
 }: ActionButtonProps) {
   return (
     <div className="top-bar-button-wrapper">
@@ -71,7 +74,8 @@ function ActionButton({
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
       >
-        {label}
+        {icon && <span className="top-bar-button-icon">{icon}</span>}
+        <span className="top-bar-label">{label}</span>
       </button>
       {showTooltip && tooltip && <Tooltip text={tooltip} />}
     </div>
@@ -84,6 +88,7 @@ interface ToggleSwitchProps {
   enabled: boolean;
   onToggle: (enabled: boolean) => void;
   label: string;
+  icon?: React.ReactNode;
   tooltip?: string;
   showTooltip: boolean;
   onMouseEnter: () => void;
@@ -94,6 +99,7 @@ function ToggleSwitch({
   enabled,
   onToggle,
   label,
+  icon,
   tooltip,
   showTooltip,
   onMouseEnter,
@@ -111,6 +117,7 @@ function ToggleSwitch({
         role="switch"
         aria-checked={enabled}
       >
+        {icon && <span className="top-bar-toggle-icon">{icon}</span>}
         <span className="top-bar-toggle-label">{label}</span>
         <span className="top-bar-toggle-switch">
           <span className="top-bar-toggle-knob" />
@@ -198,7 +205,7 @@ function RunButton({
     }
   };
 
-  const label = "▶ RUN CURRENT";
+  const label = "RUN CURRENT";
   const tooltip = shortcuts.current;
 
   return (
@@ -214,7 +221,8 @@ function RunButton({
         onMouseEnter={() => setHoveredPart("main")}
         onMouseLeave={() => setHoveredPart(null)}
       >
-        {label}
+        <Play size={14} className="top-bar-icon" />
+        <span className="top-bar-label">{label}</span>
       </button>
       {hoveredPart === "main" && <Tooltip text={tooltip} />}
       
@@ -297,6 +305,7 @@ export function TopBar({
           enabled={readerMode ?? false}
           onToggle={onToggleReaderMode || (() => {})}
           label="READER"
+          icon={<BookOpen size={14} />}
           tooltip="Toggle reader mode"
           showTooltip={hoveredButton === "reader"}
           onMouseEnter={() => setHoveredButton("reader")}
@@ -308,6 +317,7 @@ export function TopBar({
             enabled={autorun ?? false}
             onToggle={onAutorunToggle}
             label="AUTORUN"
+            icon={<Zap size={14} />}
             tooltip="Auto-execute script on save or file change"
             showTooltip={hoveredButton === "autorun"}
             onMouseEnter={() => setHoveredButton("autorun")}
@@ -320,6 +330,7 @@ export function TopBar({
             enabled={debugMode ?? false}
             onToggle={onDebugModeToggle}
             label="DEBUG"
+            icon={<Bug size={14} />}
             tooltip="Show debug buttons on outputs to inspect raw data"
             showTooltip={hoveredButton === "debug"}
             onMouseEnter={() => setHoveredButton("debug")}
@@ -336,6 +347,7 @@ export function TopBar({
             onMouseLeave={() => setHoveredButton(null)}
             tooltip={saveShortcut}
             showTooltip={hoveredButton === "save" && (hasUnsavedChanges ?? false)}
+            icon={<Save size={14} />}
           />
         )}
 

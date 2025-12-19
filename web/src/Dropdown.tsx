@@ -61,7 +61,7 @@ export interface DropdownListProps<T> {
   keyExtractor?: (item: T) => string | number;
   className?: string;
   itemClassName?: string;
-  listRef?: React.RefObject<HTMLDivElement>;
+  listRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 export function DropdownList<T>({
@@ -75,7 +75,7 @@ export function DropdownList<T>({
   itemClassName,
   listRef,
   ...props
-}: DropdownListProps<T> & React.HTMLAttributes<HTMLDivElement>) {
+}: DropdownListProps<T> & Omit<React.HTMLAttributes<HTMLDivElement>, "onSelect">) {
   const internalRef = useRef<HTMLDivElement>(null);
   const ref = listRef || internalRef;
 
