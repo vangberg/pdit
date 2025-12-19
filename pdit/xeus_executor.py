@@ -89,7 +89,7 @@ def _register_pdit_formatter():
     OFFLINE_INIT = itables.javascript.generate_init_offline_itables_html(itables.options.dt_bundle)
 
     def format_datatable(df, include=None, exclude=None):
-        html = itables.to_html_datatable(df, display_logo_when_loading=False, connected=False)
+        html = itables.to_html_datatable(df, display_logo_when_loading=False, connected=False, layout={"topStart": None, "topEnd": None, "bottomStart": "search", "bottomEnd": "paging"})
         return f'{OFFLINE_INIT}{html}'
 
     ip = IPython.get_ipython()

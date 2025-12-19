@@ -1042,34 +1042,45 @@ h1 {
   white-space: nowrap;
 }
 
-/* DataTables styling for pandas/polars output - booktabs style */
+/* DataTables styling for pandas/polars output - neobrutalism style */
 table.dataTable {
   border-collapse: collapse;
   font-size: 13px;
   font-family: 'Fira Code', Monaco, Consolas, monospace;
-  border: none;
+  border: 2px solid var(--border);
   background: #fff;
-  border-top: 2px solid var(--border);
-  border-bottom: 2px solid var(--border);
   width: 100%;
 }
 
 table.dataTable thead th {
-  background: #fff;
+  background: var(--bg-secondary);
   font-weight: 700;
   color: var(--text-primary);
-  border: none;
-  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  border-bottom: 2px solid var(--border);
   padding: 8px 8px;
   font-size: 12px;
   text-align: left;
 }
 
+table.dataTable thead th:last-child {
+  border-right: none;
+}
+
 table.dataTable tbody td {
   padding: 6px 8px;
-  border: none;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
   color: var(--text-secondary);
   background: #fff;
+}
+
+table.dataTable tbody td:last-child {
+  border-right: none;
+}
+
+table.dataTable tbody tr:last-child td {
+  border-bottom: none;
 }
 
 table.dataTable tbody tr:hover td {

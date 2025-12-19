@@ -12,6 +12,8 @@ df = pl.read_csv("https://raw.githubusercontent.com/mwaskom/seaborn-data/master/
 
 print(df[:1])
 
+df.select("sepal_length")[:5]
+
 df
 
 
