@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useDropdownNavigation, DropdownList } from "./Dropdown";
 import * as apiClient from "./api-client";
 
 interface FuzzyFinderProps {
@@ -76,11 +77,18 @@ export function FuzzyFinder({ isOpen, onClose, onSelect }: FuzzyFinderProps) {
   const [query, setQuery] = useState("");
   const [files, setFiles] = useState<string[]>([]);
   const [filteredFiles, setFilteredFiles] = useState<MatchedFile[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const { selectedIndex, setSelectedIndex, handleKeyDown } = useDropdownNavigation({
+    items: filteredFiles,
+    onSelect: (file) => {
+      onSelect(file.path);
+      onClose();
+    },
+    onClose,
+  });
 
   // Fetch files when opened
   useEffect(() => {
@@ -119,7 +127,7 @@ export function FuzzyFinder({ isOpen, onClose, onSelect }: FuzzyFinderProps) {
     matched.sort((a, b) => b.score - a.score);
     setFilteredFiles(matched);
     setSelectedIndex(0);
-  }, [query, files]);
+  }, [query, files, setSelectedIndex]);
 
   // Focus input when opened
   useEffect(() => {
@@ -128,7 +136,7 @@ export function FuzzyFinder({ isOpen, onClose, onSelect }: FuzzyFinderProps) {
       setQuery("");
       setSelectedIndex(0);
     }
-  }, [isOpen]);
+  }, [isOpen, setSelectedIndex]);
 
   // Close on click outside
   useEffect(() => {
@@ -143,51 +151,6 @@ export function FuzzyFinder({ isOpen, onClose, onSelect }: FuzzyFinderProps) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, onClose]);
-
-  // Scroll selected item into view
-  useEffect(() => {
-    if (listRef.current) {
-      const selectedItem = listRef.current.children[selectedIndex] as HTMLElement;
-      if (selectedItem) {
-        selectedItem.scrollIntoView({ block: "nearest" });
-      }
-    }
-  }, [selectedIndex]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      switch (e.key) {
-        case "ArrowDown":
-          e.preventDefault();
-          setSelectedIndex((prev) => Math.min(prev + 1, filteredFiles.length - 1));
-          break;
-        case "ArrowUp":
-          e.preventDefault();
-          setSelectedIndex((prev) => Math.max(prev - 1, 0));
-          break;
-        case "Enter":
-          e.preventDefault();
-          if (filteredFiles[selectedIndex]) {
-            onSelect(filteredFiles[selectedIndex].path);
-            onClose();
-          }
-          break;
-        case "Escape":
-          e.preventDefault();
-          onClose();
-          break;
-      }
-    },
-    [filteredFiles, selectedIndex, onSelect, onClose]
-  );
-
-  const handleSelect = useCallback(
-    (path: string) => {
-      onSelect(path);
-      onClose();
-    },
-    [onSelect, onClose]
-  );
 
   if (!isOpen) {
     return null;
@@ -204,19 +167,28 @@ export function FuzzyFinder({ isOpen, onClose, onSelect }: FuzzyFinderProps) {
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={handleKeyDown}
       />
-      <div ref={listRef} className="fuzzy-finder-list">
-        {isLoading ? (
-          <div className="fuzzy-finder-empty">Loading...</div>
-        ) : filteredFiles.length === 0 ? (
-          <div className="fuzzy-finder-empty">No files found</div>
-        ) : (
-          filteredFiles.slice(0, 20).map((file, index) => (
-            <div
-              key={file.path}
-              className={`fuzzy-finder-item ${index === selectedIndex ? "selected" : ""}`}
-              onClick={() => handleSelect(file.path)}
-              onMouseEnter={() => setSelectedIndex(index)}
-            >
+      {isLoading ? (
+        <div className="fuzzy-finder-list">
+            <div className="fuzzy-finder-empty">Loading...</div>
+        </div>
+      ) : filteredFiles.length === 0 ? (
+        <div className="fuzzy-finder-list">
+            <div className="fuzzy-finder-empty">No files found</div>
+        </div>
+      ) : (
+        <DropdownList
+          className="fuzzy-finder-list"
+          itemClassName="fuzzy-finder-item"
+          items={filteredFiles.slice(0, 20)}
+          selectedIndex={selectedIndex}
+          onSelect={(file) => {
+             onSelect(file.path);
+             onClose();
+          }}
+          onHover={setSelectedIndex}
+          keyExtractor={(file) => file.path}
+          renderItem={(file) => (
+             <>
               <span className="fuzzy-finder-filename">
                 {highlightMatches(file.path.split("/").pop() || "",
                   file.matchedIndices.filter(i => i >= file.path.lastIndexOf("/") + 1)
@@ -228,10 +200,10 @@ export function FuzzyFinder({ isOpen, onClose, onSelect }: FuzzyFinderProps) {
                   {highlightMatches(file.path, file.matchedIndices)}
                 </span>
               )}
-            </div>
-          ))
-        )}
-      </div>
+             </>
+          )}
+        />
+      )}
     </div>
   );
 }

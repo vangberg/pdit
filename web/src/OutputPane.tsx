@@ -12,7 +12,6 @@ interface OutputPaneProps {
   lineGroupLayouts?: Map<string, LineGroupLayout>;
   lineGroupHeights?: Map<string, number>;
   readerMode?: boolean;
-  debugMode?: boolean;
 }
 
 export const OutputPane: React.FC<OutputPaneProps> = ({
@@ -22,7 +21,6 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
   lineGroupLayouts,
   lineGroupHeights,
   readerMode,
-  debugMode,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const lineGroupRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -144,7 +142,6 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
                     expression={expression}
                     index={index}
                     allInvisible={group.allInvisible}
-                    debugMode={debugMode}
                   />
                 );
               })}

@@ -26,7 +26,7 @@ export function Script({ scriptPath, onPathChange, hasAuthError }: ScriptProps) 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [doc, setDoc] = useState<Text>();
 
-  const { autorun, setAutorun, readerMode, setReaderMode, debugMode, setDebugMode } =
+  const { autorun, setAutorun, readerMode, setReaderMode } =
     useScriptSettings(scriptPath);
 
   const [isFuzzyFinderOpen, setIsFuzzyFinderOpen] = useState(false);
@@ -367,8 +367,6 @@ export function Script({ scriptPath, onPathChange, hasAuthError }: ScriptProps) 
         onToggleReaderMode={handleToggleReaderMode}
         autorun={autorun}
         onAutorunToggle={setAutorun}
-        debugMode={debugMode}
-        onDebugModeToggle={setDebugMode}
         isFuzzyFinderOpen={isFuzzyFinderOpen}
         onFuzzyFinderOpenChange={setIsFuzzyFinderOpen}
         isExecuting={isExecuting}
@@ -403,7 +401,6 @@ export function Script({ scriptPath, onPathChange, hasAuthError }: ScriptProps) 
             lineGroupLayouts={lineGroupLayouts}
             lineGroupHeights={lineGroupHeights}
             readerMode={readerMode}
-            debugMode={debugMode}
           />
         </div>
       </div>

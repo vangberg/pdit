@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { PathEditor } from "./PathEditor";
+import { useDropdownNavigation, DropdownList } from "./Dropdown";
+import { Play, BookOpen, Zap, Save } from "lucide-react";
 
 interface TopBarProps {
   onRunAll: () => void;
@@ -15,8 +17,6 @@ interface TopBarProps {
   onToggleReaderMode?: () => void;
   autorun?: boolean;
   onAutorunToggle?: (enabled: boolean) => void;
-  debugMode?: boolean;
-  onDebugModeToggle?: (enabled: boolean) => void;
   isFuzzyFinderOpen?: boolean;
   onFuzzyFinderOpenChange?: (open: boolean) => void;
   isExecuting?: boolean;
@@ -51,6 +51,7 @@ interface ActionButtonProps {
   onMouseLeave: () => void;
   tooltip?: string;
   showTooltip: boolean;
+  icon?: React.ReactNode;
 }
 
 function ActionButton({
@@ -60,7 +61,8 @@ function ActionButton({
   onMouseEnter,
   onMouseLeave,
   tooltip,
-  showTooltip
+  showTooltip,
+  icon
 }: ActionButtonProps) {
   return (
     <div className="top-bar-button-wrapper">
@@ -71,7 +73,8 @@ function ActionButton({
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
       >
-        {label}
+        {icon && <span className="top-bar-button-icon">{icon}</span>}
+        <span className="top-bar-label">{label}</span>
       </button>
       {showTooltip && tooltip && <Tooltip text={tooltip} />}
     </div>
@@ -84,6 +87,7 @@ interface ToggleSwitchProps {
   enabled: boolean;
   onToggle: (enabled: boolean) => void;
   label: string;
+  icon?: React.ReactNode;
   tooltip?: string;
   showTooltip: boolean;
   onMouseEnter: () => void;
@@ -95,6 +99,7 @@ function ToggleSwitch({
   enabled,
   onToggle,
   label,
+  icon,
   tooltip,
   showTooltip,
   onMouseEnter,
@@ -114,12 +119,150 @@ function ToggleSwitch({
         aria-checked={enabled}
         disabled={disabled}
       >
+        {icon && <span className="top-bar-toggle-icon">{icon}</span>}
         <span className="top-bar-toggle-label">{label}</span>
         <span className="top-bar-toggle-switch">
           <span className="top-bar-toggle-knob" />
         </span>
       </button>
       {showTooltip && tooltip && <Tooltip text={tooltip} />}
+    </div>
+  );
+}
+
+function RunButton({
+  onRunAll,
+  onRunCurrent,
+  isExecuting,
+  shortcuts
+}: {
+  onRunAll: () => void;
+  onRunCurrent?: () => void;
+  isExecuting?: boolean;
+  shortcuts: { current: string; all: string };
+}) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [lastRunMode, setLastRunMode] = useState<"all" | "current">("current");
+  const [hoveredPart, setHoveredPart] = useState<"main" | "arrow" | null>(null);
+  
+  const containerRef = useRef<HTMLDivElement>(null);
+  const arrowRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const options = useMemo(() => [
+    { id: "current", label: "Run Current", shortcut: shortcuts.current, action: onRunCurrent, disabled: !onRunCurrent },
+    { id: "all", label: "Run All", shortcut: shortcuts.all, action: onRunAll },
+  ], [onRunAll, onRunCurrent, shortcuts.current, shortcuts.all]);
+
+  const handleOptionSelect = (option: typeof options[0]) => {
+     if (option.disabled) return;
+     setIsDropdownOpen(false);
+     setLastRunMode(option.id as "all" | "current");
+     option.action?.();
+     arrowRef.current?.focus();
+  };
+
+  const { selectedIndex, setSelectedIndex, handleKeyDown } = useDropdownNavigation({
+    items: options,
+    onSelect: handleOptionSelect,
+    onClose: () => {
+        setIsDropdownOpen(false);
+        arrowRef.current?.focus();
+    },
+    defaultIndex: options.findIndex(o => o.id === lastRunMode)
+  });
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Focus dropdown when opened
+  useEffect(() => {
+    if (isDropdownOpen) {
+      // Re-sync index with lastRunMode
+      setSelectedIndex(options.findIndex(o => o.id === lastRunMode));
+      // Small timeout to ensure render
+      requestAnimationFrame(() => {
+        dropdownRef.current?.focus();
+      });
+    }
+  }, [isDropdownOpen, lastRunMode, setSelectedIndex]);
+
+  const handleMainClick = () => {
+    if (onRunCurrent) {
+      onRunCurrent();
+    }
+  };
+
+  const handleArrowKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setIsDropdownOpen(true);
+    }
+  };
+
+  const label = "RUN CURRENT";
+  const tooltip = shortcuts.current;
+
+  return (
+    <div 
+      className="top-bar-split-button-wrapper" 
+      onMouseLeave={() => setIsDropdownOpen(false)}
+      ref={containerRef}
+    >
+      <button
+        className="top-bar-split-button-main"
+        onClick={handleMainClick}
+        disabled={isExecuting}
+        onMouseEnter={() => setHoveredPart("main")}
+        onMouseLeave={() => setHoveredPart(null)}
+      >
+        <Play size={14} className="top-bar-icon" />
+        <span className="top-bar-label">{label}</span>
+      </button>
+      {hoveredPart === "main" && <Tooltip text={tooltip} />}
+      
+      <button
+        ref={arrowRef}
+        className={`top-bar-split-button-arrow ${isDropdownOpen ? "active" : ""}`}
+        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+        onKeyDown={handleArrowKeyDown}
+        disabled={isExecuting}
+        onMouseEnter={() => setHoveredPart("arrow")}
+        onMouseLeave={() => setHoveredPart(null)}
+        aria-haspopup="true"
+        aria-expanded={isDropdownOpen}
+      >
+        ▼
+      </button>
+      
+      {isDropdownOpen && (
+        <DropdownList
+          listRef={dropdownRef}
+          className="top-bar-dropdown-menu"
+          itemClassName="top-bar-dropdown-item"
+          items={options}
+          selectedIndex={selectedIndex}
+          onSelect={handleOptionSelect}
+          onHover={setSelectedIndex}
+          keyExtractor={(opt) => opt.id}
+          tabIndex={-1}
+          style={{ outline: 'none' }}
+          onKeyDown={handleKeyDown}
+          renderItem={(option) => (
+             <>
+               <span>{option.label}</span>
+               <span className="top-bar-dropdown-item-shortcut">{option.shortcut}</span>
+             </>
+          )}
+        />
+      )}
     </div>
   );
 }
@@ -138,8 +281,6 @@ export function TopBar({
   onToggleReaderMode,
   autorun,
   onAutorunToggle,
-  debugMode,
-  onDebugModeToggle,
   isFuzzyFinderOpen,
   onFuzzyFinderOpenChange,
   isExecuting,
@@ -154,30 +295,18 @@ export function TopBar({
   return (
     <div className="top-bar">
       <div className="top-bar-content">
-        <ActionButton
-          label="▶ RUN CURRENT"
-          onClick={onRunCurrent || (() => {})}
-          disabled={isExecuting || hasAuthError || false}
-          onMouseEnter={() => setHoveredButton("current")}
-          onMouseLeave={() => setHoveredButton(null)}
-          tooltip={shortcuts.current}
-          showTooltip={hoveredButton === "current"}
-        />
-
-        <ActionButton
-          label="▶ RUN ALL"
-          onClick={onRunAll}
-          disabled={isExecuting || hasAuthError || false}
-          onMouseEnter={() => setHoveredButton("all")}
-          onMouseLeave={() => setHoveredButton(null)}
-          tooltip={shortcuts.all}
-          showTooltip={hoveredButton === "all"}
+        <RunButton
+          onRunAll={onRunAll}
+          onRunCurrent={onRunCurrent}
+          isExecuting={isExecuting}
+          shortcuts={shortcuts}
         />
 
         <ToggleSwitch
           enabled={readerMode ?? false}
           onToggle={onToggleReaderMode || (() => {})}
           label="READER"
+          icon={<BookOpen size={14} />}
           tooltip="Toggle reader mode"
           showTooltip={hoveredButton === "reader"}
           onMouseEnter={() => setHoveredButton("reader")}
@@ -190,22 +319,10 @@ export function TopBar({
             enabled={autorun ?? false}
             onToggle={onAutorunToggle}
             label="AUTORUN"
+            icon={<Zap size={14} />}
             tooltip="Auto-execute script on save or file change"
             showTooltip={hoveredButton === "autorun"}
             onMouseEnter={() => setHoveredButton("autorun")}
-            onMouseLeave={() => setHoveredButton(null)}
-            disabled={hasAuthError}
-          />
-        )}
-
-        {onDebugModeToggle && (
-          <ToggleSwitch
-            enabled={debugMode ?? false}
-            onToggle={onDebugModeToggle}
-            label="DEBUG"
-            tooltip="Show debug buttons on outputs to inspect raw data"
-            showTooltip={hoveredButton === "debug"}
-            onMouseEnter={() => setHoveredButton("debug")}
             onMouseLeave={() => setHoveredButton(null)}
             disabled={hasAuthError}
           />
@@ -220,6 +337,7 @@ export function TopBar({
             onMouseLeave={() => setHoveredButton(null)}
             tooltip={saveShortcut}
             showTooltip={hoveredButton === "save" && (hasUnsavedChanges ?? false)}
+            icon={<Save size={14} />}
           />
         )}
 
