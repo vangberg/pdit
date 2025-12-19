@@ -93,7 +93,7 @@ export function PathEditor({
   }
 
   return (
-    <div style={{ position: "relative", marginLeft: "8px" }}>
+    <div style={{ position: "relative", marginLeft: "8px", display: "flex", alignItems: "center" }}>
       {display ? (
         <span
           style={{
@@ -101,6 +101,11 @@ export function PathEditor({
             color: "#ccc",
             cursor: onPathChange ? "pointer" : "default",
             borderBottom: onPathChange ? "1px dotted #666" : "none",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            maxWidth: "200px",
+            display: "inline-block"
           }}
           onClick={() => {
             if (onPathChange) {
@@ -118,6 +123,11 @@ export function PathEditor({
             fontSize: "12px",
             color: "#888",
             cursor: "pointer",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            maxWidth: "200px",
+            display: "inline-block"
           }}
           onClick={() => setIsFuzzyFinderOpen(true)}
           onMouseEnter={() => setShowTooltip(true)}

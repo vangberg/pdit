@@ -11,7 +11,6 @@ When a todo is done, delete it.
 ## Todos
 
 * Reader mode: center + set max-width so it does not take up full width.
-* Use icons for Run, Autorun, Reader.
 * Use css grid for output so we can align badges and content.
 * Render top-level f-strings as Markdown.
 * Text-wrap output, even when there's no whitespace.
