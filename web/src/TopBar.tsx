@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { PathEditor } from "./PathEditor";
 import { useDropdownNavigation, DropdownList } from "./Dropdown";
-import { Play, BookOpen, Zap, Bug, Save } from "lucide-react";
+import { Play, BookOpen, Zap, Save } from "lucide-react";
 
 interface TopBarProps {
   onRunAll: () => void;
@@ -17,8 +17,6 @@ interface TopBarProps {
   onToggleReaderMode?: () => void;
   autorun?: boolean;
   onAutorunToggle?: (enabled: boolean) => void;
-  debugMode?: boolean;
-  onDebugModeToggle?: (enabled: boolean) => void;
   isFuzzyFinderOpen?: boolean;
   onFuzzyFinderOpenChange?: (open: boolean) => void;
   isExecuting?: boolean;
@@ -279,8 +277,6 @@ export function TopBar({
   onToggleReaderMode,
   autorun,
   onAutorunToggle,
-  debugMode,
-  onDebugModeToggle,
   isFuzzyFinderOpen,
   onFuzzyFinderOpenChange,
   isExecuting
@@ -321,19 +317,6 @@ export function TopBar({
             tooltip="Auto-execute script on save or file change"
             showTooltip={hoveredButton === "autorun"}
             onMouseEnter={() => setHoveredButton("autorun")}
-            onMouseLeave={() => setHoveredButton(null)}
-          />
-        )}
-
-        {onDebugModeToggle && (
-          <ToggleSwitch
-            enabled={debugMode ?? false}
-            onToggle={onDebugModeToggle}
-            label="DEBUG"
-            icon={<Bug size={14} />}
-            tooltip="Show debug buttons on outputs to inspect raw data"
-            showTooltip={hoveredButton === "debug"}
-            onMouseEnter={() => setHoveredButton("debug")}
             onMouseLeave={() => setHoveredButton(null)}
           />
         )}

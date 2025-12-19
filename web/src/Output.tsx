@@ -1,4 +1,4 @@
-import React, { useImperativeHandle, useRef, useState } from "react";
+import React, { useImperativeHandle, useRef } from "react";
 import Markdown from "react-markdown";
 import { Expression } from "./execution";
 
@@ -7,7 +7,6 @@ interface OutputProps {
   index: number;
   ref?: (element: HTMLDivElement | null) => void;
   allInvisible?: boolean;
-  debugMode?: boolean;
 }
 
 // Component for rendering a single image output item
@@ -51,25 +50,12 @@ const HtmlOutput: React.FC<{ html: string }> = ({ html }) => {
 // Sanitize type for CSS class names (replace slashes with dashes)
 const sanitizeTypeForCss = (type: string): string => type.replace(/\//g, '-');
 
-export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible, debugMode }) => {
+export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible }) => {
   const elementRef = useRef<HTMLDivElement | null>(null);
-  const [expandedDebugItems, setExpandedDebugItems] = useState<Set<number>>(new Set());
 
   useImperativeHandle(ref, () => elementRef.current as HTMLDivElement, []);
 
   const containerClassName = allInvisible ? "output-container output-container-invisible" : "output-container";
-
-  const toggleDebugInfo = (index: number) => {
-    setExpandedDebugItems(prev => {
-      const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
-        next.add(index);
-      }
-      return next;
-    });
-  };
 
   return (
     <div
@@ -78,8 +64,6 @@ export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible, d
     >
       <div className="output-line">
         {expression.result?.output.map((item, i) => {
-          const isDebugExpanded = expandedDebugItems.has(i);
-
           return (
             <div
               key={i}
@@ -94,32 +78,6 @@ export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible, d
                   <HtmlOutput html={item.content} />
                 ) : (
                   <pre>{item.content}</pre>
-                )}
-                {debugMode && (
-                  <div className="output-debug">
-                    <button
-                      className="output-debug-button"
-                      onClick={() => toggleDebugInfo(i)}
-                      title="Toggle debug info"
-                    >
-                      {isDebugExpanded ? '▼' : '▶'} debug
-                    </button>
-                    {isDebugExpanded && (
-                      <div className="output-debug-info">
-                        <pre>{JSON.stringify({
-                          type: item.type,
-                          content: item.content,
-                          expression: {
-                            id: expression.id,
-                            lineStart: expression.lineStart,
-                            lineEnd: expression.lineEnd,
-                            state: expression.state,
-                            isInvisible: expression.result?.isInvisible,
-                          }
-                        }, null, 2)}</pre>
-                      </div>
-                    )}
-                  </div>
                 )}
               </div>
             </div>
