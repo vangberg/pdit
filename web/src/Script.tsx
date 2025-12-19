@@ -11,7 +11,7 @@ import { useResults } from "./results";
 import { useScriptFile } from "./use-script-file";
 import { LineGroupLayout } from "./line-group-layout";
 import { useScriptSettings } from "./use-script-settings";
-import { getAuthToken, triggerAuthError } from "./auth";
+import * as apiClient from "./api-client";
 
 const DEFAULT_CODE = ``;
 
@@ -264,23 +264,7 @@ export function Script({ scriptPath, onPathChange, hasAuthError }: ScriptProps) 
     }
 
     try {
-      const token = getAuthToken();
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
-      if (token) {
-        headers["X-Auth-Token"] = token;
-      }
-
-      const response = await fetch("/api/save-file", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          path: scriptPath,
-          content: doc.toString(),
-        }),
-      });
+      const response = await apiClient.saveFile(scriptPath, doc.toString());
 
       if (response.ok) {
         setHasUnsavedChanges(false);
@@ -291,9 +275,6 @@ export function Script({ scriptPath, onPathChange, hasAuthError }: ScriptProps) 
           handleExecute(doc.toString());
         }
       } else {
-        if (response.status === 401) {
-          triggerAuthError();
-        }
         console.error("Failed to save file:", await response.text());
       }
     } catch (error) {

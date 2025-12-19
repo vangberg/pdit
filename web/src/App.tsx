@@ -12,17 +12,15 @@ function AppContent() {
     setAuthErrorCallback(setAuthError);
   }, [setAuthError]);
 
-  // Extract and store auth token from URL
-  useEffect(() => {
+  // Extract and store auth token from URL BEFORE first render
+  // This must happen synchronously so API calls have the token available
+  const [{ scriptPath: initialScriptPath }] = useState(() => {
     const hasToken = extractAndStoreToken();
     if (hasToken) {
       // Remove token from URL for security (it's now in localStorage)
       removeTokenFromUrl();
     }
-  }, []);
 
-  // Parse URL params once on mount
-  const [{ scriptPath: initialScriptPath }] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return {
       scriptPath: params.get("script"),

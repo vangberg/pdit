@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from "react";
-import { getAuthToken, triggerAuthError } from "./auth";
+import * as apiClient from "./api-client";
+import { triggerAuthError } from "./auth";
 
 interface UseScriptFileOptions {
   onFileChange?: (newContent: string) => void; // Callback when file changes (enables watching)
@@ -54,25 +55,9 @@ export function useScriptFile(
 
   // Single effect for both loading AND watching
   useEffect(() => {
-    // Get auth token
-    const token = getAuthToken();
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-
-    if (token) {
-      headers["X-Auth-Token"] = token;
-    }
-
     // Initialize session to start kernel immediately (all modes)
-    fetch("/api/init-session", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ sessionId }),
-    })
-      .then((response) => {
-        if (!response.ok && response.status === 401) {
-          triggerAuthError();
-        }
-      })
+    apiClient
+      .initSession(sessionId)
       .catch((err) => console.error("Failed to init session:", err));
 
     // No script path → use default (scratchpad mode)
@@ -89,16 +74,8 @@ export function useScriptFile(
     setError(null);
 
     try {
-      // Build EventSource URL with token (EventSource doesn't support custom headers)
-      const url = new URL('/api/watch-file', window.location.origin);
-      url.searchParams.set('path', scriptPath);
-      url.searchParams.set('sessionId', sessionId);
-      if (token) {
-        url.searchParams.set('token', token);
-      }
-
       // Create EventSource - handles both initial load AND watching!
-      const eventSource = new EventSource(url.toString());
+      const eventSource = apiClient.watchFile(scriptPath, sessionId);
 
       eventSourceRef.current = eventSource;
 

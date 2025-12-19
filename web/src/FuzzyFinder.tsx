@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { getAuthToken, triggerAuthError } from "./auth";
+import * as apiClient from "./api-client";
 
 interface FuzzyFinderProps {
   isOpen: boolean;
@@ -87,20 +87,8 @@ export function FuzzyFinder({ isOpen, onClose, onSelect }: FuzzyFinderProps) {
     if (isOpen) {
       setIsLoading(true);
 
-      const token = getAuthToken();
-      const headers: Record<string, string> = {};
-
-      if (token) {
-        headers["X-Auth-Token"] = token;
-      }
-
-      fetch("/api/list-files", { headers })
-        .then((res) => {
-          if (!res.ok && res.status === 401) {
-            triggerAuthError();
-          }
-          return res.json();
-        })
+      apiClient
+        .listFiles()
         .then((data) => {
           setFiles(data.files);
           setIsLoading(false);

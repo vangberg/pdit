@@ -3,7 +3,7 @@
  * Connects to local Python server for code execution with real-time results.
  */
 
-import { getAuthToken, triggerAuthError } from './auth';
+import * as apiClient from './api-client';
 
 export interface OutputItem {
   // MIME types: 'text/plain', 'text/html', 'text/markdown', 'image/png', 'application/json'
@@ -49,36 +49,7 @@ export class PythonServerBackend {
       reset?: boolean;
     }
   ): AsyncGenerator<ExecutionEvent, void, unknown> {
-    // Get auth token
-    const token = getAuthToken();
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'Accept': 'text/event-stream',
-    };
-
-    if (token) {
-      headers['X-Auth-Token'] = token;
-    }
-
-    // Use Fetch API with POST (EventSource only supports GET)
-    const response = await fetch('/api/execute-script', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        script,
-        sessionId: options.sessionId,
-        scriptName: options.scriptName,
-        lineRange: options.lineRange,
-        reset: options.reset,
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        triggerAuthError();
-      }
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
+    const response = await apiClient.executeScript(script, options);
 
     if (!response.body) {
       throw new Error('Response body is null');
@@ -170,21 +141,7 @@ export class PythonServerBackend {
    * Reset the execution namespace.
    */
   async reset(): Promise<void> {
-    const token = getAuthToken();
-    const headers: Record<string, string> = {};
-
-    if (token) {
-      headers['X-Auth-Token'] = token;
-    }
-
-    const response = await fetch('/api/reset', {
-      method: 'POST',
-      headers,
-    });
-
-    if (!response.ok && response.status === 401) {
-      triggerAuthError();
-    }
+    await apiClient.reset();
   }
 
   /**

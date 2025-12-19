@@ -90,15 +90,17 @@ def start(
     port: Optional[int] = None,
     host: str = "127.0.0.1",
     no_browser: bool = False,
+    disable_token_auth: bool = False,
 ):
     """Start the pdit server with optional script."""
 
     # Check if frontend is built
     static_dir = Path(__file__).parent / "_static"
     if not static_dir.exists() or not (static_dir / "index.html").exists():
-        typer.echo("Warning: Frontend build not found at pdit/_static/", err=True)
-        typer.echo("The server will start but the web interface won't be available.", err=True)
-        typer.echo("Run './scripts/build-frontend.sh' to build and copy the frontend.", err=True)
+        typer.echo()
+        typer.echo("  ⚠ Warning: Frontend build not found at pdit/_static/", err=True)
+        typer.echo("  The server will start but the web interface won't be available.", err=True)
+        typer.echo("  Run './scripts/build-frontend.sh' to build and copy the frontend.", err=True)
         typer.echo()
 
     # Use script path as-is (relative to current directory)
@@ -111,7 +113,7 @@ def start(
         # No port specified: find available port starting from 8888
         actual_port = find_available_port(start_port=8888)
         if actual_port != 8888:
-            typer.echo(f"Port 8888 is already in use, using port {actual_port} instead")
+            typer.echo(f"  ℹ Port 8888 in use, using port {actual_port} instead")
     else:
         # Port explicitly specified: use it or fail
         try:
@@ -121,31 +123,50 @@ def start(
                 s.bind((host, port))
                 actual_port = port
         except OSError:
-            typer.echo(f"Error: Port {port} is already in use", err=True)
+            typer.echo(f"  ✗ Error: Port {port} is already in use", err=True)
             sys.exit(1)
 
-    # Generate secure token for this server instance
-    auth_token = secrets.token_urlsafe(32)
+    # Generate secure token for this server instance (unless disabled)
+    auth_token = None if disable_token_auth else secrets.token_urlsafe(32)
 
-    # Build URL with token
-    url = f"http://{host}:{actual_port}?token={auth_token}"
+    # Build URL with token (if enabled)
     if script_path:
-        url += f"&script={script_path}"
+        url = f"http://{host}:{actual_port}?script={script_path}"
+        if auth_token:
+            url += f"&token={auth_token}"
+    else:
+        if auth_token:
+            url = f"http://{host}:{actual_port}?token={auth_token}"
+        else:
+            url = f"http://{host}:{actual_port}"
 
-    typer.echo(f"Starting pdit server on {host}:{actual_port}")
-    typer.echo(f"Access URL: {url}")
+    # Pretty startup output
+    typer.echo()
+    typer.echo("  ┌──────────────────────────────────────────────────────────────┐")
+    typer.echo("  │                          pdit                                │")
+    typer.echo("  └──────────────────────────────────────────────────────────────┘")
+    typer.echo()
+    typer.echo(f"  → Server:      http://{host}:{actual_port}")
+    if script_path:
+        typer.echo(f"  → Script:      {script_path}")
+    if disable_token_auth:
+        typer.echo("  → Auth:        Disabled")
+    typer.echo()
+    typer.echo(f"  → Access URL:  {url}")
+    typer.echo()
 
     # Pass port and token to server via environment variables
     import os
     os.environ["PDIT_PORT"] = str(actual_port)
-    os.environ["PDIT_AUTH_TOKEN"] = auth_token
+    if auth_token:
+        os.environ["PDIT_AUTH_TOKEN"] = auth_token
 
-    # Configure and create server
+    # Configure and create server - suppress uvicorn startup logs
     config = uvicorn.Config(
         "pdit.server:app",
         host=host,
         port=actual_port,
-        log_level="info"
+        log_level="error"  # Only show errors, not startup logs
     )
     server = Server(config=config)
 
@@ -154,7 +175,8 @@ def start(
         # Server is guaranteed to be ready here
         if not no_browser:
             webbrowser.open(url)
-            typer.echo(f"Opening browser to {url}")
+            typer.echo("  ✓ Browser opened")
+            typer.echo()
 
         # Set up SIGTERM handler for graceful shutdown
         def handle_sigterm(signum, frame):
@@ -167,9 +189,9 @@ def start(
         try:
             while not _shutdown_requested:
                 time.sleep(0.1)  # Check more frequently for shutdown
-            typer.echo("\nShutting down...")
+            typer.echo("\n  ↓ Shutting down...")
         except KeyboardInterrupt:
-            typer.echo("\nShutting down...")
+            typer.echo("\n  ↓ Shutting down...")
 
 
 @app.command()
@@ -202,6 +224,10 @@ def main_command(
         bool,
         typer.Option("--no-browser", help="Don't open browser automatically")
     ] = False,
+    disable_token_auth: Annotated[
+        bool,
+        typer.Option("--disable-token-auth", help="Disable token authentication (less secure)")
+    ] = False,
 ):
     """Start the pdit server, or export a script to HTML with --export."""
     if export:
@@ -224,7 +250,7 @@ def main_command(
             output_path.write_text(html_output)
             typer.echo(f"Exported to {output_path}")
     else:
-        start(script, port, host, no_browser)
+        start(script, port, host, no_browser, disable_token_auth)
 
 
 def main():
