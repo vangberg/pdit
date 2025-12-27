@@ -14,26 +14,40 @@ Pythonic live scripting.
 
 **Requirement**: [uv](https://github.com/astral-sh/uv)
 
+### Install as a tool (recommended)
+
 ```bash
-# Install from dist branch (recommended, includes pre-built assets)
-uv add git+https://github.com/vangberg/pdit@dist
+uv tool install git+https://github.com/vangberg/pdit@dist
+```
 
-# Or use directly with uvx
+This installs `pdit` globally, so you can run it from anywhere:
+
+```bash
+pdit script.py
+```
+
+### One-off usage with uvx
+
+```bash
 uvx --from git+https://github.com/vangberg/pdit@dist pdit script.py
+```
 
-# From cloned repo (for development)
+### Development install
+
+```bash
 git clone git@github.com:vangberg/pdit.git
 cd pdit
-uv pip install -e .
-uv run pdit script.py
+uv tool install . -e
 ```
+
+The `-e` flag creates an editable install, so changes to the source are reflected immediately.
 
 ## Usage
 
 Start pdit with a Python file:
 
 ```bash
-uv run pdit script.py
+pdit script.py
 ```
 
 This will:
@@ -44,7 +58,7 @@ This will:
 ### Options
 
 ```bash
-uv run pdit [OPTIONS] [SCRIPT]
+pdit [OPTIONS] [SCRIPT]
 
 Options:
   -e, --export        Export script to self-contained HTML file
@@ -60,16 +74,16 @@ Options:
 
 ```bash
 # Start with script
-uv run pdit analysis.py
+pdit analysis.py
 
 # Custom port
-uv run pdit --port 9000 script.py
+pdit --port 9000 script.py
 
 # Start without opening browser
-uv run pdit --no-browser script.py
+pdit --no-browser script.py
 
 # Just start the editor (no script)
-uv run pdit
+pdit
 ```
 
 ### Exporting
@@ -77,7 +91,7 @@ uv run pdit
 Export a script to a self-contained HTML file:
 
 ```bash
-uv run pdit --export script.py
+pdit --export script.py
 ```
 
 This executes the script and generates `script.html` with the output. The HTML file can be opened in any browser without a server.
