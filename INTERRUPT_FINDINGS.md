@@ -166,13 +166,78 @@ The user should use the `reset` message to restart the kernel when needed:
 ws.send(JSON.stringify({ type: 'reset' }));
 ```
 
+## Kernel Comparison
+
+Tested interrupt behavior across different Jupyter kernels:
+
+### ✅ IPython Kernel (python3/ipykernel) - WORKS CORRECTLY
+
+```bash
+$ python test_ipython_interrupt.py
+
+Step 3: Interrupt
+  [0] stream
+  [1] error
+      KeyboardInterrupt:           ✅ Sends error message
+  [2] status
+      Kernel idle                  ✅ Returns to idle state
+
+Kernel alive after interrupt: True  ✅ Process survives
+
+Step 4: Execute x + 5
+  Result: 15                       ✅ Variables preserved
+
+✅ SUCCESS: IPython kernel survived interrupt!
+```
+
+**Behavior**: Perfect - exactly as expected for SIGINT
+
+### ❌ xeus-python Kernel (xpython) - BROKEN
+
+```bash
+$ python test_kernel_alive.py
+
+Kernel alive before: True
+Kernel alive after interrupt: False  ❌ Process dies
+
+Step 7: Execute x + 5
+  ❌ Error: (no response)
+
+Result: ❌ FAILED
+```
+
+**Behavior**: interrupt_kernel() kills the process instead of just stopping execution
+
+### ❌ xpython-raw Kernel - BROKEN
+
+**Behavior**: Has different issues (timeouts on message retrieval)
+
+## Conclusion
+
+**This is confirmed to be a xeus-python bug.** The standard IPython kernel handles interrupts correctly, while xeus-python's interrupt kills the kernel process.
+
+## Recommendation (Updated)
+
+**Switch from xpython to python3 (IPython kernel)** for proper interrupt support:
+
+```python
+km = KernelManager(kernel_name='python3')  # instead of 'xpython'
+```
+
+Benefits:
+- Interrupt works correctly (stops execution, keeps kernel alive)
+- Variables preserved after interrupt
+- Sends proper KeyboardInterrupt error
+- Can execute new code immediately after interrupt
+- Standard, well-tested implementation
+
 ## Future Work
 
-1. Report bug to xeus-python project
-2. Consider switching to standard IPython kernel (ipykernel) if interrupt support is critical
-3. Or contribute fix to xeus-python
+1. ~~Report bug to xeus-python project~~ Confirmed as xeus-python issue
+2. **Switch pdit to use IPython kernel (python3)** - recommended
+3. Update server.py to use kernel_name='python3'
 
 ## Related Issues
 
-- Check xeus-python GitHub for similar issues
-- May be related to how xeus-python handles signals
+- Check xeus-python GitHub for similar interrupt issues
+- May be related to how xeus handles signals vs standard IPython kernel
