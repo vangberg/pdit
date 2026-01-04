@@ -244,13 +244,19 @@ async def execute_websocket(websocket: WebSocket):
     session: Optional[KernelSession] = None
     current_execution: Optional[asyncio.Task] = None
 
+    def cancel_execution():
+        """Cancel current execution if running."""
+        nonlocal current_execution
+        if current_execution and not current_execution.done():
+            current_execution.cancel()
+            current_execution = None
+
     async def execute_and_send(script: str, execution_id: str):
         """Execute script and send results (runs in background)."""
         try:
             async for result in Executor.execute_script(session, script, execution_id):
                 await websocket.send_json(result)
         except asyncio.CancelledError:
-            # Execution was interrupted
             await websocket.send_json({
                 'type': 'execution-cancelled',
                 'executionId': execution_id
@@ -280,50 +286,33 @@ async def execute_websocket(websocket: WebSocket):
             msg_type = msg.get('type')
 
             if msg_type == 'execute':
-                # Cancel any current execution
-                if current_execution and not current_execution.done():
-                    current_execution.cancel()
-
-                # Start new execution in background
+                cancel_execution()
                 current_execution = asyncio.create_task(
                     execute_and_send(msg['script'], msg['executionId'])
                 )
 
             elif msg_type == 'interrupt':
-                # Interrupt the kernel (send SIGINT)
                 session.interrupt()
-
-                # Cancel the current execution task
-                if current_execution and not current_execution.done():
-                    current_execution.cancel()
-
-                # Send acknowledgment immediately
+                cancel_execution()
                 await websocket.send_json({'type': 'interrupt-ack'})
 
             elif msg_type == 'reset':
-                # Cancel current execution before restart
-                if current_execution and not current_execution.done():
-                    current_execution.cancel()
-                    await current_execution
-
+                cancel_execution()
                 session.restart()
 
             elif msg_type == 'ping':
                 await websocket.send_json({'type': 'pong'})
 
     except WebSocketDisconnect:
-        # Cancel any running execution
-        if current_execution and not current_execution.done():
-            current_execution.cancel()
+        pass
     except Exception as e:
         print(f"WebSocket error: {e}")
         try:
             await websocket.send_json({'type': 'error', 'error': str(e)})
         except:
             pass
-        finally:
-            if current_execution and not current_execution.done():
-                current_execution.cancel()
+    finally:
+        cancel_execution()
 
 
 # Static file serving
