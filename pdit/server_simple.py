@@ -293,6 +293,9 @@ async def execute_websocket(websocket: WebSocket):
                 # Interrupt the kernel (send SIGINT)
                 session.interrupt()
 
+                # Send acknowledgment immediately
+                await websocket.send_json({'type': 'interrupt-ack'})
+
                 # Also cancel the task
                 if current_execution and not current_execution.done():
                     current_execution.cancel()

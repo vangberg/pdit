@@ -52,8 +52,11 @@ for i in range(1000):
         const output = msg.output.map(o => o.content.substring(0, 30)).join('');
         if (output) console.log(`  ${output}`);
     }
+    else if (msg.type === 'interrupt-ack') {
+        console.log('✅ Interrupt acknowledged - frontend can clean up now');
+    }
     else if (msg.type === 'execution-cancelled') {
-        console.log('\n✅ Execution was cancelled!');
+        console.log('✅ Execution was cancelled!');
         console.log('🎉 Interrupt works!');
         ws.close();
         process.exit(0);
