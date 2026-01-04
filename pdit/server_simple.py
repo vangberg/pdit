@@ -33,7 +33,7 @@ class KernelSession:
 
     def _start_kernel(self):
         """Start kernel and wait for ready."""
-        self.km = KernelManager(kernel_name='xpython')
+        self.km = KernelManager(kernel_name='python3')
         self.km.start_kernel()
         self.kc = self.km.client()
         self.kc.start_channels()

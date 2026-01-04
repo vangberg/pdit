@@ -70,9 +70,16 @@ for i in range(1000):
         console.log('✅ Execution was cancelled!');
     }
     else if (msg.type === 'execution-complete') {
-        console.log('\n❌ Execution completed (should have been interrupted)');
-        ws.close();
-        process.exit(1);
+        if (msg.executionId === executionId) {
+            console.log('\n❌ First execution completed (should have been interrupted)');
+            ws.close();
+            process.exit(1);
+        } else if (msg.executionId === secondExecutionId) {
+            console.log('✅ Second execution completed successfully!');
+            console.log('\n🎉 SUCCESS: Interrupt works correctly with IPython kernel!');
+            ws.close();
+            process.exit(0);
+        }
     }
 });
 

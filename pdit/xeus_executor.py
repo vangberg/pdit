@@ -1,7 +1,7 @@
 """
-xeus-python kernel executor using jupyter_client.
+IPython kernel executor using jupyter_client.
 
-Uses xeus-python kernel with jupyter_client for reliable messaging.
+Uses IPython kernel (python3) with jupyter_client for reliable messaging.
 """
 
 import ast
@@ -38,18 +38,18 @@ class Statement:
 
 
 class XeusPythonExecutor:
-    """Python executor using xeus-python kernel."""
+    """Python executor using IPython kernel."""
 
     def __init__(self):
-        """Initialize executor and start xeus-python kernel."""
+        """Initialize executor and start IPython kernel."""
         self.km: Optional[KernelManager] = None
         self.kc: Optional[BlockingKernelClient] = None
         self._start_kernel()
 
     def _start_kernel(self) -> None:
-        """Start xeus-python kernel."""
-        # Use xpython kernel
-        self.km = KernelManager(kernel_name='xpython')
+        """Start IPython kernel."""
+        # Use python3 (IPython) kernel
+        self.km = KernelManager(kernel_name='python3')
         self.km.start_kernel()
         self.kc = self.km.client()
         self.kc.start_channels()
