@@ -134,13 +134,41 @@ class ResetRequest(BaseModel):
     sessionId: str
 
 
+async def cleanup_task():
+    """Periodic cleanup of old sessions and execution history."""
+    while True:
+        await asyncio.sleep(300)  # Every 5 minutes
+
+        # Cleanup old execution history
+        cleanup_old_executions()
+
+        # Cleanup inactive sessions (1 hour of inactivity, no current execution)
+        cutoff = datetime.now() - timedelta(hours=1)
+        to_remove = [
+            sid for sid, session in _sessions.items()
+            if session.last_active < cutoff and not session.current_execution
+        ]
+        for sid in to_remove:
+            delete_session(sid)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage app lifecycle - cleanup on shutdown."""
-    yield
-    # Signal all SSE connections to close and shutdown kernels
-    shutdown_event.set()
-    shutdown_all_sessions()
+    # Start cleanup task
+    cleanup = asyncio.create_task(cleanup_task())
+    try:
+        yield
+    finally:
+        # Stop cleanup task
+        cleanup.cancel()
+        try:
+            await cleanup
+        except asyncio.CancelledError:
+            pass
+        # Signal all SSE connections to close and shutdown kernels
+        shutdown_event.set()
+        shutdown_all_sessions()
 
 
 # FastAPI app
@@ -443,113 +471,135 @@ async def save_file(request: SaveFileRequest):
 
 
 # WebSocket endpoint for execution
+async def safe_send(websocket: WebSocket, data: dict) -> bool:
+    """Safely send JSON over WebSocket, return False if connection is closed."""
+    try:
+        await websocket.send_json(data)
+        return True
+    except Exception:
+        return False
+
+
 async def execute_script_ws(session: Session, execution_state: ExecutionState, websocket: WebSocket) -> None:
     """Execute script and send results via WebSocket."""
     executor = session.executor
 
     try:
-        # Parse script using executor
-        statements = executor._parse_script(execution_state.script)
+        # Add 5 minute timeout for entire execution
+        async with asyncio.timeout(300):
+            # Parse script using executor
+            statements = executor._parse_script(execution_state.script)
 
-        # Filter by line range if provided
-        filtered = []
-        if execution_state.line_range:
-            from_line, to_line = execution_state.line_range
-            for stmt in statements:
-                if stmt.line_end < from_line or stmt.line_start > to_line:
-                    continue
-                filtered.append(stmt)
-        else:
-            filtered = statements
-
-        # Build expression info list
-        from .executor import ExpressionInfo
-        execution_state.expressions = [
-            ExpressionInfo(
-                node_index=stmt.node_index,
-                line_start=stmt.line_start,
-                line_end=stmt.line_end
-            )
-            for stmt in filtered
-        ]
-
-        # Send execution started with expression list
-        await websocket.send_json({
-            'type': 'execution-started',
-            'executionId': execution_state.execution_id,
-            'expressions': [
-                {
-                    'nodeIndex': expr.node_index,
-                    'lineStart': expr.line_start,
-                    'lineEnd': expr.line_end
-                }
-                for expr in execution_state.expressions
-            ]
-        })
-
-        # Execute each statement
-        for i, stmt in enumerate(filtered):
-            # Check if cancelled
-            if execution_state.status == 'cancelled':
-                break
-
-            # Update current index
-            execution_state.current_index = i
-
-            # Execute statement (wrapped in thread pool since it's sync)
-            if stmt.is_markdown_cell:
-                import ast
-                try:
-                    value = ast.literal_eval(stmt.source)
-                    from .executor import OutputItem
-                    output = [OutputItem(type="text/markdown", content=str(value).strip())]
-                except (ValueError, SyntaxError):
-                    output = await asyncio.to_thread(executor._execute_code, stmt.source)
+            # Filter by line range if provided
+            filtered = []
+            if execution_state.line_range:
+                from_line, to_line = execution_state.line_range
+                for stmt in statements:
+                    if stmt.line_end < from_line or stmt.line_start > to_line:
+                        continue
+                    filtered.append(stmt)
             else:
-                output = await asyncio.to_thread(executor._execute_code, stmt.source)
+                filtered = statements
 
-            # Create result
-            from .executor import ExecutionResult as ExecResult
-            result = ExecResult(
-                node_index=stmt.node_index,
-                line_start=stmt.line_start,
-                line_end=stmt.line_end,
-                output=output,
-                is_invisible=len(output) == 0
-            )
-            execution_state.results[stmt.node_index] = result
+            # Build expression info list
+            from .executor import ExpressionInfo
+            execution_state.expressions = [
+                ExpressionInfo(
+                    node_index=stmt.node_index,
+                    line_start=stmt.line_start,
+                    line_end=stmt.line_end
+                )
+                for stmt in filtered
+            ]
 
-            # Send result
-            await websocket.send_json({
-                'type': 'expression-done',
+            # Send execution started with expression list
+            if not await safe_send(websocket, {
+                'type': 'execution-started',
                 'executionId': execution_state.execution_id,
-                'nodeIndex': result.node_index,
-                'lineStart': result.line_start,
-                'lineEnd': result.line_end,
-                'output': [{'type': o.type, 'content': o.content} for o in result.output],
-                'isInvisible': result.is_invisible
-            })
+                'expressions': [
+                    {
+                        'nodeIndex': expr.node_index,
+                        'lineStart': expr.line_start,
+                        'lineEnd': expr.line_end
+                    }
+                    for expr in execution_state.expressions
+                ]
+            }):
+                return  # WebSocket closed
 
-        # Mark complete
-        if execution_state.status == 'cancelled':
-            execution_state.completed_at = datetime.now()
-            await websocket.send_json({
-                'type': 'execution-cancelled',
-                'executionId': execution_state.execution_id
-            })
-        else:
-            execution_state.status = 'completed'
-            execution_state.completed_at = datetime.now()
-            await websocket.send_json({
-                'type': 'execution-complete',
-                'executionId': execution_state.execution_id
-            })
+            # Execute each statement
+            for i, stmt in enumerate(filtered):
+                # Check if cancelled
+                if execution_state.status == 'cancelled':
+                    break
 
+                # Update current index
+                execution_state.current_index = i
+
+                # Execute statement (wrapped in thread pool since it's sync)
+                if stmt.is_markdown_cell:
+                    import ast
+                    try:
+                        value = ast.literal_eval(stmt.source)
+                        from .executor import OutputItem
+                        output = [OutputItem(type="text/markdown", content=str(value).strip())]
+                    except (ValueError, SyntaxError):
+                        output = await asyncio.to_thread(executor._execute_code, stmt.source)
+                else:
+                    output = await asyncio.to_thread(executor._execute_code, stmt.source)
+
+                # Create result
+                from .executor import ExecutionResult as ExecResult
+                result = ExecResult(
+                    node_index=stmt.node_index,
+                    line_start=stmt.line_start,
+                    line_end=stmt.line_end,
+                    output=output,
+                    is_invisible=len(output) == 0
+                )
+                execution_state.results[stmt.node_index] = result
+
+                # Send result
+                if not await safe_send(websocket, {
+                    'type': 'expression-done',
+                    'executionId': execution_state.execution_id,
+                    'nodeIndex': result.node_index,
+                    'lineStart': result.line_start,
+                    'lineEnd': result.line_end,
+                    'output': [{'type': o.type, 'content': o.content} for o in result.output],
+                    'isInvisible': result.is_invisible
+                }):
+                    return  # WebSocket closed
+
+            # Mark complete
+            if execution_state.status == 'cancelled':
+                execution_state.completed_at = datetime.now()
+                await safe_send(websocket, {
+                    'type': 'execution-cancelled',
+                    'executionId': execution_state.execution_id
+                })
+            else:
+                execution_state.status = 'completed'
+                execution_state.completed_at = datetime.now()
+                await safe_send(websocket, {
+                    'type': 'execution-complete',
+                    'executionId': execution_state.execution_id
+                })
+
+    except asyncio.TimeoutError:
+        execution_state.status = 'error'
+        execution_state.error_message = 'Execution timeout (5 minutes)'
+        execution_state.completed_at = datetime.now()
+        await safe_send(websocket, {
+            'type': 'execution-error',
+            'executionId': execution_state.execution_id,
+            'error': 'Execution timeout (5 minutes)'
+        })
     except Exception as e:
         execution_state.status = 'error'
         execution_state.error_message = str(e)
         execution_state.completed_at = datetime.now()
-        await websocket.send_json({
+        await safe_send(websocket, {
             'type': 'execution-error',
             'executionId': execution_state.execution_id,
             'error': str(e)
@@ -558,28 +608,39 @@ async def execute_script_ws(session: Session, execution_state: ExecutionState, w
 
 async def process_execution_queue(session: Session, websocket: WebSocket):
     """Process queued executions one at a time."""
-    while True:
-        # Get next execution from queue
-        execution_state = await session.execution_queue.get()
+    try:
+        while True:
+            # Get next execution from queue
+            execution_state = await session.execution_queue.get()
 
-        # Mark as running
-        session.current_execution = execution_state
-        execution_state.status = 'running'
+            # Mark as running
+            session.current_execution = execution_state
+            execution_state.status = 'running'
 
-        # Execute
-        task = asyncio.create_task(execute_script_ws(session, execution_state, websocket))
-        execution_state.task = task
+            # Execute
+            task = asyncio.create_task(execute_script_ws(session, execution_state, websocket))
+            execution_state.task = task
 
-        try:
-            await task
-        except asyncio.CancelledError:
-            # Task was cancelled
-            execution_state.status = 'cancelled'
-            execution_state.completed_at = datetime.now()
-        finally:
-            # Clear current execution
-            session.current_execution = None
-            session.execution_queue.task_done()
+            try:
+                await task
+            except asyncio.CancelledError:
+                # Task was cancelled
+                execution_state.status = 'cancelled'
+                execution_state.completed_at = datetime.now()
+                raise  # Propagate cancellation
+            except Exception as e:
+                # Log error but continue processing queue
+                print(f"Error in execution: {e}")
+            finally:
+                # Clear current execution
+                session.current_execution = None
+                session.execution_queue.task_done()
+    except asyncio.CancelledError:
+        # Queue processor was cancelled (WebSocket closed)
+        # Cancel any running execution
+        if session.current_execution and session.current_execution.task:
+            session.current_execution.task.cancel()
+        raise
 
 
 @app.websocket("/ws/execute")

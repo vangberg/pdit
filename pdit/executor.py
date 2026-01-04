@@ -62,7 +62,7 @@ class ExecutionState:
     error_message: Optional[str] = None
 
     # Timing
-    started_at: datetime = field(default_factory=datetime.now)
+    started_at: datetime = field(default_factory=lambda: datetime.now())
     completed_at: Optional[datetime] = None
 
     # Execution control
@@ -77,8 +77,8 @@ class Session:
     websocket: Optional['WebSocket'] = None
     current_execution: Optional[ExecutionState] = None
     execution_history: Dict[str, ExecutionState] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.now)
-    last_active: datetime = field(default_factory=datetime.now)
+    created_at: datetime = field(default_factory=lambda: datetime.now())
+    last_active: datetime = field(default_factory=lambda: datetime.now())
 
     # Execution queue for queued executions
     execution_queue: asyncio.Queue = field(default_factory=asyncio.Queue)
