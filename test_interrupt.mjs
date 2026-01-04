@@ -10,6 +10,7 @@ console.log('🧪 Testing interrupt functionality...\n');
 const ws = new WebSocket('ws://127.0.0.1:8889/ws/execute');
 
 let executionId;
+let secondExecutionId;
 
 ws.on('open', () => {
     console.log('✅ WebSocket connected');
@@ -53,13 +54,20 @@ for i in range(1000):
         if (output) console.log(`  ${output}`);
     }
     else if (msg.type === 'interrupt-ack') {
-        console.log('✅ Interrupt acknowledged - frontend can clean up now');
+        console.log('✅ Interrupt acknowledged - kernel restarted');
+
+        // Now try executing new code after interrupt
+        console.log('\n📤 Testing execution after interrupt...');
+        secondExecutionId = crypto.randomUUID();
+        ws.send(JSON.stringify({
+            type: 'execute',
+            executionId: secondExecutionId,
+            script: '2 + 2',
+            scriptName: 'test2.py'
+        }));
     }
     else if (msg.type === 'execution-cancelled') {
         console.log('✅ Execution was cancelled!');
-        console.log('🎉 Interrupt works!');
-        ws.close();
-        process.exit(0);
     }
     else if (msg.type === 'execution-complete') {
         console.log('\n❌ Execution completed (should have been interrupted)');
