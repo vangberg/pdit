@@ -33,33 +33,52 @@ for i in range(1000):
     km.interrupt_kernel()
 
     # Get messages after interrupt
-    print("After interrupt:")
+    print("After interrupt (waiting up to 10 seconds for any message):")
     seen_idle = False
-    for _ in range(20):
+    seen_error = False
+    for i in range(10):
         try:
             msg = kc.get_iopub_msg(timeout=1)
-            if msg['parent_header'].get('msg_id') == msg_id:
-                msg_type = msg['msg_type']
-                print(f"  {msg_type}")
+
+            # Print ALL messages, not just for our msg_id
+            msg_type = msg['msg_type']
+            is_ours = msg['parent_header'].get('msg_id') == msg_id
+
+            if is_ours:
+                print(f"  [{i}] {msg_type} (our execution)")
 
                 if msg_type == 'error':
-                    print(f"    ename: {msg['content']['ename']}")
-                    print(f"    evalue: {msg['content']['evalue']}")
+                    seen_error = True
+                    print(f"      ename: {msg['content']['ename']}")
+                    print(f"      evalue: {msg['content']['evalue']}")
+                    print(f"      traceback: {msg['content']['traceback'][:2]}")
 
-                if msg_type == 'status':
+                elif msg_type == 'status':
                     state = msg['content']['execution_state']
-                    print(f"    state: {state}")
+                    print(f"      state: {state}")
                     if state == 'idle':
                         seen_idle = True
                         break
+
+                elif msg_type == 'stream':
+                    print(f"      content: {msg['content']['text'][:50]}")
+            else:
+                print(f"  [{i}] {msg_type} (other)")
+
         except Exception as e:
-            print(f"  Timeout: {e}")
+            print(f"  [{i}] Timeout waiting for message")
             break
 
+    print(f"\nSummary:")
+    print(f"  Saw error message: {seen_error}")
+    print(f"  Saw idle status: {seen_idle}")
+
+    if seen_error:
+        print("  ✅ Kernel sent KeyboardInterrupt error")
     if seen_idle:
-        print("\n✅ Kernel went idle")
-    else:
-        print("\n❌ Kernel didn't go idle")
+        print("  ✅ Kernel went idle")
+    if not seen_error and not seen_idle:
+        print("  ❌ No error or idle - kernel just stopped sending messages")
 
     # Cleanup
     kc.stop_channels()
