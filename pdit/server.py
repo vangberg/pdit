@@ -9,48 +9,72 @@ Provides HTTP endpoints for:
 - Serving static frontend files
 """
 
+import asyncio
 import os
 import threading
 from contextlib import asynccontextmanager
 from dataclasses import asdict
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from .xeus_executor import XeusPythonExecutor
-from .executor import ExecutionResult
+from .executor import ExecutionResult, ExecutionState, Session
 from .sse import format_sse
 from .file_watcher import FileWatcher
 
 # Global shutdown event for SSE connections (threading.Event works across threads)
 shutdown_event = threading.Event()
 
-# Session registry: maps session_id -> XeusPythonExecutor
-_sessions: dict[str, XeusPythonExecutor] = {}
+# Session registry: maps session_id -> Session
+_sessions: dict[str, Session] = {}
 
 
-def get_or_create_session(session_id: str) -> XeusPythonExecutor:
+def get_or_create_session(session_id: str) -> Session:
     """Get existing session or create a new one lazily."""
     if session_id not in _sessions:
-        _sessions[session_id] = XeusPythonExecutor()
+        executor = XeusPythonExecutor()
+        _sessions[session_id] = Session(
+            session_id=session_id,
+            executor=executor,
+            websocket=None,
+            current_execution=None,
+            execution_history={},
+            created_at=datetime.now(),
+            last_active=datetime.now(),
+            execution_queue=asyncio.Queue()
+        )
     return _sessions[session_id]
 
 
 def delete_session(session_id: str) -> None:
     """Delete a session if it exists, shutting down its kernel."""
     if session_id in _sessions:
-        executor = _sessions.pop(session_id)
-        executor.shutdown()
+        session = _sessions.pop(session_id)
+        session.executor.shutdown()
 
 
 def shutdown_all_sessions() -> None:
     """Shutdown all active sessions. Called on server shutdown."""
     for session_id in list(_sessions.keys()):
         delete_session(session_id)
+
+
+def cleanup_old_executions() -> None:
+    """Clean up execution history older than 5 minutes."""
+    cutoff = datetime.now() - timedelta(minutes=5)
+    for session in _sessions.values():
+        to_remove = [
+            exec_id for exec_id, exec_state in session.execution_history.items()
+            if exec_state.completed_at and exec_state.completed_at < cutoff
+        ]
+        for exec_id in to_remove:
+            del session.execution_history[exec_id]
 
 
 def signal_shutdown():
@@ -192,7 +216,8 @@ async def execute_script(request: ExecuteScriptRequest):
     async def generate_events():
         import asyncio
 
-        executor = get_or_create_session(request.sessionId)
+        session = get_or_create_session(request.sessionId)
+        executor = session.executor
 
         # Reset execution environment if requested
         if request.reset:
@@ -265,8 +290,8 @@ async def reset(request: ResetRequest):
     Returns:
         Status OK
     """
-    executor = get_or_create_session(request.sessionId)
-    executor.reset()
+    session = get_or_create_session(request.sessionId)
+    session.executor.reset()
     return {"status": "ok"}
 
 
@@ -415,6 +440,289 @@ async def save_file(request: SaveFileRequest):
         return {"status": "ok"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error saving file: {str(e)}")
+
+
+# WebSocket endpoint for execution
+async def execute_script_ws(session: Session, execution_state: ExecutionState, websocket: WebSocket) -> None:
+    """Execute script and send results via WebSocket."""
+    executor = session.executor
+
+    try:
+        # Parse script using executor
+        statements = executor._parse_script(execution_state.script)
+
+        # Filter by line range if provided
+        filtered = []
+        if execution_state.line_range:
+            from_line, to_line = execution_state.line_range
+            for stmt in statements:
+                if stmt.line_end < from_line or stmt.line_start > to_line:
+                    continue
+                filtered.append(stmt)
+        else:
+            filtered = statements
+
+        # Build expression info list
+        from .executor import ExpressionInfo
+        execution_state.expressions = [
+            ExpressionInfo(
+                node_index=stmt.node_index,
+                line_start=stmt.line_start,
+                line_end=stmt.line_end
+            )
+            for stmt in filtered
+        ]
+
+        # Send execution started with expression list
+        await websocket.send_json({
+            'type': 'execution-started',
+            'executionId': execution_state.execution_id,
+            'expressions': [
+                {
+                    'nodeIndex': expr.node_index,
+                    'lineStart': expr.line_start,
+                    'lineEnd': expr.line_end
+                }
+                for expr in execution_state.expressions
+            ]
+        })
+
+        # Execute each statement
+        for i, stmt in enumerate(filtered):
+            # Check if cancelled
+            if execution_state.status == 'cancelled':
+                break
+
+            # Update current index
+            execution_state.current_index = i
+
+            # Execute statement (wrapped in thread pool since it's sync)
+            if stmt.is_markdown_cell:
+                import ast
+                try:
+                    value = ast.literal_eval(stmt.source)
+                    from .executor import OutputItem
+                    output = [OutputItem(type="text/markdown", content=str(value).strip())]
+                except (ValueError, SyntaxError):
+                    output = await asyncio.to_thread(executor._execute_code, stmt.source)
+            else:
+                output = await asyncio.to_thread(executor._execute_code, stmt.source)
+
+            # Create result
+            from .executor import ExecutionResult as ExecResult
+            result = ExecResult(
+                node_index=stmt.node_index,
+                line_start=stmt.line_start,
+                line_end=stmt.line_end,
+                output=output,
+                is_invisible=len(output) == 0
+            )
+            execution_state.results[stmt.node_index] = result
+
+            # Send result
+            await websocket.send_json({
+                'type': 'expression-done',
+                'executionId': execution_state.execution_id,
+                'nodeIndex': result.node_index,
+                'lineStart': result.line_start,
+                'lineEnd': result.line_end,
+                'output': [{'type': o.type, 'content': o.content} for o in result.output],
+                'isInvisible': result.is_invisible
+            })
+
+        # Mark complete
+        if execution_state.status == 'cancelled':
+            execution_state.completed_at = datetime.now()
+            await websocket.send_json({
+                'type': 'execution-cancelled',
+                'executionId': execution_state.execution_id
+            })
+        else:
+            execution_state.status = 'completed'
+            execution_state.completed_at = datetime.now()
+            await websocket.send_json({
+                'type': 'execution-complete',
+                'executionId': execution_state.execution_id
+            })
+
+    except Exception as e:
+        execution_state.status = 'error'
+        execution_state.error_message = str(e)
+        execution_state.completed_at = datetime.now()
+        await websocket.send_json({
+            'type': 'execution-error',
+            'executionId': execution_state.execution_id,
+            'error': str(e)
+        })
+
+
+async def process_execution_queue(session: Session, websocket: WebSocket):
+    """Process queued executions one at a time."""
+    while True:
+        # Get next execution from queue
+        execution_state = await session.execution_queue.get()
+
+        # Mark as running
+        session.current_execution = execution_state
+        execution_state.status = 'running'
+
+        # Execute
+        task = asyncio.create_task(execute_script_ws(session, execution_state, websocket))
+        execution_state.task = task
+
+        try:
+            await task
+        except asyncio.CancelledError:
+            # Task was cancelled
+            execution_state.status = 'cancelled'
+            execution_state.completed_at = datetime.now()
+        finally:
+            # Clear current execution
+            session.current_execution = None
+            session.execution_queue.task_done()
+
+
+@app.websocket("/ws/execute")
+async def execute_websocket(websocket: WebSocket):
+    """WebSocket endpoint for script execution."""
+    await websocket.accept()
+    session: Optional[Session] = None
+    queue_processor_task: Optional[asyncio.Task] = None
+
+    try:
+        # 1. First message must be 'init'
+        init_msg = await websocket.receive_json()
+        if init_msg.get('type') != 'init':
+            await websocket.send_json({
+                'type': 'error',
+                'error': 'First message must be init'
+            })
+            return
+
+        # 2. Get or create session
+        session_id = init_msg['sessionId']
+        session = get_or_create_session(session_id)
+        session.websocket = websocket
+        session.last_active = datetime.now()
+
+        # 3. Start queue processor
+        queue_processor_task = asyncio.create_task(process_execution_queue(session, websocket))
+
+        # 4. Acknowledge
+        await websocket.send_json({
+            'type': 'init-ack',
+            'sessionId': session_id
+        })
+
+        # 5. Message loop
+        while True:
+            msg = await websocket.receive_json()
+            msg_type = msg.get('type')
+
+            if msg_type == 'execute':
+                # Create execution state
+                execution_state = ExecutionState(
+                    execution_id=msg['executionId'],
+                    session_id=session.session_id,
+                    script=msg['script'],
+                    line_range=tuple(msg['lineRange'].values()) if msg.get('lineRange') else None,
+                    status='pending',
+                    started_at=datetime.now(),
+                )
+
+                # Add to history
+                session.execution_history[execution_state.execution_id] = execution_state
+
+                # Reset if requested
+                if msg.get('reset'):
+                    session.executor.reset()
+
+                # Queue execution
+                await session.execution_queue.put(execution_state)
+
+            elif msg_type == 'cancel':
+                # Cancel execution
+                execution_id = msg['executionId']
+                execution = session.execution_history.get(execution_id)
+                if execution and execution.status == 'running' and execution.task:
+                    execution.status = 'cancelled'
+                    execution.task.cancel()
+                    execution.completed_at = datetime.now()
+
+                    await websocket.send_json({
+                        'type': 'execution-cancelled',
+                        'executionId': execution_id
+                    })
+                else:
+                    await websocket.send_json({
+                        'type': 'error',
+                        'error': f'Execution {execution_id} not found or not running'
+                    })
+
+            elif msg_type == 'get-state':
+                # Get execution state
+                execution_id = msg['executionId']
+                execution = session.execution_history.get(execution_id)
+                if not execution:
+                    await websocket.send_json({
+                        'type': 'error',
+                        'error': f'Execution {execution_id} not found'
+                    })
+                else:
+                    await websocket.send_json({
+                        'type': 'state',
+                        'executionId': execution_id,
+                        'state': {
+                            'status': execution.status,
+                            'currentIndex': execution.current_index,
+                            'expressions': [
+                                {
+                                    'nodeIndex': expr.node_index,
+                                    'lineStart': expr.line_start,
+                                    'lineEnd': expr.line_end
+                                }
+                                for expr in execution.expressions
+                            ],
+                            'results': {
+                                str(idx): {
+                                    'nodeIndex': result.node_index,
+                                    'lineStart': result.line_start,
+                                    'lineEnd': result.line_end,
+                                    'output': [
+                                        {'type': o.type, 'content': o.content}
+                                        for o in result.output
+                                    ],
+                                    'isInvisible': result.is_invisible
+                                }
+                                for idx, result in execution.results.items()
+                            },
+                            'errorMessage': execution.error_message
+                        }
+                    })
+
+            elif msg_type == 'reset':
+                session.executor.reset()
+
+            elif msg_type == 'ping':
+                await websocket.send_json({'type': 'pong'})
+
+            # Update last active
+            session.last_active = datetime.now()
+
+    except WebSocketDisconnect:
+        # Clean up connection reference but keep session alive
+        if session:
+            session.websocket = None
+        if queue_processor_task:
+            queue_processor_task.cancel()
+
+    except Exception as e:
+        await websocket.send_json({
+            'type': 'error',
+            'error': str(e)
+        })
+        if queue_processor_task:
+            queue_processor_task.cancel()
 
 
 # Static file serving for frontend
