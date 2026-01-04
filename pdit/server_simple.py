@@ -23,12 +23,13 @@ from jupyter_client.blocking import BlockingKernelClient
 
 # Kernel session management
 class KernelSession:
-    """Manages a single kernel instance."""
+    """Manages a single kernel instance and its execution."""
 
     def __init__(self, session_id: str):
         self.session_id = session_id
         self.km: Optional[KernelManager] = None
         self.kc: Optional[BlockingKernelClient] = None
+        self.current_task: Optional[asyncio.Task] = None
         self._start_kernel()
 
     def _start_kernel(self):
@@ -39,20 +40,44 @@ class KernelSession:
         self.kc.start_channels()
         self.kc.wait_for_ready(timeout=30)
 
+    def cancel_execution(self):
+        """Cancel current execution if running."""
+        if self.current_task and not self.current_task.done():
+            self.current_task.cancel()
+            self.current_task = None
+
+    async def execute_script(self, script: str, execution_id: str, send_fn):
+        """Execute script in background, managing task lifecycle."""
+        self.cancel_execution()
+
+        async def run():
+            try:
+                async for result in Executor.execute_script(self, script, execution_id):
+                    await send_fn(result)
+            except asyncio.CancelledError:
+                await send_fn({'type': 'execution-cancelled', 'executionId': execution_id})
+            except Exception as e:
+                await send_fn({'type': 'execution-error', 'executionId': execution_id, 'error': str(e)})
+
+        self.current_task = asyncio.create_task(run())
+
+    def interrupt(self):
+        """Interrupt current execution."""
+        if self.km:
+            self.km.interrupt_kernel()
+        self.cancel_execution()
+
     def restart(self):
         """Restart the kernel."""
+        self.cancel_execution()
         if self.km:
             self.km.restart_kernel()
             if self.kc:
                 self.kc.wait_for_ready(timeout=30)
 
-    def interrupt(self):
-        """Interrupt the kernel (send SIGINT)."""
-        if self.km:
-            self.km.interrupt_kernel()
-
     def shutdown(self):
         """Shutdown the kernel."""
+        self.cancel_execution()
         if self.kc:
             self.kc.stop_channels()
         if self.km:
@@ -242,31 +267,6 @@ async def execute_websocket(websocket: WebSocket):
     """WebSocket endpoint - thin message router."""
     await websocket.accept()
     session: Optional[KernelSession] = None
-    current_execution: Optional[asyncio.Task] = None
-
-    def cancel_execution():
-        """Cancel current execution if running."""
-        nonlocal current_execution
-        if current_execution and not current_execution.done():
-            current_execution.cancel()
-            current_execution = None
-
-    async def execute_and_send(script: str, execution_id: str):
-        """Execute script and send results (runs in background)."""
-        try:
-            async for result in Executor.execute_script(session, script, execution_id):
-                await websocket.send_json(result)
-        except asyncio.CancelledError:
-            await websocket.send_json({
-                'type': 'execution-cancelled',
-                'executionId': execution_id
-            })
-        except Exception as e:
-            await websocket.send_json({
-                'type': 'execution-error',
-                'executionId': execution_id,
-                'error': str(e)
-            })
 
     try:
         # Initialize session
@@ -280,24 +280,19 @@ async def execute_websocket(websocket: WebSocket):
         session = get_session(session_id)
         await websocket.send_json({'type': 'init-ack', 'sessionId': session_id})
 
-        # Message loop - can receive messages while executing
+        # Message loop
         while True:
             msg = await websocket.receive_json()
             msg_type = msg.get('type')
 
             if msg_type == 'execute':
-                cancel_execution()
-                current_execution = asyncio.create_task(
-                    execute_and_send(msg['script'], msg['executionId'])
-                )
+                await session.execute_script(msg['script'], msg['executionId'], websocket.send_json)
 
             elif msg_type == 'interrupt':
                 session.interrupt()
-                cancel_execution()
                 await websocket.send_json({'type': 'interrupt-ack'})
 
             elif msg_type == 'reset':
-                cancel_execution()
                 session.restart()
 
             elif msg_type == 'ping':
@@ -312,7 +307,8 @@ async def execute_websocket(websocket: WebSocket):
         except:
             pass
     finally:
-        cancel_execution()
+        if session:
+            session.cancel_execution()
 
 
 # Static file serving
