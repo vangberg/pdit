@@ -75,10 +75,17 @@ class Session:
 
         return None
 
-    async def _execute_script_impl(self, script: str, execution_id: str):
+    async def _execute_script_impl(self, script: str, execution_id: str, line_range: Optional[tuple[int, int]] = None):
         """Execute script and yield results."""
         # Parse statements
-        statements = list(self._parse_statements(script))
+        all_statements = list(self._parse_statements(script))
+
+        # Filter by line range if specified
+        if line_range:
+            from_line, to_line = line_range
+            statements = [s for s in all_statements if s['line_start'] >= from_line and s['line_end'] <= to_line]
+        else:
+            statements = all_statements
 
         # Send statement list
         yield {
@@ -136,13 +143,13 @@ class Session:
             'executionId': execution_id
         }
 
-    async def execute_script(self, script: str, execution_id: str, send_fn):
+    async def execute_script(self, script: str, execution_id: str, send_fn, line_range: Optional[tuple[int, int]] = None):
         """Execute script in background, managing task lifecycle."""
         self.cancel_execution()
 
         async def run():
             try:
-                async for result in self._execute_script_impl(script, execution_id):
+                async for result in self._execute_script_impl(script, execution_id, line_range):
                     await send_fn(result)
             except asyncio.CancelledError:
                 await send_fn({'type': 'execution-cancelled', 'executionId': execution_id})

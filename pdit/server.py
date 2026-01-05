@@ -149,7 +149,11 @@ async def execute_websocket(websocket: WebSocket):
             msg_type = msg.get('type')
 
             if msg_type == 'execute':
-                await session.execute_script(msg['script'], msg['executionId'], websocket.send_json)
+                # Extract line range if provided (convert from {from, to} to tuple)
+                line_range = None
+                if 'lineRange' in msg and msg['lineRange']:
+                    line_range = (msg['lineRange']['from'], msg['lineRange']['to'])
+                await session.execute_script(msg['script'], msg['executionId'], websocket.send_json, line_range)
 
             elif msg_type == 'interrupt':
                 session.interrupt()
