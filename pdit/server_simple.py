@@ -2,8 +2,8 @@
 Simplified FastAPI server - clean abstractions.
 
 Architecture:
-- KernelSession: Manages kernel lifecycle
-- Executor: Handles parsing and execution
+- Kernel: Low-level kernel process management
+- Session: High-level execution coordination
 - WebSocket handler: Just message routing
 """
 
@@ -21,63 +21,38 @@ from jupyter_client import KernelManager
 from jupyter_client.blocking import BlockingKernelClient
 
 
-# Kernel session management
-class KernelSession:
-    """Manages a single kernel instance and its execution."""
+# Kernel process management
+class Kernel:
+    """Low-level Jupyter kernel process management."""
 
-    def __init__(self, session_id: str):
-        self.session_id = session_id
+    def __init__(self, kernel_name: str = 'python3'):
+        self.kernel_name = kernel_name
         self.km: Optional[KernelManager] = None
         self.kc: Optional[BlockingKernelClient] = None
-        self.current_task: Optional[asyncio.Task] = None
-        self._start_kernel()
+        self.start()
 
-    def _start_kernel(self):
+    def start(self):
         """Start kernel and wait for ready."""
-        self.km = KernelManager(kernel_name='python3')
+        self.km = KernelManager(kernel_name=self.kernel_name)
         self.km.start_kernel()
         self.kc = self.km.client()
         self.kc.start_channels()
         self.kc.wait_for_ready(timeout=30)
 
-    def cancel_execution(self):
-        """Cancel current execution if running."""
-        if self.current_task and not self.current_task.done():
-            self.current_task.cancel()
-            self.current_task = None
-
-    async def execute_script(self, script: str, execution_id: str, send_fn):
-        """Execute script in background, managing task lifecycle."""
-        self.cancel_execution()
-
-        async def run():
-            try:
-                async for result in Executor.execute_script(self, script, execution_id):
-                    await send_fn(result)
-            except asyncio.CancelledError:
-                await send_fn({'type': 'execution-cancelled', 'executionId': execution_id})
-            except Exception as e:
-                await send_fn({'type': 'execution-error', 'executionId': execution_id, 'error': str(e)})
-
-        self.current_task = asyncio.create_task(run())
-
-    def interrupt(self):
-        """Interrupt current execution."""
-        if self.km:
-            self.km.interrupt_kernel()
-        self.cancel_execution()
-
     def restart(self):
         """Restart the kernel."""
-        self.cancel_execution()
         if self.km:
             self.km.restart_kernel()
             if self.kc:
                 self.kc.wait_for_ready(timeout=30)
 
+    def interrupt(self):
+        """Interrupt the kernel (send SIGINT)."""
+        if self.km:
+            self.km.interrupt_kernel()
+
     def shutdown(self):
         """Shutdown the kernel."""
-        self.cancel_execution()
         if self.kc:
             self.kc.stop_channels()
         if self.km:
@@ -92,7 +67,6 @@ class KernelSession:
 
         while True:
             try:
-                # Get message from kernel
                 kernel_msg = await asyncio.to_thread(
                     self.kc.get_iopub_msg, timeout=30
                 )
@@ -111,14 +85,24 @@ class KernelSession:
                 break
 
 
-# Script parsing and execution
-class Executor:
-    """Handles script parsing and execution coordination."""
+# Session: high-level execution coordination
+class Session:
+    """Manages script execution using a Kernel."""
 
     ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
-    @staticmethod
-    def parse_statements(code: str):
+    def __init__(self, session_id: str):
+        self.session_id = session_id
+        self.kernel = Kernel()
+        self.current_task: Optional[asyncio.Task] = None
+
+    def cancel_execution(self):
+        """Cancel current execution if running."""
+        if self.current_task and not self.current_task.done():
+            self.current_task.cancel()
+            self.current_task = None
+
+    def _parse_statements(self, code: str):
         """Parse script into statements."""
         try:
             tree = ast.parse(code)
@@ -140,8 +124,7 @@ class Executor:
                 'syntax_error': str(e)
             }
 
-    @staticmethod
-    def process_kernel_message(kernel_msg: Dict[str, Any]) -> Optional[Dict[str, str]]:
+    def _process_kernel_message(self, kernel_msg: Dict[str, Any]) -> Optional[Dict[str, str]]:
         """Convert kernel message to output item."""
         msg_type = kernel_msg['msg_type']
         content = kernel_msg['content']
@@ -165,16 +148,15 @@ class Executor:
                 return {'type': 'text/plain', 'content': data['text/plain']}
         elif msg_type == 'error':
             tb = '\n'.join(content['traceback'])
-            tb = Executor.ANSI_ESCAPE.sub('', tb)
+            tb = self.ANSI_ESCAPE.sub('', tb)
             return {'type': 'error', 'content': tb}
 
         return None
 
-    @staticmethod
-    async def execute_script(session: KernelSession, script: str, execution_id: str):
+    async def _execute_script_impl(self, script: str, execution_id: str):
         """Execute script and yield results."""
         # Parse statements
-        statements = list(Executor.parse_statements(script))
+        statements = list(self._parse_statements(script))
 
         # Send statement list
         yield {
@@ -210,8 +192,8 @@ class Executor:
 
             # Execute and collect output
             output = []
-            async for kernel_msg in session.execute(stmt['code']):
-                output_item = Executor.process_kernel_message(kernel_msg)
+            async for kernel_msg in self.kernel.execute(stmt['code']):
+                output_item = self._process_kernel_message(kernel_msg)
                 if output_item:
                     output.append(output_item)
 
@@ -232,15 +214,45 @@ class Executor:
             'executionId': execution_id
         }
 
+    async def execute_script(self, script: str, execution_id: str, send_fn):
+        """Execute script in background, managing task lifecycle."""
+        self.cancel_execution()
+
+        async def run():
+            try:
+                async for result in self._execute_script_impl(script, execution_id):
+                    await send_fn(result)
+            except asyncio.CancelledError:
+                await send_fn({'type': 'execution-cancelled', 'executionId': execution_id})
+            except Exception as e:
+                await send_fn({'type': 'execution-error', 'executionId': execution_id, 'error': str(e)})
+
+        self.current_task = asyncio.create_task(run())
+
+    def interrupt(self):
+        """Interrupt current execution."""
+        self.kernel.interrupt()
+        self.cancel_execution()
+
+    def restart(self):
+        """Restart the kernel."""
+        self.cancel_execution()
+        self.kernel.restart()
+
+    def shutdown(self):
+        """Shutdown the kernel."""
+        self.cancel_execution()
+        self.kernel.shutdown()
+
 
 # Session registry
-_sessions: Dict[str, KernelSession] = {}
+_sessions: Dict[str, Session] = {}
 
 
-def get_session(session_id: str) -> KernelSession:
-    """Get or create kernel session."""
+def get_session(session_id: str) -> Session:
+    """Get or create session."""
     if session_id not in _sessions:
-        _sessions[session_id] = KernelSession(session_id)
+        _sessions[session_id] = Session(session_id)
     return _sessions[session_id]
 
 
@@ -266,7 +278,7 @@ async def health():
 async def execute_websocket(websocket: WebSocket):
     """WebSocket endpoint - thin message router."""
     await websocket.accept()
-    session: Optional[KernelSession] = None
+    session: Optional[Session] = None
 
     try:
         # Initialize session
