@@ -7,7 +7,7 @@ from .executor import (
     ExpressionInfo,
     OutputItem,
 )
-from .xeus_executor import XeusPythonExecutor
+from .python_executor import PythonExecutor
 
 __version__ = "0.1.0"
 
@@ -15,5 +15,5 @@ __all__ = [
     "ExecutionResult",
     "ExpressionInfo",
     "OutputItem",
-    "XeusPythonExecutor",
+    "PythonExecutor",
 ]

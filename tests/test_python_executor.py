@@ -1,14 +1,14 @@
-"""Tests for XeusPythonExecutor."""
+"""Tests for PythonExecutor."""
 
 import pytest
-from pdit.xeus_executor import XeusPythonExecutor, Statement
+from pdit.python_executor import PythonExecutor, Statement
 from pdit.executor import OutputItem
 
 
 @pytest.fixture
 def executor():
     """Create and return a fresh executor instance."""
-    exec_instance = XeusPythonExecutor()
+    exec_instance = PythonExecutor()
     yield exec_instance
     # Cleanup
     exec_instance.shutdown()

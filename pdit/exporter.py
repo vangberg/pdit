@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from .executor import ExecutionResult
-from .xeus_executor import XeusPythonExecutor
+from .python_executor import PythonExecutor
 
 
 def execute_script(script_content: str, script_name: str) -> list[dict[str, Any]]:
@@ -18,7 +18,7 @@ def execute_script(script_content: str, script_name: str) -> list[dict[str, Any]
     Returns:
         List of expression dicts ready for frontend consumption
     """
-    executor = XeusPythonExecutor()
+    executor = PythonExecutor()
     expressions = []
     expression_id = 0
 
