@@ -1,5 +1,5 @@
 """
-IPython kernel executor using jupyter_client.
+Python kernel executor using jupyter_client.
 
 Uses IPython kernel (python3) with jupyter_client for reliable messaging.
 """
@@ -37,7 +37,7 @@ class Statement:
     is_markdown_cell: bool = False
 
 
-class XeusPythonExecutor:
+class PythonExecutor:
     """Python executor using IPython kernel."""
 
     def __init__(self):
@@ -309,3 +309,6 @@ del _register_pdit_formatter
         except Exception as e:
             # Suppress exceptions during cleanup to avoid issues during interpreter shutdown
             logger.debug(f"Exception during executor cleanup: {e}")
+
+# Backwards compatibility
+XeusPythonExecutor = PythonExecutor
