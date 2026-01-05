@@ -9,16 +9,27 @@ Architecture:
 
 import asyncio
 import ast
+import fnmatch
+import os
 import re
+import threading
+from dataclasses import asdict
 from pathlib import Path
-from typing import Optional, AsyncGenerator, Dict, Any
+from typing import Optional, AsyncGenerator, Dict, Any, List
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from jupyter_client import KernelManager
 from jupyter_client.blocking import BlockingKernelClient
+from pydantic import BaseModel
+
+from .file_watcher import FileWatcher
+from .sse import format_sse
+
+# Global shutdown event for SSE connections
+shutdown_event = threading.Event()
 
 
 # Kernel process management
@@ -272,6 +283,91 @@ app.add_middleware(
 async def health():
     """Health check."""
     return {"status": "ok"}
+
+
+# Pydantic models for file operations
+class SaveFileRequest(BaseModel):
+    path: str
+    content: str
+
+
+class ReadFileResponse(BaseModel):
+    content: str
+
+
+class ListFilesResponse(BaseModel):
+    files: List[str]
+
+
+@app.get("/api/watch-file")
+async def watch_file(path: str, sessionId: str):
+    """Watch a file and stream initial content + changes via SSE."""
+    watcher_stop_event = threading.Event()
+
+    async def generate_events():
+        watcher = FileWatcher(path, stop_event=watcher_stop_event)
+        try:
+            async for event in watcher.watch_with_initial():
+                if shutdown_event.is_set():
+                    break
+                yield format_sse(asdict(event))
+                if event.type in ("fileDeleted", "error"):
+                    break
+        finally:
+            watcher_stop_event.set()
+
+    return StreamingResponse(
+        generate_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
+
+@app.get("/api/read-file", response_model=ReadFileResponse)
+async def read_file(path: str):
+    """Read a file from the filesystem."""
+    try:
+        file_path = Path(path)
+        content = file_path.read_text()
+        return ReadFileResponse(content=content)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"File not found: {path}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
+
+
+@app.get("/api/list-files", response_model=ListFilesResponse)
+async def list_files():
+    """List all Python files in the current working directory."""
+    cwd = Path.cwd()
+    py_files: list[str] = []
+    skip_dirs = {".git", ".venv", "venv", "__pycache__", "node_modules", ".tox", ".mypy_cache", ".pytest_cache", "dist", "build", "*.egg-info"}
+
+    for root, dirs, files in os.walk(cwd):
+        dirs[:] = [d for d in dirs if not d.startswith('.') and d not in skip_dirs and not any(fnmatch.fnmatch(d, pattern) for pattern in skip_dirs)]
+        for file in files:
+            if file.endswith('.py'):
+                full_path = Path(root) / file
+                relative_path = full_path.relative_to(cwd)
+                py_files.append(str(relative_path))
+
+    py_files.sort(key=lambda p: Path(p).name.lower())
+    return ListFilesResponse(files=py_files)
+
+
+@app.post("/api/save-file")
+async def save_file(request: SaveFileRequest):
+    """Save a file to the filesystem."""
+    try:
+        file_path = Path(request.path)
+        file_path.write_text(request.content)
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error saving file: {str(e)}")
 
 
 @app.websocket("/ws/execute")
