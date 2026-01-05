@@ -21,6 +21,9 @@ ws.on('open', () => {
 ws.on('message', (data) => {
     const msg = JSON.parse(data.toString());
     console.log(`📨 Received: ${msg.type}`, msg.executionId ? `(${msg.executionId.slice(0, 8)}...)` : '');
+    if (msg.type === 'expression-done') {
+        console.log(`   Full message:`, JSON.stringify(msg, null, 2));
+    }
 
     if (msg.type === 'init-ack') {
         executionId = crypto.randomUUID();
@@ -43,14 +46,17 @@ for i in range(1000):
     else if (msg.type === 'expression-done') {
         if (msg.output && msg.output.length > 0) {
             const output = msg.output[0];
-            console.log(`  Output type: ${output.type}`);
+            console.log(`  📋 Output type: ${output.type}`);
             if (output.type === 'error') {
-                console.log(`  Error content: ${output.content.substring(0, 100)}...`);
+                console.log(`  🔴 Error: ${output.content.substring(0, 150)}`);
             }
         }
     }
-    else if (msg.type === 'execution-cancelled' || msg.type === 'interrupt-ack') {
-        console.log(`  ✅ Got ${msg.type}`);
+    else if (msg.type === 'execution-cancelled') {
+        console.log(`  ⚠️  Got execution-cancelled`);
+    }
+    else if (msg.type === 'execution-complete') {
+        console.log(`  ✅ Got execution-complete`);
     }
 });
 

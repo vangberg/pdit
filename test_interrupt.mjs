@@ -49,37 +49,37 @@ for i in range(1000):
         console.log('✅ Execution started');
     }
     else if (msg.type === 'expression-done') {
-        // Show first few iterations
-        const output = msg.output.map(o => o.content.substring(0, 30)).join('');
-        if (output) console.log(`  ${output}`);
-    }
-    else if (msg.type === 'interrupt-ack') {
-        console.log('✅ Interrupt acknowledged - kernel restarted');
+        // Check for KeyboardInterrupt error
+        const hasInterruptError = msg.output && msg.output.some(o =>
+            o.type === 'error' && o.content.includes('KeyboardInterrupt')
+        );
 
-        // Now try executing new code after interrupt
-        console.log('\n📤 Testing execution after interrupt...');
-        secondExecutionId = crypto.randomUUID();
-        ws.send(JSON.stringify({
-            type: 'execute',
-            executionId: secondExecutionId,
-            script: '2 + 2',
-            scriptName: 'test2.py'
-        }));
-    }
-    else if (msg.type === 'execution-cancelled') {
-        console.log('✅ Execution was cancelled!');
+        if (hasInterruptError) {
+            console.log('✅ Received KeyboardInterrupt error from kernel');
+
+            // Now try executing new code after interrupt
+            console.log('\n📤 Testing execution after interrupt...');
+            secondExecutionId = crypto.randomUUID();
+            ws.send(JSON.stringify({
+                type: 'execute',
+                executionId: secondExecutionId,
+                script: '2 + 2',
+                scriptName: 'test2.py'
+            }));
+        } else {
+            // Show iterations
+            const output = msg.output && msg.output.map(o => o.content.substring(0, 30)).join('');
+            if (output) console.log(`  ${output}`);
+        }
     }
     else if (msg.type === 'execution-complete') {
-        if (msg.executionId === executionId) {
-            console.log('\n❌ First execution completed (should have been interrupted)');
-            ws.close();
-            process.exit(1);
-        } else if (msg.executionId === secondExecutionId) {
+        if (msg.executionId === secondExecutionId) {
             console.log('✅ Second execution completed successfully!');
             console.log('\n🎉 SUCCESS: Interrupt works correctly with IPython kernel!');
             ws.close();
             process.exit(0);
         }
+        // First execution completes with KeyboardInterrupt - that's expected
     }
 });
 

@@ -230,9 +230,9 @@ class Session:
         self.current_task = asyncio.create_task(run())
 
     def interrupt(self):
-        """Interrupt current execution."""
+        """Interrupt current execution (send SIGINT to kernel)."""
         self.kernel.interrupt()
-        self.cancel_execution()
+        # Don't cancel task - let kernel send KeyboardInterrupt error
 
     def restart(self):
         """Restart the kernel."""
@@ -302,7 +302,6 @@ async def execute_websocket(websocket: WebSocket):
 
             elif msg_type == 'interrupt':
                 session.interrupt()
-                await websocket.send_json({'type': 'interrupt-ack'})
 
             elif msg_type == 'reset':
                 session.restart()
