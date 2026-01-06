@@ -212,6 +212,83 @@ class Session:
         self.cancel_execution()
         self.kernel.shutdown()
 
+    def execute_script_sync(self, script: str, line_range: Optional[tuple[int, int]] = None):
+        """Execute script synchronously, yielding results.
+
+        For use in CLI export where we don't need async.
+        """
+        # Parse statements
+        all_statements = list(self._parse_statements(script))
+
+        # Filter by line range if specified
+        if line_range:
+            from_line, to_line = line_range
+            statements = [
+                s for s in all_statements
+                if not (s['line_end'] < from_line or s['line_start'] > to_line)
+            ]
+        else:
+            statements = all_statements
+
+        # Yield statement list
+        yield {
+            'type': 'execution-started',
+            'expressions': [
+                {
+                    'nodeIndex': s['node_index'],
+                    'lineStart': s['line_start'],
+                    'lineEnd': s['line_end']
+                }
+                for s in statements if 'syntax_error' not in s
+            ]
+        }
+
+        # Execute each statement synchronously
+        for stmt in statements:
+            if 'syntax_error' in stmt:
+                yield {
+                    'type': 'expression-done',
+                    'nodeIndex': stmt['node_index'],
+                    'lineStart': stmt['line_start'],
+                    'lineEnd': stmt['line_end'],
+                    'output': [{'type': 'error', 'content': stmt['syntax_error']}],
+                    'isInvisible': False
+                }
+                continue
+
+            # Handle markdown cells
+            if stmt.get('is_markdown'):
+                try:
+                    value = ast.literal_eval(stmt['code'])
+                    output = [{'type': 'text/markdown', 'content': str(value).strip()}]
+                except (ValueError, SyntaxError):
+                    output = []
+                yield {
+                    'type': 'expression-done',
+                    'nodeIndex': stmt['node_index'],
+                    'lineStart': stmt['line_start'],
+                    'lineEnd': stmt['line_end'],
+                    'output': output,
+                    'isInvisible': False
+                }
+                continue
+
+            # Execute synchronously using kernel
+            output = []
+            for kernel_msg in self.kernel.execute_sync(stmt['code']):
+                output_item = self._process_kernel_message(kernel_msg)
+                if output_item:
+                    output.append(output_item)
+
+            yield {
+                'type': 'expression-done',
+                'nodeIndex': stmt['node_index'],
+                'lineStart': stmt['line_start'],
+                'lineEnd': stmt['line_end'],
+                'output': output,
+                'isInvisible': len(output) == 0
+            }
+
 
 # Session registry
 _sessions: Dict[str, Session] = {}

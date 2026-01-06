@@ -1,7 +1,7 @@
 import os
-import sys
 import pytest
-from pdit.xeus_executor import XeusPythonExecutor
+from pdit.session import Session
+
 
 class TestLocalImport:
     def test_local_import(self, tmp_path):
@@ -15,28 +15,29 @@ class TestLocalImport:
         os.chdir(tmp_path)
 
         try:
-            executor = XeusPythonExecutor()
-            
+            session = Session(session_id="test")
+
             script = "import local_bar\nprint(local_bar.y)"
-            
-            results = list(executor.execute_script(script))
-            
+
+            results = list(session.execute_script_sync(script))
+
             error_found = None
             output_found = False
-            
+
             for res in results:
-                if isinstance(res, list): continue
-                for out in res.output:
-                    if out.type == "error":
-                        error_found = out.content
-                    if out.type == "stdout" and "100" in out.content:
+                if res['type'] != 'expression-done':
+                    continue
+                for out in res.get('output', []):
+                    if out['type'] == 'error':
+                        error_found = out['content']
+                    if out['type'] == 'stdout' and '100' in out['content']:
                         output_found = True
-            
+
             if error_found:
                 pytest.fail(f"Import failed with error: {error_found}")
-            
+
             assert output_found, "Did not find expected output '100'"
 
         finally:
-            executor.shutdown()
+            session.shutdown()
             os.chdir(cwd)

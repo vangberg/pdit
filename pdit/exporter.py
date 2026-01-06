@@ -4,8 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .executor import ExecutionResult
-from .python_executor import PythonExecutor
+from .session import Session
 
 
 def execute_script(script_content: str, script_name: str) -> list[dict[str, Any]]:
@@ -18,29 +17,28 @@ def execute_script(script_content: str, script_name: str) -> list[dict[str, Any]
     Returns:
         List of expression dicts ready for frontend consumption
     """
-    executor = PythonExecutor()
+    session = Session(session_id="export")
     expressions = []
     expression_id = 0
 
     try:
-        for result in executor.execute_script(script_content, script_name=script_name):
-            if isinstance(result, list):
-                # First yield is list of ExpressionInfo - skip
+        for result in session.execute_script_sync(script_content):
+            if result['type'] == 'execution-started':
                 continue
-            elif isinstance(result, ExecutionResult):
+            elif result['type'] == 'expression-done':
                 expressions.append({
                     "id": expression_id,
-                    "lineStart": result.line_start,
-                    "lineEnd": result.line_end,
+                    "lineStart": result['lineStart'],
+                    "lineEnd": result['lineEnd'],
                     "state": "done",
                     "result": {
-                        "output": [{"type": item.type, "content": item.content} for item in result.output],
-                        "isInvisible": result.is_invisible
+                        "output": result['output'],
+                        "isInvisible": result['isInvisible']
                     }
                 })
                 expression_id += 1
     finally:
-        executor.shutdown()
+        session.shutdown()
 
     return expressions
 
