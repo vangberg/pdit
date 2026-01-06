@@ -20,6 +20,10 @@ from .sse import format_sse
 # Global shutdown event for SSE connections
 shutdown_event = threading.Event()
 
+def signal_shutdown():
+    """Signal all SSE connections to close."""
+    shutdown_event.set()
+
 # FastAPI app
 app = FastAPI(title="pdit", version="0.2.0")
 
