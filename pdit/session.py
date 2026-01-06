@@ -31,11 +31,18 @@ class Session:
             lines = code.split('\n')
             for i, node in enumerate(tree.body):
                 source = '\n'.join(lines[node.lineno - 1:node.end_lineno])
+                # Detect markdown cells: top-level string literals
+                is_markdown = (
+                    isinstance(node, ast.Expr) and
+                    isinstance(node.value, ast.Constant) and
+                    isinstance(node.value.value, str)
+                )
                 yield {
                     'node_index': i,
                     'line_start': node.lineno,
                     'line_end': node.end_lineno,
-                    'code': source
+                    'code': source,
+                    'is_markdown': is_markdown
                 }
         except SyntaxError as e:
             yield {
@@ -45,6 +52,25 @@ class Session:
                 'code': code,
                 'syntax_error': str(e)
             }
+
+    def _process_mime_data(self, data: Dict[str, Any]) -> Optional[Dict[str, str]]:
+        """Process MIME bundle data into output item.
+
+        Priority order: image > html > json > plain text.
+        """
+        # Check for any image type first
+        image_types = [k for k in data.keys() if k.startswith('image/')]
+        if image_types:
+            mime_type = image_types[0]
+            return {'type': mime_type, 'content': data[mime_type]}
+        elif 'text/html' in data:
+            return {'type': 'text/html', 'content': data['text/html']}
+        elif 'application/json' in data:
+            import json
+            return {'type': 'application/json', 'content': json.dumps(data['application/json'])}
+        elif 'text/plain' in data:
+            return {'type': 'text/plain', 'content': data['text/plain']}
+        return None
 
     def _process_kernel_message(self, kernel_msg: Dict[str, Any]) -> Optional[Dict[str, str]]:
         """Convert kernel message to output item."""
@@ -57,17 +83,9 @@ class Session:
                 'content': content['text']
             }
         elif msg_type == 'execute_result':
-            data = content['data']
-            if 'text/html' in data:
-                return {'type': 'text/html', 'content': data['text/html']}
-            elif 'text/plain' in data:
-                return {'type': 'text/plain', 'content': data['text/plain']}
+            return self._process_mime_data(content['data'])
         elif msg_type == 'display_data':
-            data = content['data']
-            if 'text/html' in data:
-                return {'type': 'text/html', 'content': data['text/html']}
-            elif 'text/plain' in data:
-                return {'type': 'text/plain', 'content': data['text/plain']}
+            return self._process_mime_data(content['data'])
         elif msg_type == 'error':
             tb = '\n'.join(content['traceback'])
             tb = self.ANSI_ESCAPE.sub('', tb)
@@ -80,10 +98,13 @@ class Session:
         # Parse statements
         all_statements = list(self._parse_statements(script))
 
-        # Filter by line range if specified
+        # Filter by line range if specified (include any statement that overlaps)
         if line_range:
             from_line, to_line = line_range
-            statements = [s for s in all_statements if s['line_start'] >= from_line and s['line_end'] <= to_line]
+            statements = [
+                s for s in all_statements
+                if not (s['line_end'] < from_line or s['line_start'] > to_line)
+            ]
         else:
             statements = all_statements
 
@@ -115,6 +136,24 @@ class Session:
                         'type': 'error',
                         'content': stmt['syntax_error']
                     }],
+                    'isInvisible': False
+                }
+                continue
+
+            # Handle markdown cells: return string content as markdown
+            if stmt.get('is_markdown'):
+                try:
+                    value = ast.literal_eval(stmt['code'])
+                    output = [{'type': 'text/markdown', 'content': str(value).strip()}]
+                except (ValueError, SyntaxError):
+                    output = []
+                yield {
+                    'type': 'expression-done',
+                    'executionId': execution_id,
+                    'nodeIndex': stmt['node_index'],
+                    'lineStart': stmt['line_start'],
+                    'lineEnd': stmt['line_end'],
+                    'output': output,
                     'isInvisible': False
                 }
                 continue
