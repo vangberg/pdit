@@ -267,3 +267,17 @@ def get_session(session_id: str) -> Session:
     if session_id not in _sessions:
         _sessions[session_id] = Session(session_id)
     return _sessions[session_id]
+
+
+def delete_session(session_id: str) -> None:
+    """Delete a session if it exists, shutting down its kernel."""
+    session = _sessions.pop(session_id, None)
+    if not session:
+        return
+    session.shutdown()
+
+
+def shutdown_all_sessions() -> None:
+    """Shutdown all active sessions."""
+    for session_id in list(_sessions.keys()):
+        delete_session(session_id)

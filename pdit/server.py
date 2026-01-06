@@ -3,6 +3,7 @@
 import fnmatch
 import os
 import threading
+from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
 from typing import Optional, List
@@ -14,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .file_watcher import FileWatcher
-from .session import get_session, Session
+from .session import get_session, Session, shutdown_all_sessions
 from .sse import format_sse
 
 # Global shutdown event for SSE connections
@@ -23,9 +24,17 @@ shutdown_event = threading.Event()
 def signal_shutdown():
     """Signal all SSE connections to close."""
     shutdown_event.set()
+    shutdown_all_sessions()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    shutdown_event.set()
+    shutdown_all_sessions()
 
 # FastAPI app
-app = FastAPI(title="pdit", version="0.2.0")
+app = FastAPI(title="pdit", version="0.2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
