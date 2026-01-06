@@ -7,14 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from pdit.server import app
-from pdit.session import _sessions
-
-
-def delete_session(session_id: str):
-    """Delete a session and shutdown its kernel."""
-    if session_id in _sessions:
-        _sessions[session_id].shutdown()
-        del _sessions[session_id]
+from pdit.session import delete_session
 
 
 client = TestClient(app)
