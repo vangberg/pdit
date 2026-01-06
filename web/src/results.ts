@@ -1,11 +1,13 @@
 import { useState, useCallback, useRef } from "react";
-import { Expression, ExecutionEvent } from "./execution";
+import { Expression, ExecutionEvent, ServerExpressionRef } from "./execution";
 import { computeLineGroups, LineGroup } from "./compute-line-groups";
 
 /** Key for looking up expressions by line range */
 function lineRangeKey(lineStart: number, lineEnd: number): string {
   return `${lineStart}-${lineEnd}`;
 }
+
+let expressionIdCounter = 1;
 
 /**
  * Adds new expressions to the expression store (non-destructive).
@@ -93,11 +95,11 @@ interface ExecutionState {
 }
 
 /**
- * Handle an 'expressions' event: initialize pending expressions, preserve old results.
+ * Handle an 'execution-started' event: initialize pending expressions, preserve old results.
  */
-function handleExpressionsEvent(
+function handleExecutionStartedEvent(
   state: ExecutionState,
-  expressions: Expression[],
+  expressions: ServerExpressionRef[],
   existingExpressions: Map<number, Expression>
 ): void {
   // Build lookup of existing expressions by current line range (from line groups)
@@ -122,7 +124,9 @@ function handleExpressionsEvent(
     // Preserve old result while pending/executing
     const existingExpr = existingByRange.get(key);
     state.expressionsByRange.set(key, {
-      ...expr,
+      id: expressionIdCounter++,
+      lineStart: expr.lineStart,
+      lineEnd: expr.lineEnd,
       state: inferredState,
       result: existingExpr?.result,
     });
@@ -130,16 +134,24 @@ function handleExpressionsEvent(
 }
 
 /**
- * Handle a 'done' event: update expression with result, advance executing state.
+ * Handle an 'expression-done' event: update expression with result, advance executing state.
  */
-function handleDoneEvent(
+function handleExpressionDoneEvent(
   state: ExecutionState,
-  expression: Expression
+  event: Extract<ExecutionEvent, { type: "expression-done" }>
 ): void {
-  const key = lineRangeKey(expression.lineStart, expression.lineEnd);
+  const key = lineRangeKey(event.lineStart, event.lineEnd);
+  const existing = state.expressionsByRange.get(key);
+  const id = existing?.id ?? expressionIdCounter++;
 
   // Update this expression with its result
-  state.expressionsByRange.set(key, expression);
+  state.expressionsByRange.set(key, {
+    id,
+    lineStart: event.lineStart,
+    lineEnd: event.lineEnd,
+    state: "done",
+    result: { output: event.output, isInvisible: event.isInvisible },
+  });
 
   // Find first pending expression and mark it as executing
   for (const [k, expr] of state.expressionsByRange) {
@@ -207,11 +219,11 @@ export function useResults() {
 
       const state = executionStateRef.current;
 
-      if (event.type === 'expressions') {
-        handleExpressionsEvent(state, event.expressions, expressions);
-      } else if (event.type === 'done') {
-        handleDoneEvent(state, event.expression);
-      } else if (event.type === 'cancelled') {
+      if (event.type === "execution-started") {
+        handleExecutionStartedEvent(state, event.expressions, expressions);
+      } else if (event.type === "expression-done") {
+        handleExpressionDoneEvent(state, event);
+      } else if (event.type === "execution-cancelled") {
         handleCancelledEvent(state, event.cancelledExpressions);
       }
 
@@ -239,7 +251,7 @@ export function useResults() {
         .filter((expr) => expr.state === 'done')
         .map((expr) => expr.id);
 
-      if (event.type === "cancelled") {
+      if (event.type === "execution-cancelled" || event.type === "execution-complete") {
         executionStateRef.current = null;
       }
 

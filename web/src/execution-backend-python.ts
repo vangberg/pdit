@@ -25,21 +25,29 @@ export interface ExpressionResult {
   isInvisible?: boolean;
 }
 
-// Events yielded by executeScript
-export type ExecutionEvent =
-  | { type: 'expressions'; expressions: Expression[] }
-  | { type: 'done'; expression: Expression }
-  | {
-      type: 'cancelled';
-      cancelledExpressions: Array<{
-        nodeIndex: number;
-        lineStart: number;
-        lineEnd: number;
-      }>;
-    };
+export type ServerExpressionRef = {
+  nodeIndex: number;
+  lineStart: number;
+  lineEnd: number;
+};
 
-// Global counter for expression IDs
-let globalIdCounter = 1;
+// Events yielded by executeScript (mirrors backend event vocabulary)
+export type ExecutionEvent =
+  | { type: 'execution-started'; executionId: string; expressions: ServerExpressionRef[] }
+  | {
+      type: 'expression-done';
+      executionId: string;
+      nodeIndex: number;
+      lineStart: number;
+      lineEnd: number;
+      output: OutputItem[];
+      isInvisible: boolean;
+    }
+  | { type: 'execution-cancelled'; executionId: string; cancelledExpressions: ServerExpressionRef[] }
+  | { type: 'execution-complete'; executionId: string }
+  | { type: 'execution-error'; executionId: string; error: string }
+  | { type: 'error'; error: string }
+  | { type: 'pong' };
 
 type ClientMessage =
   | { type: 'init'; sessionId: string }
@@ -87,13 +95,13 @@ export class PythonServerBackend {
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        this.send({ type: 'init', sessionId });
         this.initAckResolver = (msg: ServerMessage) => {
           if (msg.type !== 'init-ack') return;
           if (msg.sessionId !== sessionId) return;
           this.initAckResolver = null;
           resolve();
         };
+        this.send({ type: 'init', sessionId });
       };
 
       this.ws.onmessage = (event) => {
@@ -161,7 +169,6 @@ export class PythonServerBackend {
     let done = false;
     let error: Error | null = null;
 
-    const expressionList: Expression[] = [];
     let notify: (() => void) | null = null;
     const waitForSignal = () =>
       new Promise<void>((resolve) => {
@@ -176,74 +183,36 @@ export class PythonServerBackend {
 
     const onMessage = (msg: ServerMessage) => {
       if (msg.type === 'error') {
+        events.push(msg as ExecutionEvent);
         error = new Error(msg.error);
-        done = true;
-        signal();
-        return;
-      }
-
-      if (msg.executionId !== executionId) {
-        return;
-      }
-
-      if (msg.type === 'execution-started') {
-        const expressions: Expression[] = (msg.expressions ?? []).map(
-          (expr: { nodeIndex: number; lineStart: number; lineEnd: number }) => ({
-            id: globalIdCounter++,
-            lineStart: expr.lineStart,
-            lineEnd: expr.lineEnd,
-            state: 'pending' as const,
-          })
-        );
-        expressionList.push(...expressions);
-        events.push({ type: 'expressions', expressions });
-        signal();
-        return;
-      }
-
-      if (msg.type === 'expression-done') {
-        const expr = expressionList.find(
-          (e) => e.lineStart === msg.lineStart && e.lineEnd === msg.lineEnd
-        );
-        const id = expr?.id ?? globalIdCounter++;
-        events.push({
-          type: 'done',
-          expression: {
-            id,
-            lineStart: msg.lineStart,
-            lineEnd: msg.lineEnd,
-            state: 'done' as const,
-            result: { output: msg.output ?? [], isInvisible: msg.isInvisible },
-          },
-        });
-        signal();
-        return;
-      }
-
-      if (msg.type === 'execution-cancelled') {
-        events.push({
-          type: 'cancelled',
-          cancelledExpressions: (msg.cancelledExpressions ?? []) as Array<{
-            nodeIndex: number;
-            lineStart: number;
-            lineEnd: number;
-          }>,
-        });
         done = true;
         signal();
         return;
       }
 
       if (msg.type === 'execution-error') {
+        if (msg.executionId !== executionId) return;
+        events.push(msg as ExecutionEvent);
         error = new Error(msg.error);
         done = true;
         signal();
         return;
       }
 
-      if (msg.type === 'execution-complete') {
-        done = true;
+      if (msg.executionId !== executionId) return;
+
+      if (
+        msg.type === 'execution-started' ||
+        msg.type === 'expression-done' ||
+        msg.type === 'execution-cancelled' ||
+        msg.type === 'execution-complete'
+      ) {
+        events.push(msg as ExecutionEvent);
+        if (msg.type === 'execution-cancelled' || msg.type === 'execution-complete') {
+          done = true;
+        }
         signal();
+        return;
       }
     };
 

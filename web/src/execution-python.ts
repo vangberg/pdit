@@ -6,7 +6,14 @@
 import { PythonServerBackend } from './execution-backend-python';
 
 // Re-export types from backend
-export type { OutputItem, Expression, ExpressionResult, ExecutionEvent, ExpressionState } from './execution-backend-python';
+export type {
+  OutputItem,
+  Expression,
+  ExpressionResult,
+  ExecutionEvent,
+  ExpressionState,
+  ServerExpressionRef,
+} from './execution-backend-python';
 
 const backend = new PythonServerBackend();
 

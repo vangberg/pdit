@@ -161,8 +161,8 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
           console.log("Execute event:", event);
 
           // Track the last executed line end
-          if (event.type === "done") {
-            const lineEnd = event.expression.lineEnd;
+          if (event.type === "expression-done") {
+            const lineEnd = event.lineEnd;
             if (
               lastExecutedLineEnd === undefined ||
               lineEnd > lastExecutedLineEnd
@@ -179,7 +179,8 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
           editorRef.current?.applyExecutionUpdate({
             doc: script,
             lineGroups: newLineGroups,
-            lastExecutedResultIds: event.type === "done" ? doneIds : undefined,
+            lastExecutedResultIds:
+              event.type === "expression-done" ? doneIds : undefined,
           });
         }
       } catch (error) {
