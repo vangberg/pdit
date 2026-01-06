@@ -53,6 +53,52 @@ class Session:
                 'syntax_error': str(e)
             }
 
+    def _prepare_execution(self, script: str, line_range: Optional[tuple[int, int]] = None):
+        """Parse script and filter statements. Returns (statements, started_event)."""
+        all_statements = list(self._parse_statements(script))
+
+        if line_range:
+            from_line, to_line = line_range
+            statements = [
+                s for s in all_statements
+                if not (s['line_end'] < from_line or s['line_start'] > to_line)
+            ]
+        else:
+            statements = all_statements
+
+        started = {
+            'type': 'execution-started',
+            'expressions': [
+                {'nodeIndex': s['node_index'], 'lineStart': s['line_start'], 'lineEnd': s['line_end']}
+                for s in statements if 'syntax_error' not in s
+            ]
+        }
+        return statements, started
+
+    def _make_expression_done(self, stmt: dict, output: list) -> dict:
+        """Build expression-done event for a statement."""
+        return {
+            'type': 'expression-done',
+            'nodeIndex': stmt['node_index'],
+            'lineStart': stmt['line_start'],
+            'lineEnd': stmt['line_end'],
+            'output': output,
+            'isInvisible': len(output) == 0
+        }
+
+    def _handle_non_executable(self, stmt: dict) -> Optional[dict]:
+        """Handle syntax errors and markdown. Returns event or None if needs execution."""
+        if 'syntax_error' in stmt:
+            return self._make_expression_done(stmt, [{'type': 'error', 'content': stmt['syntax_error']}])
+        if stmt.get('is_markdown'):
+            try:
+                value = ast.literal_eval(stmt['code'])
+                output = [{'type': 'text/markdown', 'content': str(value).strip()}]
+            except (ValueError, SyntaxError):
+                output = []
+            return self._make_expression_done(stmt, output)
+        return None
+
     def _process_mime_data(self, data: Dict[str, Any]) -> Optional[Dict[str, str]]:
         """Process MIME bundle data into output item.
 
@@ -95,92 +141,26 @@ class Session:
 
     async def _execute_script_impl(self, script: str, execution_id: str, line_range: Optional[tuple[int, int]] = None):
         """Execute script and yield results."""
-        # Parse statements
-        all_statements = list(self._parse_statements(script))
+        statements, started = self._prepare_execution(script, line_range)
+        started['executionId'] = execution_id
+        yield started
 
-        # Filter by line range if specified (include any statement that overlaps)
-        if line_range:
-            from_line, to_line = line_range
-            statements = [
-                s for s in all_statements
-                if not (s['line_end'] < from_line or s['line_start'] > to_line)
-            ]
-        else:
-            statements = all_statements
-
-        # Send statement list
-        yield {
-            'type': 'execution-started',
-            'executionId': execution_id,
-            'expressions': [
-                {
-                    'nodeIndex': s['node_index'],
-                    'lineStart': s['line_start'],
-                    'lineEnd': s['line_end']
-                }
-                for s in statements if 'syntax_error' not in s
-            ]
-        }
-
-        # Execute each statement
         for stmt in statements:
-            # Check for syntax error
-            if 'syntax_error' in stmt:
-                yield {
-                    'type': 'expression-done',
-                    'executionId': execution_id,
-                    'nodeIndex': stmt['node_index'],
-                    'lineStart': stmt['line_start'],
-                    'lineEnd': stmt['line_end'],
-                    'output': [{
-                        'type': 'error',
-                        'content': stmt['syntax_error']
-                    }],
-                    'isInvisible': False
-                }
+            if event := self._handle_non_executable(stmt):
+                event['executionId'] = execution_id
+                yield event
                 continue
 
-            # Handle markdown cells: return string content as markdown
-            if stmt.get('is_markdown'):
-                try:
-                    value = ast.literal_eval(stmt['code'])
-                    output = [{'type': 'text/markdown', 'content': str(value).strip()}]
-                except (ValueError, SyntaxError):
-                    output = []
-                yield {
-                    'type': 'expression-done',
-                    'executionId': execution_id,
-                    'nodeIndex': stmt['node_index'],
-                    'lineStart': stmt['line_start'],
-                    'lineEnd': stmt['line_end'],
-                    'output': output,
-                    'isInvisible': False
-                }
-                continue
-
-            # Execute and collect output
             output = []
             async for kernel_msg in self.kernel.execute(stmt['code']):
-                output_item = self._process_kernel_message(kernel_msg)
-                if output_item:
+                if output_item := self._process_kernel_message(kernel_msg):
                     output.append(output_item)
 
-            # Send result
-            yield {
-                'type': 'expression-done',
-                'executionId': execution_id,
-                'nodeIndex': stmt['node_index'],
-                'lineStart': stmt['line_start'],
-                'lineEnd': stmt['line_end'],
-                'output': output,
-                'isInvisible': len(output) == 0
-            }
+            event = self._make_expression_done(stmt, output)
+            event['executionId'] = execution_id
+            yield event
 
-        # Send completion
-        yield {
-            'type': 'execution-complete',
-            'executionId': execution_id
-        }
+        yield {'type': 'execution-complete', 'executionId': execution_id}
 
     async def execute_script(self, script: str, execution_id: str, send_fn, line_range: Optional[tuple[int, int]] = None):
         """Execute script in background, managing task lifecycle."""
@@ -217,77 +197,20 @@ class Session:
 
         For use in CLI export where we don't need async.
         """
-        # Parse statements
-        all_statements = list(self._parse_statements(script))
+        statements, started = self._prepare_execution(script, line_range)
+        yield started
 
-        # Filter by line range if specified
-        if line_range:
-            from_line, to_line = line_range
-            statements = [
-                s for s in all_statements
-                if not (s['line_end'] < from_line or s['line_start'] > to_line)
-            ]
-        else:
-            statements = all_statements
-
-        # Yield statement list
-        yield {
-            'type': 'execution-started',
-            'expressions': [
-                {
-                    'nodeIndex': s['node_index'],
-                    'lineStart': s['line_start'],
-                    'lineEnd': s['line_end']
-                }
-                for s in statements if 'syntax_error' not in s
-            ]
-        }
-
-        # Execute each statement synchronously
         for stmt in statements:
-            if 'syntax_error' in stmt:
-                yield {
-                    'type': 'expression-done',
-                    'nodeIndex': stmt['node_index'],
-                    'lineStart': stmt['line_start'],
-                    'lineEnd': stmt['line_end'],
-                    'output': [{'type': 'error', 'content': stmt['syntax_error']}],
-                    'isInvisible': False
-                }
+            if event := self._handle_non_executable(stmt):
+                yield event
                 continue
 
-            # Handle markdown cells
-            if stmt.get('is_markdown'):
-                try:
-                    value = ast.literal_eval(stmt['code'])
-                    output = [{'type': 'text/markdown', 'content': str(value).strip()}]
-                except (ValueError, SyntaxError):
-                    output = []
-                yield {
-                    'type': 'expression-done',
-                    'nodeIndex': stmt['node_index'],
-                    'lineStart': stmt['line_start'],
-                    'lineEnd': stmt['line_end'],
-                    'output': output,
-                    'isInvisible': False
-                }
-                continue
-
-            # Execute synchronously using kernel
             output = []
             for kernel_msg in self.kernel.execute_sync(stmt['code']):
-                output_item = self._process_kernel_message(kernel_msg)
-                if output_item:
+                if output_item := self._process_kernel_message(kernel_msg):
                     output.append(output_item)
 
-            yield {
-                'type': 'expression-done',
-                'nodeIndex': stmt['node_index'],
-                'lineStart': stmt['line_start'],
-                'lineEnd': stmt['line_end'],
-                'output': output,
-                'isInvisible': len(output) == 0
-            }
+            yield self._make_expression_done(stmt, output)
 
 
 # Session registry
