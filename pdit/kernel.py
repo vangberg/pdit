@@ -1,6 +1,8 @@
 """Low-level Jupyter kernel process management."""
 
 import asyncio
+import queue
+import textwrap
 from typing import Optional, AsyncGenerator, Dict, Any
 
 from jupyter_client import KernelManager
@@ -38,38 +40,46 @@ class Kernel:
 
     def _setup_kernel(self) -> None:
         """Configure kernel for inline matplotlib output and DataFrame display."""
-        self._execute_silent("""
-import IPython
-ip = IPython.get_ipython()
-if ip:
-    ip.run_line_magic('matplotlib', 'inline')
-""")
+        self._execute_silent(textwrap.dedent("""
+        import IPython
+        ip = IPython.get_ipython()
+        if ip:
+            ip.run_line_magic("matplotlib", "inline")
+        """))
         self._register_display_formatters()
 
     def _register_display_formatters(self) -> None:
         """Register custom display formatters for DataFrames."""
-        formatter_code = """
-def _register_pdit_formatter():
-    import IPython
-    import itables
+        self._execute_silent(textwrap.dedent("""
+        def _register_pdit_formatter():
+            import IPython
+            import itables
 
-    # Generate offline bundle
-    OFFLINE_INIT = itables.javascript.generate_init_offline_itables_html(itables.options.dt_bundle)
+            offline_init = itables.javascript.generate_init_offline_itables_html(itables.options.dt_bundle)
 
-    def format_datatable(df, include=None, exclude=None):
-        html = itables.to_html_datatable(df, display_logo_when_loading=False, connected=False, layout={"topStart": None, "topEnd": None, "bottomStart": "search", "bottomEnd": "paging"})
-        return f'{OFFLINE_INIT}{html}'
+            def format_datatable(df, include=None, exclude=None):
+                html = itables.to_html_datatable(
+                    df,
+                    display_logo_when_loading=False,
+                    connected=False,
+                    layout={
+                        "topStart": None,
+                        "topEnd": None,
+                        "bottomStart": "search",
+                        "bottomEnd": "paging",
+                    },
+                )
+                return f"{offline_init}{html}"
 
-    ip = IPython.get_ipython()
-    if ip:
-        formatter = ip.display_formatter.formatters['text/html']
-        formatter.for_type_by_name('polars.dataframe.frame', 'DataFrame', format_datatable)
-        formatter.for_type_by_name('pandas.core.frame', 'DataFrame', format_datatable)
+            ip = IPython.get_ipython()
+            if ip:
+                formatter = ip.display_formatter.formatters["text/html"]
+                formatter.for_type_by_name("polars.dataframe.frame", "DataFrame", format_datatable)
+                formatter.for_type_by_name("pandas.core.frame", "DataFrame", format_datatable)
 
-_register_pdit_formatter()
-del _register_pdit_formatter
-"""
-        self._execute_silent(formatter_code)
+        _register_pdit_formatter()
+        del _register_pdit_formatter
+        """))
 
     def restart(self):
         """Restart the kernel."""
@@ -88,8 +98,10 @@ del _register_pdit_formatter
         """Shutdown the kernel."""
         if self.kc:
             self.kc.stop_channels()
+            self.kc = None
         if self.km:
             self.km.shutdown_kernel(now=True)
+            self.km = None
 
     async def execute(self, code: str) -> AsyncGenerator[Dict[str, Any], None]:
         """Execute code and yield kernel messages."""
@@ -101,8 +113,10 @@ del _register_pdit_formatter
         while True:
             try:
                 kernel_msg = await asyncio.to_thread(
-                    self.kc.get_iopub_msg, timeout=30
+                    self.kc.get_iopub_msg, timeout=1
                 )
+            except queue.Empty:
+                continue
             except Exception:
                 break
 
@@ -126,7 +140,9 @@ del _register_pdit_formatter
 
         while True:
             try:
-                kernel_msg = self.kc.get_iopub_msg(timeout=30)
+                kernel_msg = self.kc.get_iopub_msg(timeout=1)
+            except queue.Empty:
+                continue
             except Exception:
                 break
 
