@@ -1,7 +1,7 @@
 import "./style.css";
 import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
-import { executeScript } from "./execution-python";
+import { executeScript, interrupt } from "./execution-python";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { LineGroup } from "./compute-line-groups";
@@ -182,7 +182,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
           editorRef.current?.applyExecutionUpdate({
             doc: script,
             lineGroups: newLineGroups,
-            lastExecutedResultIds: doneIds,
+            lastExecutedResultIds: event.type === "done" ? doneIds : undefined,
           });
         }
       } catch (error) {
@@ -232,6 +232,10 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
   const handleRunCurrent = useCallback(() => {
     editorRef.current?.executeCurrent();
     editorRef.current?.focus();
+  }, []);
+
+  const handleInterrupt = useCallback(() => {
+    interrupt();
   }, []);
 
   const handleReloadFromDisk = useCallback(() => {
@@ -358,6 +362,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
       <TopBar
         onRunAll={handleRunAll}
         onRunCurrent={handleRunCurrent}
+        onInterrupt={handleInterrupt}
         onSave={handleSave}
         hasUnsavedChanges={hasUnsavedChanges}
         scriptPath={scriptPath}

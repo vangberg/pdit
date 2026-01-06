@@ -150,6 +150,27 @@ function handleDoneEvent(
   }
 }
 
+function handleCancelledEvent(
+  state: ExecutionState,
+  cancelledExpressions: Array<{ lineStart: number; lineEnd: number }>
+): void {
+  for (const exprInfo of cancelledExpressions) {
+    const key = lineRangeKey(exprInfo.lineStart, exprInfo.lineEnd);
+    const existing = state.expressionsByRange.get(key);
+    if (!existing) {
+      continue;
+    }
+
+    // Treat as if it never ran: keep any previous output, otherwise remove it
+    // so the editor doesn't show a new group/border.
+    if (existing.result) {
+      state.expressionsByRange.set(key, { ...existing, state: "done" });
+    } else {
+      state.expressionsByRange.delete(key);
+    }
+  }
+}
+
 /**
  * Custom hook to manage expression store and line groups.
  */
@@ -190,6 +211,8 @@ export function useResults() {
         handleExpressionsEvent(state, event.expressions, expressions);
       } else if (event.type === 'done') {
         handleDoneEvent(state, event.expression);
+      } else if (event.type === 'cancelled') {
+        handleCancelledEvent(state, event.cancelledExpressions);
       }
 
       // Get all expressions as array
@@ -215,6 +238,10 @@ export function useResults() {
       const doneIds = allExpressions
         .filter((expr) => expr.state === 'done')
         .map((expr) => expr.id);
+
+      if (event.type === "cancelled") {
+        executionStateRef.current = null;
+      }
 
       return { lineGroups: groups, doneIds };
     },

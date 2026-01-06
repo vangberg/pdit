@@ -38,3 +38,10 @@ export async function* executeScript(
 export async function reset(): Promise<void> {
   await backend.reset();
 }
+
+/**
+ * Interrupt the kernel (send SIGINT).
+ */
+export function interrupt(): void {
+  backend.interrupt();
+}

@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { PathEditor } from "./PathEditor";
 import { useDropdownNavigation, DropdownList } from "./Dropdown";
-import { Play, BookOpen, Zap, Save } from "lucide-react";
+import { Play, BookOpen, Zap, Save, Square } from "lucide-react";
 
 interface TopBarProps {
   onRunAll: () => void;
   onRunCurrent?: () => void;
+  onInterrupt?: () => void;
   onSave?: () => void;
   hasUnsavedChanges?: boolean;
   scriptPath?: string | null;
@@ -266,6 +267,7 @@ function RunButton({
 export function TopBar({
   onRunAll,
   onRunCurrent,
+  onInterrupt,
   onSave,
   hasUnsavedChanges,
   scriptPath,
@@ -296,6 +298,19 @@ export function TopBar({
           isExecuting={isExecuting}
           shortcuts={shortcuts}
         />
+
+        {isExecuting && onInterrupt && (
+          <ActionButton
+            label="STOP"
+            onClick={onInterrupt}
+            disabled={false}
+            onMouseEnter={() => setHoveredButton("stop")}
+            onMouseLeave={() => setHoveredButton(null)}
+            tooltip="Interrupt execution"
+            showTooltip={hoveredButton === "stop"}
+            icon={<Square size={14} />}
+          />
+        )}
 
         <ToggleSwitch
           enabled={readerMode ?? false}

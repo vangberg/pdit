@@ -28,14 +28,22 @@ export interface ExpressionResult {
 // Events yielded by executeScript
 export type ExecutionEvent =
   | { type: 'expressions'; expressions: Expression[] }
-  | { type: 'done'; expression: Expression };
+  | { type: 'done'; expression: Expression }
+  | {
+      type: 'cancelled';
+      cancelledExpressions: Array<{
+        nodeIndex: number;
+        lineStart: number;
+        lineEnd: number;
+      }>;
+    };
 
 // Global counter for expression IDs
 let globalIdCounter = 1;
 
 // Message types
 interface ClientMessage {
-  type: 'init' | 'execute' | 'cancel' | 'get-state' | 'reset' | 'ping';
+  type: 'init' | 'execute' | 'cancel' | 'get-state' | 'reset' | 'ping' | 'interrupt';
   [key: string]: any;
 }
 
@@ -221,6 +229,14 @@ export class PythonServerBackend {
       } else if (msg.type === 'execution-complete') {
         done = true;
       } else if (msg.type === 'execution-cancelled') {
+        events.push({
+          type: 'cancelled',
+          cancelledExpressions: (msg.cancelledExpressions ?? []) as Array<{
+            nodeIndex: number;
+            lineStart: number;
+            lineEnd: number;
+          }>,
+        });
         done = true;
       } else if (msg.type === 'execution-error') {
         error = new Error(msg.error);
@@ -268,6 +284,13 @@ export class PythonServerBackend {
    */
   cancelExecution(executionId: string) {
     this.send({ type: 'cancel', executionId });
+  }
+
+  /**
+   * Interrupt the kernel (send SIGINT).
+   */
+  interrupt() {
+    this.send({ type: 'interrupt' });
   }
 
   /**

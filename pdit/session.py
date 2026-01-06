@@ -17,12 +17,18 @@ class Session:
         self.session_id = session_id
         self.kernel = Kernel()
         self.current_task: Optional[asyncio.Task] = None
+        self._interrupt_requested = False
+        self._current_execution_id: Optional[str] = None
+        self._current_pending_expressions: list[dict] = []
 
     def cancel_execution(self):
         """Cancel current execution if running."""
         if self.current_task and not self.current_task.done():
             self.current_task.cancel()
             self.current_task = None
+        self._interrupt_requested = False
+        self._current_execution_id = None
+        self._current_pending_expressions = []
 
     def _parse_statements(self, code: str):
         """Parse script into statements."""
@@ -143,12 +149,26 @@ class Session:
         """Execute script and yield results."""
         statements, started = self._prepare_execution(script, line_range)
         started['executionId'] = execution_id
+        self._current_execution_id = execution_id
+        self._current_pending_expressions = list(started.get('expressions', []))
         yield started
 
         for stmt in statements:
+            if self._interrupt_requested:
+                yield {
+                    'type': 'execution-cancelled',
+                    'executionId': execution_id,
+                    'cancelledExpressions': self._current_pending_expressions,
+                }
+                return
+
             if event := self._handle_non_executable(stmt):
                 event['executionId'] = execution_id
                 yield event
+                self._current_pending_expressions = [
+                    e for e in self._current_pending_expressions
+                    if e.get('nodeIndex') != stmt.get('node_index')
+                ]
                 continue
 
             output = []
@@ -159,28 +179,53 @@ class Session:
             event = self._make_expression_done(stmt, output)
             event['executionId'] = execution_id
             yield event
+            self._current_pending_expressions = [
+                e for e in self._current_pending_expressions
+                if e.get('nodeIndex') != stmt.get('node_index')
+            ]
+
+            if self._interrupt_requested:
+                yield {
+                    'type': 'execution-cancelled',
+                    'executionId': execution_id,
+                    'cancelledExpressions': self._current_pending_expressions,
+                }
+                return
 
         yield {'type': 'execution-complete', 'executionId': execution_id}
+        self._current_execution_id = None
+        self._current_pending_expressions = []
 
     async def execute_script(self, script: str, execution_id: str, send_fn, line_range: Optional[tuple[int, int]] = None):
         """Execute script in background, managing task lifecycle."""
         self.cancel_execution()
+        self._interrupt_requested = False
 
         async def run():
             try:
                 async for result in self._execute_script_impl(script, execution_id, line_range):
                     await send_fn(result)
             except asyncio.CancelledError:
-                await send_fn({'type': 'execution-cancelled', 'executionId': execution_id})
+                await send_fn({
+                    'type': 'execution-cancelled',
+                    'executionId': execution_id,
+                    'cancelledExpressions': self._current_pending_expressions,
+                })
             except Exception as e:
                 await send_fn({'type': 'execution-error', 'executionId': execution_id, 'error': str(e)})
+            finally:
+                if self._current_execution_id == execution_id:
+                    self._current_execution_id = None
+                    self._current_pending_expressions = []
 
         self.current_task = asyncio.create_task(run())
 
     def interrupt(self):
-        """Interrupt current execution (send SIGINT to kernel)."""
+        """Interrupt current execution (send SIGINT to kernel and stop after current statement)."""
+        if not self.current_task or self.current_task.done():
+            return
+        self._interrupt_requested = True
         self.kernel.interrupt()
-        # Don't cancel task - let kernel send KeyboardInterrupt error
 
     def restart(self):
         """Restart the kernel."""
