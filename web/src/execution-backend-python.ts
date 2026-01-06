@@ -41,124 +41,97 @@ export type ExecutionEvent =
 // Global counter for expression IDs
 let globalIdCounter = 1;
 
-// Message types
-interface ClientMessage {
-  type: 'init' | 'execute' | 'cancel' | 'get-state' | 'reset' | 'ping' | 'interrupt';
-  [key: string]: any;
-}
+type ClientMessage =
+  | { type: 'init'; sessionId: string }
+  | {
+      type: 'execute';
+      executionId: string;
+      script: string;
+      lineRange?: { from: number; to: number };
+    }
+  | { type: 'interrupt' }
+  | { type: 'reset' }
+  | { type: 'ping' };
 
-interface ServerMessage {
-  type: string;
-  [key: string]: any;
-}
+type ServerMessage = Record<string, any> & { type: string };
 
 export class PythonServerBackend {
   private ws: WebSocket | null = null;
   private sessionId: string | null = null;
-  private messageHandlers = new Map<string, (msg: ServerMessage) => void>();
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private isConnecting = false;
-  private connectionPromise: Promise<void> | null = null;
+  private connectPromise: Promise<void> | null = null;
+  private initAckResolver: ((msg: ServerMessage) => void) | null = null;
+  private activeExecution: {
+    executionId: string;
+    onMessage: (msg: ServerMessage) => void;
+    signal: () => void;
+  } | null = null;
 
   /**
    * Connect to WebSocket server and initialize session.
    */
   private async connect(sessionId: string): Promise<void> {
-    // If already connecting, wait for that connection
-    if (this.isConnecting && this.connectionPromise) {
-      return this.connectionPromise;
-    }
-
-    // If already connected to this session, reuse connection
     if (this.ws?.readyState === WebSocket.OPEN && this.sessionId === sessionId) {
       return;
     }
 
-    this.isConnecting = true;
+    if (this.connectPromise) {
+      return this.connectPromise;
+    }
+
     this.sessionId = sessionId;
 
-    this.connectionPromise = new Promise<void>((resolve, reject) => {
+    this.connectPromise = new Promise<void>((resolve, reject) => {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/ws/execute`;
 
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        // Send init message
         this.send({ type: 'init', sessionId });
-
-        // Wait for init-ack
-        const ackHandler = (msg: ServerMessage) => {
-          if (msg.type === 'init-ack') {
-            this.messageHandlers.delete('init-ack-promise');
-            this.reconnectAttempts = 0;
-            this.isConnecting = false;
-            resolve();
-          }
+        this.initAckResolver = (msg: ServerMessage) => {
+          if (msg.type !== 'init-ack') return;
+          if (msg.sessionId !== sessionId) return;
+          this.initAckResolver = null;
+          resolve();
         };
-        this.messageHandlers.set('init-ack-promise', ackHandler);
       };
 
       this.ws.onmessage = (event) => {
         const msg = JSON.parse(event.data) as ServerMessage;
-
-        // Route to all handlers (allows multiple listeners)
-        this.messageHandlers.forEach((handler) => {
-          try {
-            handler(msg);
-          } catch (e) {
-            console.error('Handler error:', e);
-          }
-        });
+        if (this.initAckResolver) {
+          this.initAckResolver(msg);
+          return;
+        }
+        if (this.activeExecution) {
+          this.activeExecution.onMessage(msg);
+        }
       };
 
       this.ws.onclose = () => {
-        this.handleDisconnect();
+        this.ws = null;
+        this.sessionId = null;
+        this.connectPromise = null;
+        if (this.activeExecution) {
+          this.activeExecution.signal();
+        }
       };
 
       this.ws.onerror = (error) => {
-        this.isConnecting = false;
+        this.ws = null;
+        this.sessionId = null;
+        this.connectPromise = null;
         reject(error);
       };
     });
 
-    return this.connectionPromise;
-  }
-
-  private async handleDisconnect() {
-    this.ws = null;
-    this.connectionPromise = null;
-
-    // Exponential backoff reconnection
-    if (this.reconnectAttempts < this.maxReconnectAttempts && this.sessionId) {
-      const delay = Math.min(1000 * 2 ** this.reconnectAttempts, 30000);
-      this.reconnectAttempts++;
-
-      await new Promise(resolve => setTimeout(resolve, delay));
-
-      try {
-        await this.connect(this.sessionId);
-      } catch (e) {
-        console.error('Reconnection failed:', e);
-      }
-    }
+    return this.connectPromise;
   }
 
   private send(msg: ClientMessage) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(msg));
-    } else {
-      console.error('WebSocket not connected, cannot send:', msg);
+    if (this.ws?.readyState !== WebSocket.OPEN) {
+      throw new Error('WebSocket not connected');
     }
-  }
-
-  private on(handlerId: string, handler: (msg: ServerMessage) => void) {
-    this.messageHandlers.set(handlerId, handler);
-  }
-
-  private off(handlerId: string) {
-    this.messageHandlers.delete(handlerId);
+    this.ws.send(JSON.stringify(msg));
   }
 
   /**
@@ -170,49 +143,69 @@ export class PythonServerBackend {
     options: {
       sessionId: string;
       lineRange?: { from: number; to: number };
-      scriptName?: string;
       reset?: boolean;
     }
   ): AsyncGenerator<ExecutionEvent, void, unknown> {
-    // Ensure connected
     await this.connect(options.sessionId);
+
+    if (this.activeExecution) {
+      throw new Error('Execution already in progress');
+    }
+
+    if (options.reset) {
+      await this.reset();
+    }
 
     const executionId = crypto.randomUUID();
     const events: ExecutionEvent[] = [];
     let done = false;
     let error: Error | null = null;
 
-    // Track expressions for ID assignment
     const expressionList: Expression[] = [];
+    let notify: (() => void) | null = null;
+    const waitForSignal = () =>
+      new Promise<void>((resolve) => {
+        notify = resolve;
+      });
+    const signal = () => {
+      if (!notify) return;
+      const resolve = notify;
+      notify = null;
+      resolve();
+    };
 
-    // Set up handlers for this execution
-    const handlerId = `exec-${executionId}`;
+    const onMessage = (msg: ServerMessage) => {
+      if (msg.type === 'error') {
+        error = new Error(msg.error);
+        done = true;
+        signal();
+        return;
+      }
 
-    this.on(handlerId, (msg) => {
-      // Only handle messages for this execution
-      if (msg.executionId !== executionId) return;
+      if (msg.executionId !== executionId) {
+        return;
+      }
 
       if (msg.type === 'execution-started') {
-        const expressions: Expression[] = msg.expressions.map(
-          (expr: { nodeIndex: number; lineStart: number; lineEnd: number }) => {
-            const id = globalIdCounter++;
-            return {
-              id,
-              lineStart: expr.lineStart,
-              lineEnd: expr.lineEnd,
-              state: 'pending' as const,
-            };
-          }
+        const expressions: Expression[] = (msg.expressions ?? []).map(
+          (expr: { nodeIndex: number; lineStart: number; lineEnd: number }) => ({
+            id: globalIdCounter++,
+            lineStart: expr.lineStart,
+            lineEnd: expr.lineEnd,
+            state: 'pending' as const,
+          })
         );
         expressionList.push(...expressions);
         events.push({ type: 'expressions', expressions });
-      } else if (msg.type === 'expression-done') {
-        // Find the expression by line range
+        signal();
+        return;
+      }
+
+      if (msg.type === 'expression-done') {
         const expr = expressionList.find(
-          e => e.lineStart === msg.lineStart && e.lineEnd === msg.lineEnd
+          (e) => e.lineStart === msg.lineStart && e.lineEnd === msg.lineEnd
         );
         const id = expr?.id ?? globalIdCounter++;
-
         events.push({
           type: 'done',
           expression: {
@@ -220,15 +213,14 @@ export class PythonServerBackend {
             lineStart: msg.lineStart,
             lineEnd: msg.lineEnd,
             state: 'done' as const,
-            result: {
-              output: msg.output,
-              isInvisible: msg.isInvisible,
-            },
+            result: { output: msg.output ?? [], isInvisible: msg.isInvisible },
           },
         });
-      } else if (msg.type === 'execution-complete') {
-        done = true;
-      } else if (msg.type === 'execution-cancelled') {
+        signal();
+        return;
+      }
+
+      if (msg.type === 'execution-cancelled') {
         events.push({
           type: 'cancelled',
           cancelledExpressions: (msg.cancelledExpressions ?? []) as Array<{
@@ -238,52 +230,47 @@ export class PythonServerBackend {
           }>,
         });
         done = true;
-      } else if (msg.type === 'execution-error') {
+        signal();
+        return;
+      }
+
+      if (msg.type === 'execution-error') {
         error = new Error(msg.error);
         done = true;
+        signal();
+        return;
       }
-    });
 
-    // Send execute message
-    this.send({
-      type: 'execute',
-      executionId,
-      script,
-      scriptName: options.scriptName,
-      lineRange: options.lineRange,
-      reset: options.reset,
-    });
+      if (msg.type === 'execution-complete') {
+        done = true;
+        signal();
+      }
+    };
 
-    // Yield events as they arrive
+    this.activeExecution = { executionId, onMessage, signal };
+
     try {
-      while (!done) {
-        if (events.length > 0) {
+      this.send({ type: 'execute', executionId, script, lineRange: options.lineRange });
+
+      while (true) {
+        while (events.length > 0) {
           yield events.shift()!;
-        } else {
-          // Wait a bit for more events
-          await new Promise(resolve => setTimeout(resolve, 10));
         }
-      }
 
-      // Yield remaining events
-      while (events.length > 0) {
-        yield events.shift()!;
-      }
+        if (done) {
+          if (error) {
+            throw error;
+          }
+          return;
+        }
 
-      if (error) {
-        throw error;
+        await waitForSignal();
       }
     } finally {
-      // Clean up handler
-      this.off(handlerId);
+      if (this.activeExecution?.executionId === executionId) {
+        this.activeExecution = null;
+      }
     }
-  }
-
-  /**
-   * Cancel a running execution.
-   */
-  cancelExecution(executionId: string) {
-    this.send({ type: 'cancel', executionId });
   }
 
   /**
@@ -321,6 +308,8 @@ export class PythonServerBackend {
     if (this.ws) {
       this.ws.close();
       this.ws = null;
+      this.sessionId = null;
+      this.connectPromise = null;
     }
   }
 }

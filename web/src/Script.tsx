@@ -150,8 +150,6 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
       script: string,
       options?: { lineRange?: { from: number; to: number }; reset?: boolean },
     ): Promise<{ lastExecutedLineEnd?: number }> => {
-      // Extract script name from path (just the filename)
-      const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
       let lastExecutedLineEnd: number | undefined;
 
       setIsExecuting(true);
@@ -159,7 +157,6 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
         for await (const event of executeScript(script, {
           sessionId,
           ...options,
-          scriptName,
         })) {
           console.log("Execute event:", event);
 
