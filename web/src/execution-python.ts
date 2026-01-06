@@ -1,6 +1,6 @@
 /**
  * Main execution interface for Python code.
- * Uses Python server backend for local execution with SSE streaming.
+ * Uses Python server backend for local execution with WebSocket streaming.
  */
 
 import { PythonServerBackend } from './execution-backend-python';
@@ -17,7 +17,6 @@ const backend = new PythonServerBackend();
  * @param script - The Python code to execute
  * @param options.sessionId - Session ID for execution environment
  * @param options.lineRange - Optional line range to filter which statements to execute (1-based, inclusive)
- * @param options.scriptName - Optional script name for output context
  * @param options.reset - Optional flag to reset the execution environment before running
  */
 export async function* executeScript(
@@ -25,7 +24,6 @@ export async function* executeScript(
   options: {
     sessionId: string;
     lineRange?: { from: number; to: number };
-    scriptName?: string;
     reset?: boolean;
   }
 ) {
