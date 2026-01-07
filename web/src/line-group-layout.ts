@@ -1,6 +1,6 @@
 import {EditorView, Decoration, WidgetType, DecorationSet} from "@codemirror/view"
 import {StateField, StateEffect, RangeSetBuilder, Facet, Text} from "@codemirror/state"
-import { lineGroupsField, lastExecutedIdsField } from "./result-grouping-plugin"
+import { lineGroupsField, lastExecutedIdsField, staleGroupIdsField } from "./result-grouping-plugin"
 import { LineGroup, LineGroupState } from "./compute-line-groups"
 
 // ============================================================================
@@ -23,14 +23,16 @@ class Spacer extends WidgetType {
     readonly height: number,
     readonly lineNumber: number,
     readonly isRecent: boolean,
-    readonly state: LineGroupState
+    readonly state: LineGroupState,
+    readonly isStale: boolean
   ) { super() }
 
   eq(other: Spacer) {
     return this.height == other.height &&
            this.lineNumber == other.lineNumber &&
            this.isRecent == other.isRecent &&
-           this.state == other.state
+           this.state == other.state &&
+           this.isStale == other.isStale
   }
 
   private getClassName(): string {
@@ -39,6 +41,10 @@ class Spacer extends WidgetType {
     } else if (this.state === 'executing') {
       return 'cm-preview-spacer cm-preview-spacer-executing'
     } else {
+      // Stale groups keep the spacer but drop executed styling.
+      if (this.isStale) {
+        return 'cm-preview-spacer cm-preview-spacer-stale'
+      }
       return this.isRecent ? 'cm-preview-spacer cm-preview-spacer-recent' : 'cm-preview-spacer'
     }
   }
@@ -148,6 +154,7 @@ function computeSpacers(
   layouts: Map<string, LineGroupLayout>,
   targetHeights: Map<string, number>,
   lastExecutedIds: Set<number>,
+  staleGroupIds: Set<string>,
   doc: Text
 ): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>()
@@ -161,8 +168,9 @@ function computeSpacers(
       if (diff > 0.01) {
         const endLine = doc.line(group.lineEnd)
         const isRecent = group.resultIds.some(id => lastExecutedIds.has(id))
+        const isStale = group.state === 'done' && staleGroupIds.has(group.id)
         builder.add(endLine.to, endLine.to, Decoration.widget({
-          widget: new Spacer(diff, group.lineEnd, isRecent, group.state),
+          widget: new Spacer(diff, group.lineEnd, isRecent, group.state, isStale),
           block: true,
           side: 1
         }))
@@ -182,7 +190,8 @@ function compareSpacers(a: DecorationSet, b: DecorationSet): boolean {
     if (iA.from != iB.from ||
         Math.abs(spacerA.height - spacerB.height) > 1 ||
         spacerA.isRecent !== spacerB.isRecent ||
-        spacerA.state !== spacerB.state)
+        spacerA.state !== spacerB.state ||
+        spacerA.isStale !== spacerB.isStale)
       return false
     iA.next(); iB.next()
   }
@@ -225,7 +234,15 @@ function updateSpacersAndReportLayout(view: EditorView) {
   // 2. Compute new spacers
   const targetHeights = view.state.field(lineGroupTargetHeightsField)
   const lastExecutedIds = view.state.field(lastExecutedIdsField)
-  const newSpacers = computeSpacers(groups, layouts, targetHeights, lastExecutedIds, view.state.doc)
+  const staleGroupIds = view.state.field(staleGroupIdsField)
+  const newSpacers = computeSpacers(
+    groups,
+    layouts,
+    targetHeights,
+    lastExecutedIds,
+    staleGroupIds,
+    view.state.doc
+  )
 
   // 3. Dispatch if changed
   if (!compareSpacers(newSpacers, currentSpacers)) {

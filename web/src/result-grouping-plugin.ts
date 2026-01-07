@@ -266,6 +266,73 @@ export const lastExecutedIdsField = StateField.define<Set<number>>({
   },
 });
 
+export const staleGroupIdsField = StateField.define<Set<string>>({
+  create() {
+    return new Set();
+  },
+
+  update(stale, tr) {
+    const groups = tr.state.field(lineGroupsField);
+    const hasSetLineGroups = tr.effects.some((effect) =>
+      effect.is(setLineGroups)
+    );
+
+    if (hasSetLineGroups) {
+      // New execution results clear stale state for all groups.
+      return new Set();
+    }
+
+    const groupsChanged = tr.startState.field(lineGroupsField) !== groups;
+
+    if (!tr.docChanged && !groupsChanged) {
+      return stale;
+    }
+
+    if (groups.length === 0) {
+      return new Set();
+    }
+
+    // Retain stale flags only for groups that still exist.
+    const groupIds = new Set(groups.map((group) => group.id));
+    const next = new Set<string>(
+      Array.from(stale).filter((id) => groupIds.has(id))
+    );
+
+    if (!tr.docChanged) {
+      return next;
+    }
+
+    // Use the mapped group ranges to detect overlap in the post-change document.
+    const groupRanges = tr.state.field(groupRangesField);
+    const groupStates = new Map(groups.map((group) => [group.id, group.state]));
+
+    const changedRanges: Array<{ from: number; to: number }> = [];
+    tr.changes.iterChanges((_fromA, _toA, fromB, toB) => {
+      const end = Math.max(fromB, toB - 1);
+      changedRanges.push({ from: fromB, to: end });
+    });
+
+    if (changedRanges.length === 0) {
+      return next;
+    }
+
+    groupRanges.between(0, tr.state.doc.length, (from, to, value) => {
+      if (groupStates.get(value.id) !== 'done') {
+        return;
+      }
+
+      for (const change of changedRanges) {
+        if (change.to < from || change.from > to) {
+          continue;
+        }
+        next.add(value.id);
+        break;
+      }
+    });
+    return next;
+  },
+});
+
 function snapRangesToFullLines(
   ranges: RangeSet<GroupValue>,
   doc: Text
@@ -381,6 +448,7 @@ export const lineGroupBackgroundField = StateField.define<DecorationSet>({
 
   update(_, tr) {
     const lineGroups = tr.state.field(lineGroupsField);
+    const staleGroupIds = tr.state.field(staleGroupIdsField);
 
     if (lineGroups.length === 0) {
       return Decoration.none;
@@ -393,6 +461,11 @@ export const lineGroupBackgroundField = StateField.define<DecorationSet>({
 
     for (const group of lineGroups) {
       const isRecent = group.resultIds.some(id => lastExecutedIds.has(id));
+      const isStale = group.state === 'done' && staleGroupIds.has(group.id);
+
+      if (isStale) {
+        continue;
+      }
 
       // Determine class based on group state
       let bgClass: string;
@@ -458,6 +531,10 @@ const groupTheme = EditorView.theme({
     backgroundColor: "rgba(225, 239, 254, 0.3)",
     borderLeft: "3px solid #7dd3fc",
   },
+  ".cm-preview-spacer-stale": {
+    backgroundColor: "transparent",
+    borderLeft: "none",
+  },
   ".cm-preview-spacer-recent": {
     borderLeft: "3px solid #0284c7",
   },
@@ -517,6 +594,7 @@ export const resultGroupingExtension = [
   groupRangesField,
   lineGroupsField,
   lastExecutedIdsField,
+  staleGroupIdsField,
   groupDecorationsField,
   lineGroupBackgroundField,
   groupTheme,
