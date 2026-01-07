@@ -43,7 +43,7 @@ uv run honcho start
 
 # Or run separately:
 # Terminal 1: Backend
-uv run uvicorn pdit.server:app --reload --port 8888
+uv run uvicorn pdit.server:app --reload --reload-exclude examples/** --port 8888
 
 # Terminal 2: Frontend dev server
 cd web
