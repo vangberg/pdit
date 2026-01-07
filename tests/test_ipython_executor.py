@@ -247,16 +247,15 @@ class TestErrorHandling:
         assert result.output[0].type == "error"
         assert "TypeError" in result.output[0].content
 
-    def test_execution_continues_after_error(self, executor):
-        """Test that execution continues with subsequent code after an error."""
+    def test_execution_stops_after_error(self, executor):
+        """Test that execution stops after an error."""
         script = "x = 5\ny = 1 / 0\nz = 10"
         results = list(executor.execute_script(script))
 
-        # Should have 4 results: expressions info + 3 statements
-        assert len(results) == 4
+        # Should have 3 results: expressions info + 2 statements
+        assert len(results) == 3
         assert results[1].is_invisible is True  # x = 5 succeeds
         assert results[2].output[0].type == "error"  # y = 1/0 errors
-        assert results[3].is_invisible is True  # z = 10 succeeds
 
 
 class TestLineRangeFiltering:
