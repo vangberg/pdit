@@ -255,6 +255,20 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
     setReaderMode(!readerMode);
   }, [readerMode, setReaderMode]);
 
+  const handleInterrupt = useCallback(async () => {
+    try {
+      await fetch("/api/interrupt", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ sessionId }),
+      });
+    } catch (error) {
+      console.error("Error sending interrupt:", error);
+    }
+  }, [sessionId]);
+
   const handleSave = useCallback(async () => {
     if (!scriptPath || !doc) {
       console.warn("Cannot save: no script path or document");
@@ -358,6 +372,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
       <TopBar
         onRunAll={handleRunAll}
         onRunCurrent={handleRunCurrent}
+        onInterrupt={handleInterrupt}
         onSave={handleSave}
         hasUnsavedChanges={hasUnsavedChanges}
         scriptPath={scriptPath}

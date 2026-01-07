@@ -189,9 +189,11 @@ async def execute_script(request: ExecuteScriptRequest):
 
     SSE Format: data: <JSON>\n\n
     """
-    async def generate_events():
-        import asyncio
+    import asyncio
+    import queue
 
+    async def generate_events():
+        loop = asyncio.get_running_loop()
         executor = get_or_create_session(request.sessionId)
 
         # Reset execution environment if requested
@@ -203,48 +205,81 @@ async def execute_script(request: ExecuteScriptRequest):
         if request.lineRange:
             line_range = (request.lineRange.from_, request.lineRange.to)
 
+        # Use a queue to communicate between the blocking executor thread and async generator
+        event_queue: queue.Queue = queue.Queue()
+
+        def run_executor():
+            """Run the blocking executor in a thread, pushing events to the queue."""
+            try:
+                events = executor.execute_script(request.script, line_range, request.scriptName)
+                for event in events:
+                    event_queue.put(("event", event))
+                event_queue.put(("done", None))
+            except Exception as e:
+                event_queue.put(("error", e))
+
+        # Start executor in background thread
+        executor_task = loop.run_in_executor(None, run_executor)
+
         try:
-            # Execute script (yields expression list first, then results)
-            events = executor.execute_script(request.script, line_range, request.scriptName)
-
-            for event in events:
-                # First event is expression list
-                if isinstance(event, list):
-                    yield format_sse({
-                        "type": "expressions",
-                        "expressions": [
-                            {
-                                "lineStart": expr.line_start,
-                                "lineEnd": expr.line_end
-                            }
-                            for expr in event
-                        ]
-                    })
-                # Subsequent events are execution results
-                elif isinstance(event, ExecutionResult):
-                    expr_result = ExpressionResult(
-                        lineStart=event.line_start,
-                        lineEnd=event.line_end,
-                        output=[
-                            OutputItem(type=o.type, content=o.content)
-                            for o in event.output
-                        ],
-                        isInvisible=event.is_invisible
+            while True:
+                # Poll queue without blocking the event loop
+                try:
+                    item = await loop.run_in_executor(
+                        None, lambda: event_queue.get(timeout=0.1)
                     )
-                    yield format_sse(expr_result.model_dump())
+                except queue.Empty:
+                    # Yield control to allow cancellation on client disconnect.
+                    await asyncio.sleep(0.01)
+                    continue
 
-                # Force async yield to flush immediately
-                await asyncio.sleep(0)
+                msg_type, payload = item
 
-            # Send completion event
-            yield format_sse({"type": "complete"})
+                if msg_type == "done":
+                    yield format_sse({"type": "complete"})
+                    break
+                elif msg_type == "error":
+                    yield format_sse({"type": "error", "message": str(payload)})
+                    break
+                elif msg_type == "event":
+                    event = payload
+                    # First event is expression list
+                    if isinstance(event, list):
+                        yield format_sse({
+                            "type": "expressions",
+                            "expressions": [
+                                {
+                                    "lineStart": expr.line_start,
+                                    "lineEnd": expr.line_end
+                                }
+                                for expr in event
+                            ]
+                        })
+                    # Subsequent events are execution results
+                    elif isinstance(event, ExecutionResult):
+                        expr_result = ExpressionResult(
+                            lineStart=event.line_start,
+                            lineEnd=event.line_end,
+                            output=[
+                                OutputItem(type=o.type, content=o.content)
+                                for o in event.output
+                            ],
+                            isInvisible=event.is_invisible
+                        )
+                        yield format_sse(expr_result.model_dump())
 
         except Exception as e:
-            # Send error event
-            yield format_sse({
-                "type": "error",
-                "message": str(e)
-            })
+            yield format_sse({"type": "error", "message": str(e)})
+        finally:
+            if not executor_task.done():
+                try:
+                    executor.interrupt()
+                except Exception:
+                    pass
+                try:
+                    await asyncio.wait_for(executor_task, timeout=1.0)
+                except Exception:
+                    pass
 
     return StreamingResponse(
         generate_events(),
