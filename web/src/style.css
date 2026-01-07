@@ -875,11 +875,16 @@ h1 {
   color: #1f2937;
 }
 
-.top-bar-split-button-main:disabled,
+.top-bar-split-button-main:disabled {
+  cursor: not-allowed;
+  color: #6b7280;
+  border-color: #e5e7eb;
+}
+
 .top-bar-split-button-arrow:disabled {
   cursor: not-allowed;
   color: #6b7280;
-  border-color: #6b7280;
+  border-color: #e5e7eb;
 }
 
 .top-bar-dropdown-menu {

@@ -130,11 +130,13 @@ function ToggleSwitch({
 function RunButton({
   onRunAll,
   onRunCurrent,
+  onInterrupt,
   isExecuting,
   shortcuts
 }: {
   onRunAll: () => void;
   onRunCurrent?: () => void;
+  onInterrupt?: () => void;
   isExecuting?: boolean;
   shortcuts: { current: string; all: string };
 }) {
@@ -179,6 +181,12 @@ function RunButton({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (isExecuting) {
+      setIsDropdownOpen(false);
+    }
+  }, [isExecuting]);
+
   // Focus dropdown when opened
   useEffect(() => {
     if (isDropdownOpen) {
@@ -192,9 +200,11 @@ function RunButton({
   }, [isDropdownOpen, lastRunMode, setSelectedIndex]);
 
   const handleMainClick = () => {
-    if (onRunCurrent) {
-      onRunCurrent();
+    if (isExecuting) {
+      onInterrupt?.();
+      return;
     }
+    onRunCurrent?.();
   };
 
   const handleArrowKeyDown = (e: React.KeyboardEvent) => {
@@ -204,8 +214,10 @@ function RunButton({
     }
   };
 
-  const label = "RUN CURRENT";
-  const tooltip = shortcuts.current;
+  const label = isExecuting ? "STOP" : "RUN CURRENT";
+  const tooltip = undefined;
+  const icon = isExecuting ? <Square size={14} className="top-bar-icon" /> : <Play size={14} className="top-bar-icon" />;
+  const isDisabled = isExecuting ? !onInterrupt : false;
 
   return (
     <div 
@@ -216,14 +228,14 @@ function RunButton({
       <button
         className="top-bar-split-button-main"
         onClick={handleMainClick}
-        disabled={isExecuting}
+        disabled={isDisabled}
         onMouseEnter={() => setHoveredPart("main")}
         onMouseLeave={() => setHoveredPart(null)}
       >
-        <Play size={14} className="top-bar-icon" />
+        {icon}
         <span className="top-bar-label">{label}</span>
       </button>
-      {hoveredPart === "main" && <Tooltip text={tooltip} />}
+      {hoveredPart === "main" && tooltip && <Tooltip text={tooltip} />}
       
       <button
         ref={arrowRef}
@@ -295,19 +307,9 @@ export function TopBar({
         <RunButton
           onRunAll={onRunAll}
           onRunCurrent={onRunCurrent}
+          onInterrupt={onInterrupt}
           isExecuting={isExecuting}
           shortcuts={shortcuts}
-        />
-
-        <ActionButton
-          label="STOP"
-          onClick={onInterrupt || (() => {})}
-          disabled={false}
-          onMouseEnter={() => setHoveredButton("interrupt")}
-          onMouseLeave={() => setHoveredButton(null)}
-          tooltip="Interrupt execution (KeyboardInterrupt)"
-          showTooltip={hoveredButton === "interrupt"}
-          icon={<Square size={14} />}
         />
 
         <ToggleSwitch
