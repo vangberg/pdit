@@ -53,10 +53,10 @@ def shutdown_all_sessions() -> None:
         delete_session(session_id)
 
 
-def is_keyboard_interrupt(result: ExecutionResult) -> bool:
-    """Check if an execution result represents a KeyboardInterrupt."""
+def is_error_result(result: ExecutionResult) -> bool:
+    """Check if an execution result represents an error."""
     return any(
-        item.type == "error" and "KeyboardInterrupt" in item.content
+        item.type == "error"
         for item in result.output
     )
 
@@ -281,7 +281,7 @@ async def execute_script(request: ExecuteScriptRequest):
                         )
                         yield format_sse(expr_result.model_dump())
 
-                        if is_keyboard_interrupt(event):
+                        if is_error_result(event):
                             remaining = expression_infos[executed_count:]
                             if remaining:
                                 yield format_sse({

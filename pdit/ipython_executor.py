@@ -219,10 +219,10 @@ del _register_pdit_formatter
 
         return output
 
-    def _is_keyboard_interrupt(self, output: List[OutputItem]) -> bool:
-        """Check whether output contains a KeyboardInterrupt traceback."""
+    def _has_error(self, output: List[OutputItem]) -> bool:
+        """Check whether output contains an error."""
         return any(
-            item.type == "error" and "KeyboardInterrupt" in item.content
+            item.type == "error"
             for item in output
         )
 
@@ -295,7 +295,7 @@ del _register_pdit_formatter
             )
             yield result
 
-            if self._is_keyboard_interrupt(output):
+            if self._has_error(output):
                 break
 
     def reset(self) -> None:
