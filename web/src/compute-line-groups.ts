@@ -9,6 +9,7 @@ export interface LineGroup {
   lineStart: number;
   lineEnd: number;
   allInvisible?: boolean;
+  hasError?: boolean;
   state: LineGroupState;
 }
 
@@ -22,6 +23,11 @@ export function computeLineGroups(results: Expression[]): LineGroup[] {
   if (results.length === 0) {
     return [];
   }
+
+  const expressionHasError = (result: Expression): boolean =>
+    result.result?.output?.some(
+      (item) => item.type === 'error' || item.type === 'stderr'
+    ) ?? false;
 
   // Build a mapping of line number to the result IDs that cover that line.
   const lineToResults = new Map<number, Set<number>>();
@@ -94,6 +100,7 @@ export function computeLineGroups(results: Expression[]): LineGroup[] {
       const allInvisible = groupResults.every(
         (result) => result.result?.isInvisible === true
       );
+      const hasError = groupResults.some(expressionHasError);
 
       // Compute group state from expression states:
       // - Any executing → executing
@@ -116,6 +123,7 @@ export function computeLineGroups(results: Expression[]): LineGroup[] {
         lineStart: minLine,
         lineEnd: maxLine,
         allInvisible,
+        hasError,
         state: groupState,
       });
     }

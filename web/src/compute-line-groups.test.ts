@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { computeLineGroups } from './compute-line-groups';
-import { Expression } from './execution';
+import { Expression, OutputItem } from './execution';
 
 // Helper to create expression with required fields
-function expr(id: number, lineStart: number, lineEnd: number): Expression {
-  return { id, lineStart, lineEnd, state: 'done', result: { output: [] } };
+function expr(
+  id: number,
+  lineStart: number,
+  lineEnd: number,
+  output: OutputItem[] = []
+): Expression {
+  return { id, lineStart, lineEnd, state: 'done', result: { output } };
 }
 
 describe('computeLineGroups', () => {
@@ -76,5 +81,16 @@ describe('computeLineGroups', () => {
     expect(groups[0].lineStart).toBe(1);
     expect(groups[1].lineStart).toBe(10);
     expect(groups[2].lineStart).toBe(20);
+  });
+
+  it('marks groups with error output', () => {
+    const results: Expression[] = [
+      expr(1, 1, 1, [{ type: 'stderr', content: 'Boom' }]),
+      expr(2, 3, 3, [{ type: 'text/plain', content: 'OK' }])
+    ];
+    const groups = computeLineGroups(results);
+    expect(groups).toHaveLength(2);
+    expect(groups[0].hasError).toBe(true);
+    expect(groups[1].hasError).toBe(false);
   });
 });

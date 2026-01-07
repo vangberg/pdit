@@ -23,6 +23,7 @@ class Spacer extends WidgetType {
     readonly height: number,
     readonly lineNumber: number,
     readonly isRecent: boolean,
+    readonly hasError: boolean,
     readonly state: LineGroupState,
     readonly isStale: boolean
   ) { super() }
@@ -31,6 +32,7 @@ class Spacer extends WidgetType {
     return this.height == other.height &&
            this.lineNumber == other.lineNumber &&
            this.isRecent == other.isRecent &&
+           this.hasError == other.hasError &&
            this.state == other.state &&
            this.isStale == other.isStale
   }
@@ -44,6 +46,11 @@ class Spacer extends WidgetType {
       // Stale groups keep the spacer but drop executed styling.
       if (this.isStale) {
         return 'cm-preview-spacer cm-preview-spacer-stale'
+      }
+      if (this.hasError) {
+        return this.isRecent
+          ? 'cm-preview-spacer cm-preview-spacer-error cm-preview-spacer-error-recent'
+          : 'cm-preview-spacer cm-preview-spacer-error'
       }
       return this.isRecent ? 'cm-preview-spacer cm-preview-spacer-recent' : 'cm-preview-spacer'
     }
@@ -170,7 +177,14 @@ function computeSpacers(
         const isRecent = group.resultIds.some(id => lastExecutedIds.has(id))
         const isStale = group.state === 'done' && staleGroupIds.has(group.id)
         builder.add(endLine.to, endLine.to, Decoration.widget({
-          widget: new Spacer(diff, group.lineEnd, isRecent, group.state, isStale),
+          widget: new Spacer(
+            diff,
+            group.lineEnd,
+            isRecent,
+            group.hasError || false,
+            group.state,
+            isStale
+          ),
           block: true,
           side: 1
         }))
@@ -190,6 +204,7 @@ function compareSpacers(a: DecorationSet, b: DecorationSet): boolean {
     if (iA.from != iB.from ||
         Math.abs(spacerA.height - spacerB.height) > 1 ||
         spacerA.isRecent !== spacerB.isRecent ||
+        spacerA.hasError !== spacerB.hasError ||
         spacerA.state !== spacerB.state ||
         spacerA.isStale !== spacerB.isStale)
       return false

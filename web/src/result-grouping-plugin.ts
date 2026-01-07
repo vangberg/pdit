@@ -27,6 +27,7 @@ export class GroupValue extends RangeValue {
     public id: string,
     public resultIds: number[],
     public allInvisible: boolean = false,
+    public hasError: boolean = false,
     public state: LineGroupState = 'done'
   ) {
     super();
@@ -34,7 +35,9 @@ export class GroupValue extends RangeValue {
 
   eq(other: GroupValue) {
     // Compare allInvisible flag and state for proper decoration updates
-    return this.allInvisible === other.allInvisible && this.state === other.state;
+    return this.allInvisible === other.allInvisible &&
+      this.hasError === other.hasError &&
+      this.state === other.state;
   }
 }
 
@@ -141,7 +144,13 @@ export function lineGroupsToRangeSet(
     return {
       from: fromLine.from,
       to: toLine.to,
-      value: new GroupValue(group.id, group.resultIds, group.allInvisible || false, group.state),
+      value: new GroupValue(
+        group.id,
+        group.resultIds,
+        group.allInvisible || false,
+        group.hasError || false,
+        group.state
+      ),
     };
   });
 
@@ -169,6 +178,7 @@ export function rangeSetToLineGroups(
       lineEnd: endLine,
       resultIds: [...value.resultIds].sort((a, b) => a - b),
       allInvisible: value.allInvisible,
+      hasError: value.hasError,
       state: value.state,
     });
   });
@@ -207,6 +217,7 @@ function areLineGroupsEqual(a: LineGroup[], b: LineGroup[]): boolean {
       groupA.lineEnd !== groupB.lineEnd ||
       groupA.resultIds.length !== groupB.resultIds.length ||
       groupA.allInvisible !== groupB.allInvisible ||
+      groupA.hasError !== groupB.hasError ||
       groupA.state !== groupB.state
     ) {
       return false;
@@ -404,6 +415,7 @@ function mergeSnappedRanges(
 
       // Merged group is invisible only if both groups are invisible
       const mergedAllInvisible = current.value.allInvisible && next.value.allInvisible;
+      const mergedHasError = current.value.hasError || next.value.hasError;
 
       // Merged state: any executing → executing, any pending → pending, otherwise done
       let mergedState: LineGroupState = 'done';
@@ -416,7 +428,13 @@ function mergeSnappedRanges(
       current = {
         ...current,
         to: Math.max(current.to, next.to),
-        value: new GroupValue(current.value.id, uniqueResultIds, mergedAllInvisible, mergedState)
+        value: new GroupValue(
+          current.value.id,
+          uniqueResultIds,
+          mergedAllInvisible,
+          mergedHasError,
+          mergedState
+        )
       };
       continue;
     }
@@ -494,6 +512,10 @@ export const lineGroupBackgroundField = StateField.define<DecorationSet>({
         bgClass = 'cm-line-group-pending';
       } else if (group.state === 'executing') {
         bgClass = 'cm-line-group-executing';
+      } else if (group.hasError) {
+        bgClass = isRecent
+          ? 'cm-line-group-error cm-line-group-error-recent'
+          : 'cm-line-group-error';
       } else if (group.allInvisible) {
         // Done state with invisible output
         bgClass = isRecent ? 'cm-line-group-invisible cm-line-group-recent' : 'cm-line-group-invisible';
@@ -538,6 +560,14 @@ const groupTheme = EditorView.theme({
   ".cm-line-group-recent": {
     borderLeft: "3px solid #0284c7",
   },
+  // Error state (red)
+  ".cm-line-group-error": {
+    backgroundColor: "rgba(248, 113, 113, 0.15)",
+    borderLeft: "3px solid #fca5a5",
+  },
+  ".cm-line-group-error-recent": {
+    borderLeft: "3px solid #dc2626",
+  },
   // Pending state (grey)
   ".cm-line-group-pending": {
     borderLeft: "3px solid #9ca3af",
@@ -558,6 +588,13 @@ const groupTheme = EditorView.theme({
   },
   ".cm-preview-spacer-recent": {
     borderLeft: "3px solid #0284c7",
+  },
+  ".cm-preview-spacer-error": {
+    backgroundColor: "rgba(248, 113, 113, 0.15)",
+    borderLeft: "3px solid #fca5a5",
+  },
+  ".cm-preview-spacer-error-recent": {
+    borderLeft: "3px solid #dc2626",
   },
   ".cm-preview-spacer-pending": {
     borderLeft: "3px solid #9ca3af",
