@@ -37,14 +37,14 @@ class TestHealthEndpoint:
 class TestResetEndpoint:
     """Tests for /reset endpoint."""
 
-    def setup_method(self):
-        """Create a fresh session ID for each test."""
-        self.session_id = str(uuid.uuid4())
+    # Class-level session - shared across all tests, cleaned up once at end
+    session_id = str(uuid.uuid4())
 
-    def teardown_method(self):
-        """Clean up the session after each test."""
+    @classmethod
+    def teardown_class(cls):
+        """Clean up the session after all tests in class."""
         if HAS_FASTAPI:
-            delete_session(self.session_id)
+            delete_session(cls.session_id)
 
     def _parse_sse_response(self, response):
         """Parse SSE response into list of results."""
@@ -93,14 +93,14 @@ class TestResetEndpoint:
 class TestExecuteScriptEndpoint:
     """Tests for /execute-script endpoint."""
 
-    def setup_method(self):
-        """Create a fresh session ID for each test."""
-        self.session_id = str(uuid.uuid4())
+    # Class-level session - shared across all tests, cleaned up once at end
+    session_id = str(uuid.uuid4())
 
-    def teardown_method(self):
-        """Clean up the session after each test."""
+    @classmethod
+    def teardown_class(cls):
+        """Clean up the session after all tests in class."""
         if HAS_FASTAPI:
-            delete_session(self.session_id)
+            delete_session(cls.session_id)
 
     def _parse_sse_response(self, response):
         """Parse SSE response into list of execution results (excluding expressions/complete events)."""
