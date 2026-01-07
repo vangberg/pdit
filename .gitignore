@@ -1,4 +1,4 @@
-# Node.js / Web frontend
+c# Node.js / Web frontend
 node_modules
 
 # Python
@@ -38,3 +38,5 @@ dmypy.json
 # OS
 .DS_Store
 Thumbs.db
+
+todos/
