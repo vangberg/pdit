@@ -78,6 +78,15 @@ wheels = [
 ]
 
 [[package]]
+name = "backports-entry-points-selectable"
+version = "1.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fc/25/dae014b114397a6f60578d7358bf5fcb103f71556e5363a50d7b42e9bc51/backports.entry_points_selectable-1.3.0.tar.gz", hash = "sha256:17a8b44ae700fba548686dd274ddc91c060371565cd63806c20a1d33911746e6", size = 9882, upload-time = "2023-11-27T19:03:06.585Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5a/78/b3ba5d804ae21e26e6179bbe4e1338deaaba9d20161918f59e20e9d92ea0/backports.entry_points_selectable-1.3.0-py3-none-any.whl", hash = "sha256:66f5da003eb4b283c7b60581bc8bb0baf0d810eb3e3068da786d3821b4d5746a", size = 6217, upload-time = "2023-11-27T19:03:04.844Z" },
+]
+
+[[package]]
 name = "black"
 version = "25.11.0"
 source = { registry = "https://pypi.org/simple" }
@@ -671,6 +680,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/01/ee/02a2c011bdab74c6fb3c75474d40b3052059d95df7e73351460c8588d963/h11-0.16.0.tar.gz", hash = "sha256:4e35b956cf45792e4caa5885e69fba00bdbc6ffafbfa020300e549b208ee5ff1", size = 101250, upload-time = "2025-04-24T03:35:25.427Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl", hash = "sha256:63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86", size = 37515, upload-time = "2025-04-24T03:35:24.344Z" },
+]
+
+[[package]]
+name = "honcho"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "backports-entry-points-selectable", marker = "python_full_version < '3.10'" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/65/c8/d860888358bf5c8a6e7d78d1b508b59b0e255afd5655f243b8f65166dafd/honcho-2.0.0.tar.gz", hash = "sha256:af3815c03c634bf67d50f114253ea9fef72ecff26e4fd06b29234789ac5b8b2e", size = 45618, upload-time = "2024-10-06T14:26:53.871Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/48/1c/25631fc359955569e63f5446dbb7022c320edf9846cbe892ee5113433a7e/honcho-2.0.0-py3-none-any.whl", hash = "sha256:56dcd04fc72d362a4befb9303b1a1a812cba5da283526fbc6509be122918ddf3", size = 22093, upload-time = "2024-10-06T14:26:52.181Z" },
 ]
 
 [[package]]
@@ -1686,11 +1708,19 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-dev = [
-    { name = "black" },
-    { name = "mypy" },
+examples = [
+    { name = "great-tables" },
+    { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "matplotlib", version = "3.10.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "pandas" },
     { name = "polars" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "black" },
+    { name = "honcho" },
+    { name = "mypy" },
     { name = "pytest", version = "8.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "pytest", version = "9.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "pytest-asyncio", version = "1.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -1698,44 +1728,32 @@ dev = [
     { name = "ruff" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "great-tables" },
-    { name = "itables" },
-    { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "matplotlib", version = "3.10.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "pandas" },
-    { name = "polars" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "aiofiles", specifier = ">=23.0.0" },
-    { name = "black", marker = "extra == 'dev'", specifier = ">=23.0" },
     { name = "fastapi", specifier = ">=0.104.0" },
+    { name = "great-tables", marker = "extra == 'examples'", specifier = ">=0.20.0" },
     { name = "ipython", specifier = ">=8.18.1" },
     { name = "itables", specifier = ">=2.6.1" },
     { name = "jupyter-client", specifier = ">=8.0.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0" },
-    { name = "pandas", marker = "extra == 'dev'", specifier = ">=2.0.0" },
-    { name = "polars", marker = "extra == 'dev'", specifier = ">=0.19.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
+    { name = "matplotlib", marker = "extra == 'examples'", specifier = ">=3.7.5" },
+    { name = "pandas", marker = "extra == 'examples'", specifier = ">=2.0.3" },
+    { name = "polars", marker = "extra == 'examples'", specifier = ">=1.8.2" },
     { name = "typer", specifier = ">=0.9.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.24.0" },
     { name = "watchfiles", specifier = ">=0.20.0" },
     { name = "xeus-python", specifier = ">=0.17.0" },
 ]
-provides-extras = ["dev"]
+provides-extras = ["examples"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "great-tables", specifier = ">=0.20.0" },
-    { name = "itables", specifier = ">=2.3.0" },
-    { name = "matplotlib", specifier = ">=3.7.5" },
-    { name = "pandas", specifier = ">=2.0.3" },
-    { name = "polars", specifier = ">=1.8.2" },
+    { name = "black", specifier = ">=23.0" },
+    { name = "honcho", specifier = ">=1.1.0" },
+    { name = "mypy", specifier = ">=1.0" },
+    { name = "pytest", specifier = ">=7.0" },
+    { name = "pytest-asyncio", specifier = ">=0.21.0" },
+    { name = "ruff", specifier = ">=0.1.0" },
 ]
 
 [[package]]

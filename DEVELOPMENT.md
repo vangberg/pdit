@@ -38,6 +38,10 @@ git add pdit/_static/ web/
 For hot reloading during development:
 
 ```bash
+# With honcho (recommended)
+uv run honcho start
+
+# Or run separately:
 # Terminal 1: Backend
 uv run uvicorn pdit.server:app --reload --port 8888
 
