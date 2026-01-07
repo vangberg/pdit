@@ -5,13 +5,21 @@ from pdit.ipython_executor import IPythonExecutor, Statement
 from pdit.executor import OutputItem
 
 
-@pytest.fixture
+# Module-scoped executor - starts kernel once for all tests in this file
+@pytest.fixture(scope="module")
 def executor():
-    """Create and return a fresh executor instance."""
+    """Create executor instance shared across all tests in module."""
     exec_instance = IPythonExecutor()
     yield exec_instance
-    # Cleanup
     exec_instance.shutdown()
+
+
+# Fixture that resets kernel before test (for tests needing clean state)
+@pytest.fixture
+def clean_executor(executor):
+    """Reset executor before test for clean state."""
+    executor.reset()
+    return executor
 
 
 class TestStatementParsing:
@@ -172,15 +180,15 @@ class TestCodeExecution:
         assert results[3].is_invisible is False  # a + b
         assert "15" in results[3].output[0].content
 
-    def test_state_persistence(self, executor):
+    def test_state_persistence(self, clean_executor):
         """Test that state persists across executions."""
         # First execution
         script1 = "x = 100"
-        list(executor.execute_script(script1))
+        list(clean_executor.execute_script(script1))
 
         # Second execution using variable from first
         script2 = "x * 2"
-        results = list(executor.execute_script(script2))
+        results = list(clean_executor.execute_script(script2))
 
         result = results[1]
         assert "200" in result.output[0].content
@@ -279,22 +287,22 @@ class TestLineRangeFiltering:
         assert expressions[0].line_start == 2
         assert expressions[1].line_start == 3
 
-    def test_filter_excludes_before_and_after(self, executor):
+    def test_filter_excludes_before_and_after(self, clean_executor):
         """Test that lines outside the range are not executed."""
         script = "x = 1\ny = 2\nz = 3"
 
         # Execute only middle line
-        results = list(executor.execute_script(script, line_range=(2, 2)))
+        results = list(clean_executor.execute_script(script, line_range=(2, 2)))
 
         # y should be defined, but x and z should not
         script2 = "y"
-        results2 = list(executor.execute_script(script2))
+        results2 = list(clean_executor.execute_script(script2))
         result2 = results2[1]
         assert "2" in result2.output[0].content
 
         # x should not be defined
         script3 = "x"
-        results3 = list(executor.execute_script(script3))
+        results3 = list(clean_executor.execute_script(script3))
         result3 = results3[1]
         assert result3.output[0].type == "error"
         assert "NameError" in result3.output[0].content
@@ -379,39 +387,39 @@ class TestMimeTypeProcessing:
 class TestKernelReset:
     """Tests for kernel reset functionality."""
 
-    def test_reset_clears_namespace(self, executor):
+    def test_reset_clears_namespace(self, clean_executor):
         """Test that reset clears the namespace."""
         # Set a variable
         script1 = "reset_var = 999"
-        list(executor.execute_script(script1))
+        list(clean_executor.execute_script(script1))
 
         # Verify it exists
         script2 = "reset_var"
-        results2 = list(executor.execute_script(script2))
+        results2 = list(clean_executor.execute_script(script2))
         assert "999" in results2[1].output[0].content
 
         # Reset the kernel
-        executor.reset()
+        clean_executor.reset()
 
         # Variable should no longer exist
         script3 = "reset_var"
-        results3 = list(executor.execute_script(script3))
+        results3 = list(clean_executor.execute_script(script3))
         result3 = results3[1]
         assert result3.output[0].type == "error"
         assert "NameError" in result3.output[0].content
 
-    def test_reset_preserves_executor_functionality(self, executor):
+    def test_reset_preserves_executor_functionality(self, clean_executor):
         """Test that executor works correctly after reset."""
         # Execute before reset
         script1 = "x = 5"
-        list(executor.execute_script(script1))
+        list(clean_executor.execute_script(script1))
 
         # Reset
-        executor.reset()
+        clean_executor.reset()
 
         # Execute after reset
         script2 = "y = 10\ny"
-        results = list(executor.execute_script(script2))
+        results = list(clean_executor.execute_script(script2))
 
         assert len(results) == 3
         assert results[2].output[0].content.strip() == "10"
