@@ -6,7 +6,7 @@
 
 ```bash
 # Install dependencies (with dev tools)
-uv pip install -e ".[dev]"
+uv sync --dev
 
 # Run pdit
 uv run pdit script.py

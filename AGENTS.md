@@ -1,7 +1,5 @@
 # AGENTS.md
 
-**DO NOT COMMIT TO GIT""
-
 Use React 19 API's
 
 Use CodeMirror 6 API
