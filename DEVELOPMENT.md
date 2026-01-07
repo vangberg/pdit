@@ -61,7 +61,3 @@ uv run pytest
 cd web
 npm test
 ```
-
-## Issue tracking
-
-Uses [bd (beads)](https://github.com/steveyegge/beads). See AGENTS.md for workflow.
