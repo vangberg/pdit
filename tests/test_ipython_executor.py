@@ -1,8 +1,7 @@
 """Tests for IPythonExecutor."""
 
 import pytest
-from pdit.ipython_executor import IPythonExecutor, Statement
-from pdit.executor import OutputItem
+from pdit.ipython_executor import IPythonExecutor
 
 
 # Module-scoped executor - starts kernel once for all tests in this file
@@ -31,10 +30,9 @@ class TestStatementParsing:
         statements = executor._parse_script(script)
 
         assert len(statements) == 1
-        assert statements[0].line_start == 1
-        assert statements[0].line_end == 1
-        assert statements[0].is_expr is True
-        assert statements[0].source == "2 + 2"
+        assert statements[0]["lineStart"] == 1
+        assert statements[0]["lineEnd"] == 1
+        assert statements[0]["source"] == "2 + 2"
 
     def test_parse_assignment(self, executor):
         """Test parsing an assignment statement."""
@@ -42,8 +40,7 @@ class TestStatementParsing:
         statements = executor._parse_script(script)
 
         assert len(statements) == 1
-        assert statements[0].is_expr is False
-        assert statements[0].source == "x = 10"
+        assert statements[0]["source"] == "x = 10"
 
     def test_parse_multiple_statements(self, executor):
         """Test parsing multiple statements."""
@@ -51,9 +48,9 @@ class TestStatementParsing:
         statements = executor._parse_script(script)
 
         assert len(statements) == 3
-        assert statements[0].line_start == 1
-        assert statements[1].line_start == 2
-        assert statements[2].line_start == 3
+        assert statements[0]["lineStart"] == 1
+        assert statements[1]["lineStart"] == 2
+        assert statements[2]["lineStart"] == 3
 
     def test_parse_multiline_function(self, executor):
         """Test parsing a multi-line function definition."""
@@ -64,10 +61,10 @@ greet("World")"""
         statements = executor._parse_script(script)
 
         assert len(statements) == 2
-        assert statements[0].line_start == 1
-        assert statements[0].line_end == 2
-        assert statements[1].line_start == 4
-        assert statements[1].line_end == 4
+        assert statements[0]["lineStart"] == 1
+        assert statements[0]["lineEnd"] == 2
+        assert statements[1]["lineStart"] == 4
+        assert statements[1]["lineEnd"] == 4
 
     def test_parse_class_definition(self, executor):
         """Test parsing a class definition."""
@@ -85,8 +82,8 @@ c.count"""
 
         assert len(statements) == 4
         # Class definition spans multiple lines
-        assert statements[0].line_start == 1
-        assert statements[0].line_end == 6
+        assert statements[0]["lineStart"] == 1
+        assert statements[0]["lineEnd"] == 6
 
     def test_parse_markdown_cell(self, executor):
         """Test parsing markdown string literals."""
@@ -94,8 +91,7 @@ c.count"""
         statements = executor._parse_script(script)
 
         assert len(statements) == 1
-        assert statements[0].is_markdown_cell is True
-        assert statements[0].is_expr is True
+        assert statements[0]["isMarkdownCell"] is True
 
     def test_parse_triple_quoted_string(self, executor):
         """Test parsing triple-quoted strings as markdown."""
@@ -103,7 +99,7 @@ c.count"""
         statements = executor._parse_script(script)
 
         assert len(statements) == 1
-        assert statements[0].is_markdown_cell is True
+        assert statements[0]["isMarkdownCell"] is True
 
 
 class TestCodeExecution:
@@ -114,20 +110,21 @@ class TestCodeExecution:
         script = "2 + 2"
         results = list(executor.execute_script(script))
 
-        # First result is expression info
+        # First result is expressions event
         assert len(results) == 2
-        expressions = results[0]
-        assert len(expressions) == 1
+        expressions_event = results[0]
+        assert expressions_event["type"] == "expressions"
+        assert len(expressions_event["expressions"]) == 1
 
         # Second result is execution result
         result = results[1]
-        assert result.line_start == 1
-        assert result.line_end == 1
-        assert result.is_invisible is False
-        assert len(result.output) == 1
+        assert result["lineStart"] == 1
+        assert result["lineEnd"] == 1
+        assert result["isInvisible"] is False
+        assert len(result["output"]) == 1
         # IPython returns results as text/plain
-        assert result.output[0].type == "text/plain"
-        assert "4" in result.output[0].content
+        assert result["output"][0]["type"] == "text/plain"
+        assert "4" in result["output"][0]["content"]
 
     def test_execute_assignment(self, executor):
         """Test executing an assignment with no output."""
@@ -135,8 +132,8 @@ class TestCodeExecution:
         results = list(executor.execute_script(script))
 
         result = results[1]
-        assert result.is_invisible is True
-        assert len(result.output) == 0
+        assert result["isInvisible"] is True
+        assert len(result["output"]) == 0
 
     def test_execute_print(self, executor):
         """Test capturing print output."""
@@ -145,9 +142,9 @@ class TestCodeExecution:
 
         result = results[1]
         # Should have exactly one stdout output (merged)
-        assert len(result.output) == 1
-        assert result.output[0].type == "stdout"
-        assert "Hello, World!" in result.output[0].content
+        assert len(result["output"]) == 1
+        assert result["output"][0]["type"] == "stdout"
+        assert "Hello, World!" in result["output"][0]["content"]
 
     def test_stdout_merging(self, executor):
         """Test that consecutive stdout outputs are merged."""
@@ -157,9 +154,9 @@ class TestCodeExecution:
 
         result = results[1]
         # Should have exactly one stdout output containing all prints
-        stdout_outputs = [o for o in result.output if o.type == "stdout"]
+        stdout_outputs = [o for o in result["output"] if o["type"] == "stdout"]
         assert len(stdout_outputs) == 1
-        content = stdout_outputs[0].content
+        content = stdout_outputs[0]["content"]
         assert "0" in content
         assert "1" in content
         assert "2" in content
@@ -169,16 +166,16 @@ class TestCodeExecution:
         script = "a = 5\nb = 10\na + b"
         results = list(executor.execute_script(script))
 
-        # First result is expression info (3 expressions)
-        expressions = results[0]
-        assert len(expressions) == 3
+        # First result is expressions event (3 expressions)
+        expressions_event = results[0]
+        assert len(expressions_event["expressions"]) == 3
 
         # Next 3 results are execution results
         assert len(results) == 4
-        assert results[1].is_invisible is True  # a = 5
-        assert results[2].is_invisible is True  # b = 10
-        assert results[3].is_invisible is False  # a + b
-        assert "15" in results[3].output[0].content
+        assert results[1]["isInvisible"] is True  # a = 5
+        assert results[2]["isInvisible"] is True  # b = 10
+        assert results[3]["isInvisible"] is False  # a + b
+        assert "15" in results[3]["output"][0]["content"]
 
     def test_state_persistence(self, clean_executor):
         """Test that state persists across executions."""
@@ -191,7 +188,7 @@ class TestCodeExecution:
         results = list(clean_executor.execute_script(script2))
 
         result = results[1]
-        assert "200" in result.output[0].content
+        assert "200" in result["output"][0]["content"]
 
     def test_execute_import(self, executor):
         """Test importing modules."""
@@ -199,8 +196,8 @@ class TestCodeExecution:
         results = list(executor.execute_script(script))
 
         assert len(results) == 3
-        assert results[1].is_invisible is True  # import
-        assert "3.14" in results[2].output[0].content  # math.pi
+        assert results[1]["isInvisible"] is True  # import
+        assert "3.14" in results[2]["output"][0]["content"]  # math.pi
 
 
 class TestErrorHandling:
@@ -212,9 +209,9 @@ class TestErrorHandling:
         results = list(executor.execute_script(script))
 
         result = results[1]
-        assert len(result.output) == 1
-        assert result.output[0].type == "error"
-        assert "ZeroDivisionError" in result.output[0].content
+        assert len(result["output"]) == 1
+        assert result["output"][0]["type"] == "error"
+        assert "ZeroDivisionError" in result["output"][0]["content"]
 
     def test_name_error(self, executor):
         """Test capturing name errors."""
@@ -222,21 +219,21 @@ class TestErrorHandling:
         results = list(executor.execute_script(script))
 
         result = results[1]
-        assert result.output[0].type == "error"
-        assert "NameError" in result.output[0].content
+        assert result["output"][0]["type"] == "error"
+        assert "NameError" in result["output"][0]["content"]
 
     def test_syntax_error(self, executor):
         """Test handling syntax errors."""
         script = "if True\n  print('missing colon')"
         results = list(executor.execute_script(script))
 
-        # Syntax errors return a single result
-        assert len(results) == 1
-        result = results[0]
-        assert result.line_start == 1
-        assert len(result.output) == 1
-        assert result.output[0].type == "error"
-        assert "SyntaxError" in result.output[0].content
+        # Syntax errors return expressions event + error result
+        assert len(results) == 2
+        result = results[1]
+        assert result["lineStart"] == 1
+        assert len(result["output"]) == 1
+        assert result["output"][0]["type"] == "error"
+        assert "SyntaxError" in result["output"][0]["content"]
 
     def test_type_error(self, executor):
         """Test capturing type errors."""
@@ -244,18 +241,18 @@ class TestErrorHandling:
         results = list(executor.execute_script(script))
 
         result = results[1]
-        assert result.output[0].type == "error"
-        assert "TypeError" in result.output[0].content
+        assert result["output"][0]["type"] == "error"
+        assert "TypeError" in result["output"][0]["content"]
 
     def test_execution_stops_after_error(self, executor):
         """Test that execution stops after an error."""
         script = "x = 5\ny = 1 / 0\nz = 10"
         results = list(executor.execute_script(script))
 
-        # Should have 3 results: expressions info + 2 statements
+        # Should have 3 results: expressions event + 2 statements
         assert len(results) == 3
-        assert results[1].is_invisible is True  # x = 5 succeeds
-        assert results[2].output[0].type == "error"  # y = 1/0 errors
+        assert results[1]["isInvisible"] is True  # x = 5 succeeds
+        assert results[2]["output"][0]["type"] == "error"  # y = 1/0 errors
 
 
 class TestLineRangeFiltering:
@@ -266,25 +263,25 @@ class TestLineRangeFiltering:
         script = "a = 1\nb = 2\nc = 3"
         results = list(executor.execute_script(script, line_range=(2, 2)))
 
-        # Should have expression info + 1 result
+        # Should have expressions event + 1 result
         assert len(results) == 2
-        expressions = results[0]
-        assert len(expressions) == 1
-        assert expressions[0].line_start == 2
+        expressions_event = results[0]
+        assert len(expressions_event["expressions"]) == 1
+        assert expressions_event["expressions"][0]["lineStart"] == 2
 
         result = results[1]
-        assert result.line_start == 2
-        assert result.line_end == 2
+        assert result["lineStart"] == 2
+        assert result["lineEnd"] == 2
 
     def test_filter_range(self, executor):
         """Test filtering to execute a range of lines."""
         script = "a = 1\nb = 2\nc = 3\nd = 4"
         results = list(executor.execute_script(script, line_range=(2, 3)))
 
-        expressions = results[0]
-        assert len(expressions) == 2
-        assert expressions[0].line_start == 2
-        assert expressions[1].line_start == 3
+        expressions_event = results[0]
+        assert len(expressions_event["expressions"]) == 2
+        assert expressions_event["expressions"][0]["lineStart"] == 2
+        assert expressions_event["expressions"][1]["lineStart"] == 3
 
     def test_filter_excludes_before_and_after(self, clean_executor):
         """Test that lines outside the range are not executed."""
@@ -297,14 +294,14 @@ class TestLineRangeFiltering:
         script2 = "y"
         results2 = list(clean_executor.execute_script(script2))
         result2 = results2[1]
-        assert "2" in result2.output[0].content
+        assert "2" in result2["output"][0]["content"]
 
         # x should not be defined
         script3 = "x"
         results3 = list(clean_executor.execute_script(script3))
         result3 = results3[1]
-        assert result3.output[0].type == "error"
-        assert "NameError" in result3.output[0].content
+        assert result3["output"][0]["type"] == "error"
+        assert "NameError" in result3["output"][0]["content"]
 
 
 class TestMarkdownCells:
@@ -316,9 +313,9 @@ class TestMarkdownCells:
         results = list(executor.execute_script(script))
 
         result = results[1]
-        assert len(result.output) == 1
-        assert result.output[0].type == "text/markdown"
-        assert "# This is a heading" in result.output[0].content
+        assert len(result["output"]) == 1
+        assert result["output"][0]["type"] == "text/markdown"
+        assert "# This is a heading" in result["output"][0]["content"]
 
     def test_markdown_triple_quoted(self, executor):
         """Test triple-quoted markdown strings."""
@@ -326,8 +323,8 @@ class TestMarkdownCells:
         results = list(executor.execute_script(script))
 
         result = results[1]
-        assert result.output[0].type == "text/markdown"
-        assert "This is **markdown**" in result.output[0].content
+        assert result["output"][0]["type"] == "text/markdown"
+        assert "This is **markdown**" in result["output"][0]["content"]
 
     def test_markdown_multiline(self, executor):
         """Test multi-line markdown strings."""
@@ -339,9 +336,9 @@ This is a paragraph.
         results = list(executor.execute_script(script))
 
         result = results[1]
-        assert result.output[0].type == "text/markdown"
-        assert "# Title" in result.output[0].content
-        assert "This is a paragraph." in result.output[0].content
+        assert result["output"][0]["type"] == "text/markdown"
+        assert "# Title" in result["output"][0]["content"]
+        assert "This is a paragraph." in result["output"][0]["content"]
 
 
 class TestMimeTypeProcessing:
@@ -353,7 +350,7 @@ class TestMimeTypeProcessing:
         results = list(executor.execute_script(script))
 
         result = results[1]
-        assert result.output[0].type == "text/plain"
+        assert result["output"][0]["type"] == "text/plain"
 
     def test_none_result(self, executor):
         """Test that None results produce no output."""
@@ -361,8 +358,8 @@ class TestMimeTypeProcessing:
         results = list(executor.execute_script(script))
 
         result = results[1]
-        assert result.is_invisible is True
-        assert len(result.output) == 0
+        assert result["isInvisible"] is True
+        assert len(result["output"]) == 0
 
     def test_list_output(self, executor):
         """Test list representation."""
@@ -370,7 +367,7 @@ class TestMimeTypeProcessing:
         results = list(executor.execute_script(script))
 
         result = results[1]
-        assert "[1, 2, 3, 4, 5]" in result.output[0].content
+        assert "[1, 2, 3, 4, 5]" in result["output"][0]["content"]
 
     def test_dict_output(self, executor):
         """Test dictionary representation."""
@@ -378,7 +375,7 @@ class TestMimeTypeProcessing:
         results = list(executor.execute_script(script))
 
         result = results[1]
-        content = result.output[0].content
+        content = result["output"][0]["content"]
         assert "'a'" in content or '"a"' in content
         assert "1" in content
 
@@ -395,7 +392,7 @@ class TestKernelReset:
         # Verify it exists
         script2 = "reset_var"
         results2 = list(clean_executor.execute_script(script2))
-        assert "999" in results2[1].output[0].content
+        assert "999" in results2[1]["output"][0]["content"]
 
         # Reset the kernel
         clean_executor.reset()
@@ -404,8 +401,8 @@ class TestKernelReset:
         script3 = "reset_var"
         results3 = list(clean_executor.execute_script(script3))
         result3 = results3[1]
-        assert result3.output[0].type == "error"
-        assert "NameError" in result3.output[0].content
+        assert result3["output"][0]["type"] == "error"
+        assert "NameError" in result3["output"][0]["content"]
 
     def test_reset_preserves_executor_functionality(self, clean_executor):
         """Test that executor works correctly after reset."""
@@ -421,7 +418,7 @@ class TestKernelReset:
         results = list(clean_executor.execute_script(script2))
 
         assert len(results) == 3
-        assert results[2].output[0].content.strip() == "10"
+        assert results[2]["output"][0]["content"].strip() == "10"
 
 
 class TestComplexScenarios:
@@ -436,11 +433,11 @@ result = add(3, 4)
 result"""
         results = list(executor.execute_script(script))
 
-        # Should have: expressions info, func def, assignment, result
+        # Should have: expressions event, func def, assignment, result
         assert len(results) == 4
-        assert results[1].is_invisible is True  # function def
-        assert results[2].is_invisible is True  # assignment
-        assert "7" in results[3].output[0].content
+        assert results[1]["isInvisible"] is True  # function def
+        assert results[2]["isInvisible"] is True  # assignment
+        assert "7" in results[3]["output"][0]["content"]
 
     def test_list_comprehension(self, executor):
         """Test list comprehension execution."""
@@ -448,7 +445,7 @@ result"""
         results = list(executor.execute_script(script))
 
         result = results[1]
-        assert "[0, 1, 4, 9, 16]" in result.output[0].content
+        assert "[0, 1, 4, 9, 16]" in result["output"][0]["content"]
 
     def test_generator_expression(self, executor):
         """Test generator expression."""
@@ -456,7 +453,7 @@ result"""
         results = list(executor.execute_script(script))
 
         result = results[1]
-        assert "[0, 1, 4, 9, 16]" in result.output[0].content
+        assert "[0, 1, 4, 9, 16]" in result["output"][0]["content"]
 
     def test_with_statement(self, executor):
         """Test with statement execution."""
@@ -469,7 +466,7 @@ content"""
 
         # Find the final result
         final_result = results[-1]
-        assert "test" in final_result.output[0].content
+        assert "test" in final_result["output"][0]["content"]
 
     def test_mixed_output_types(self, executor):
         """Test script with mixed stdout and expression results."""
@@ -479,12 +476,12 @@ print("Result:")
 x"""
         results = list(executor.execute_script(script))
 
-        # expressions info + 4 statements
+        # expressions event + 4 statements
         assert len(results) == 5
-        assert "Starting" in results[1].output[0].content
-        assert results[2].is_invisible is True
-        assert "Result:" in results[3].output[0].content
-        assert "8" in results[4].output[0].content
+        assert "Starting" in results[1]["output"][0]["content"]
+        assert results[2]["isInvisible"] is True
+        assert "Result:" in results[3]["output"][0]["content"]
+        assert "8" in results[4]["output"][0]["content"]
 
     def test_exception_traceback(self, executor):
         """Test that exception tracebacks are captured."""
@@ -496,8 +493,8 @@ failing_function()"""
 
         # Last result should contain error with traceback
         error_result = results[-1]
-        assert error_result.output[0].type == "error"
-        error_content = error_result.output[0].content
+        assert error_result["output"][0]["type"] == "error"
+        error_content = error_result["output"][0]["content"]
         assert "ZeroDivisionError" in error_content
         assert "failing_function" in error_content
 
@@ -514,7 +511,7 @@ add_five(10)"""
 
         # Find the final result expression
         final_result = results[-1]
-        assert "15" in final_result.output[0].content
+        assert "15" in final_result["output"][0]["content"]
 
     def test_lambda_expression(self, executor):
         """Test lambda expressions."""
@@ -522,7 +519,7 @@ add_five(10)"""
 add(10, 20)"""
         results = list(executor.execute_script(script))
 
-        assert "30" in results[-1].output[0].content
+        assert "30" in results[-1]["output"][0]["content"]
 
 
 class TestStripAnsi:

@@ -9,6 +9,7 @@ Provides HTTP endpoints for:
 - Serving static frontend files
 """
 
+import asyncio
 import os
 import threading
 from contextlib import asynccontextmanager
@@ -22,7 +23,6 @@ from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from .ipython_executor import IPythonExecutor
-from .executor import ExecutionResult
 from .sse import format_sse
 from .file_watcher import FileWatcher
 
@@ -53,12 +53,9 @@ def shutdown_all_sessions() -> None:
         delete_session(session_id)
 
 
-def is_error_result(result: ExecutionResult) -> bool:
+def is_error_result(result: dict) -> bool:
     """Check if an execution result represents an error."""
-    return any(
-        item.type == "error"
-        for item in result.output
-    )
+    return any(item["type"] == "error" for item in result.get("output", []))
 
 
 def signal_shutdown():
@@ -68,40 +65,6 @@ def signal_shutdown():
 
 
 # Pydantic models for API
-class OutputItem(BaseModel):
-    """Output item from execution."""
-    type: str
-    content: str
-
-
-class ExpressionResult(BaseModel):
-    """Result of executing a single statement."""
-    lineStart: int
-    lineEnd: int
-    output: List[OutputItem]
-    isInvisible: bool
-
-
-class LineRange(BaseModel):
-    """Line range filter for execution."""
-    from_: int = Field(alias='from')
-    to: int
-
-
-class ExecuteScriptRequest(BaseModel):
-    """Request to execute a Python script."""
-    script: str
-    sessionId: str
-    scriptName: Optional[str] = None
-    lineRange: Optional[LineRange] = None
-    reset: Optional[bool] = False
-
-
-class ExecuteResponse(BaseModel):
-    """Response from script execution."""
-    results: List[ExpressionResult]
-
-
 class ReadFileResponse(BaseModel):
     """Response from reading a file."""
     content: str
@@ -194,132 +157,72 @@ async def init_session(request: ResetRequest):
 
 
 @app.post("/api/execute-script")
-async def execute_script(request: ExecuteScriptRequest):
+async def execute_script(request: Request):
     """Stream execution results as Server-Sent Events.
 
-    Each statement result is sent as a separate SSE event as it completes,
-    providing real-time feedback instead of waiting for entire script.
-
-    Args:
-        request: Script to execute with optional line range and reset flag
+    Executor yields SSE-ready dicts directly, server is passthrough.
 
     Returns:
         StreamingResponse with text/event-stream media type
-
-    SSE Format: data: <JSON>\n\n
     """
-    import asyncio
-    import queue
+    body = await request.json()
+    session_id = body["sessionId"]
+    script = body["script"]
+    script_name = body.get("scriptName")
+    line_range = None
+    if lr := body.get("lineRange"):
+        line_range = (lr["from"], lr["to"])
+    reset = body.get("reset", False)
+
+    executor = get_or_create_session(session_id)
+    if reset:
+        executor.reset()
 
     async def generate_events():
-        loop = asyncio.get_running_loop()
-        executor = get_or_create_session(request.sessionId)
-
-        # Reset execution environment if requested
-        if request.reset:
-            executor.reset()
-
-        # Convert line range if provided
-        line_range = None
-        if request.lineRange:
-            line_range = (request.lineRange.from_, request.lineRange.to)
-
-        # Use a queue to communicate between the blocking executor thread and async generator
-        event_queue: queue.Queue = queue.Queue()
-        expression_infos: list = []
+        expressions: list[dict] = []
         executed_count = 0
 
-        def run_executor():
-            """Run the blocking executor in a thread, pushing events to the queue."""
-            try:
-                events = executor.execute_script(request.script, line_range, request.scriptName)
-                for event in events:
-                    event_queue.put(("event", event))
-                event_queue.put(("done", None))
-            except Exception as e:
-                event_queue.put(("error", e))
+        # Sentinel to detect StopIteration (can't raise StopIteration in coroutines)
+        _DONE = object()
 
-        # Start executor in background thread
-        executor_task = loop.run_in_executor(None, run_executor)
+        def next_event(gen):
+            try:
+                return next(gen)
+            except StopIteration:
+                return _DONE
 
         try:
+            gen = executor.execute_script(script, line_range, script_name)
             while True:
-                # Poll queue without blocking the event loop
-                try:
-                    item = await loop.run_in_executor(
-                        None, lambda: event_queue.get(timeout=0.1)
-                    )
-                except queue.Empty:
-                    # Yield control to allow cancellation on client disconnect.
-                    await asyncio.sleep(0.01)
-                    continue
-
-                msg_type, payload = item
-
-                if msg_type == "done":
+                event = await asyncio.to_thread(next_event, gen)
+                if event is _DONE:
                     yield format_sse({"type": "complete"})
                     break
-                elif msg_type == "error":
-                    yield format_sse({"type": "error", "message": str(payload)})
-                    break
-                elif msg_type == "event":
-                    event = payload
-                    # First event is expression list
-                    if isinstance(event, list):
-                        expression_infos = event
-                        executed_count = 0
-                        yield format_sse({
-                            "type": "expressions",
-                            "expressions": [
-                                {
-                                    "lineStart": expr.line_start,
-                                    "lineEnd": expr.line_end
-                                }
-                                for expr in event
-                            ]
-                        })
-                    # Subsequent events are execution results
-                    elif isinstance(event, ExecutionResult):
-                        executed_count += 1
-                        expr_result = ExpressionResult(
-                            lineStart=event.line_start,
-                            lineEnd=event.line_end,
-                            output=[
-                                OutputItem(type=o.type, content=o.content)
-                                for o in event.output
-                            ],
-                            isInvisible=event.is_invisible
-                        )
-                        yield format_sse(expr_result.model_dump())
 
-                        if is_error_result(event):
-                            remaining = expression_infos[executed_count:]
-                            if remaining:
-                                yield format_sse({
-                                    "type": "cancelled",
-                                    "expressions": [
-                                        {
-                                            "lineStart": expr.line_start,
-                                            "lineEnd": expr.line_end
-                                        }
-                                        for expr in remaining
-                                    ]
-                                })
-                            yield format_sse({"type": "complete"})
-                            break
+                # Passthrough: executor yields SSE-ready dicts
+                yield format_sse(event)
+
+                # Track expressions for cancelled handling
+                if event.get("type") == "expressions":
+                    expressions = event["expressions"]
+                    executed_count = 0
+                elif "output" in event:
+                    executed_count += 1
+                    if is_error_result(event):
+                        remaining = expressions[executed_count:]
+                        if remaining:
+                            yield format_sse({"type": "cancelled", "expressions": remaining})
+                        yield format_sse({"type": "complete"})
+                        break
 
         except Exception as e:
             yield format_sse({"type": "error", "message": str(e)})
         finally:
-            if not executor_task.done():
-                try:
-                    executor.interrupt()
-                except Exception:
-                    pass
-                try:
-                    await asyncio.wait_for(executor_task, timeout=1.0)
-                except Exception:
-                    pass
+            # Interrupt kernel if client disconnects mid-execution
+            try:
+                executor.interrupt()
+            except Exception:
+                pass
 
     return StreamingResponse(
         generate_events(),

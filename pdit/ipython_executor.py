@@ -2,6 +2,7 @@
 IPython kernel executor using jupyter_client.
 
 Uses IPython kernel with jupyter_client for reliable messaging.
+Yields SSE-ready dicts directly for minimal server overhead.
 """
 
 import ast
@@ -11,31 +12,13 @@ import logging
 import re
 import time
 import traceback
-from dataclasses import dataclass
-from typing import Any, Dict, Generator, List, Optional, Union
+from typing import Any, Generator
 
 from jupyter_client import KernelManager
 from jupyter_client.blocking import BlockingKernelClient
 
-from .executor import (
-    ExpressionInfo,
-    ExecutionResult,
-    OutputItem,
-)
-
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Statement:
-    """Parsed Python statement."""
-    node_index: int
-    line_start: int
-    line_end: int
-    source: str
-    is_expr: bool
-    is_markdown_cell: bool = False
 
 
 class IPythonExecutor:
@@ -111,13 +94,13 @@ del _register_pdit_formatter
 """
         self._execute_silent(formatter_code)
 
-    def _parse_script(self, script: str) -> List[Statement]:
-        """Parse Python script into statements using AST."""
+    def _parse_script(self, script: str) -> list[dict]:
+        """Parse Python script into statement dicts using AST."""
         tree = ast.parse(script)
         statements = []
         lines = script.split('\n')
 
-        for i, node in enumerate(tree.body):
+        for node in tree.body:
             line_start = node.lineno
             line_end = node.end_lineno or node.lineno
 
@@ -128,14 +111,12 @@ del _register_pdit_formatter
             is_expr = isinstance(node, ast.Expr)
             is_markdown_cell = is_expr and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)
 
-            statements.append(Statement(
-                node_index=i,
-                line_start=line_start,
-                line_end=line_end,
-                source=source,
-                is_expr=is_expr,
-                is_markdown_cell=is_markdown_cell
-            ))
+            statements.append({
+                "lineStart": line_start,
+                "lineEnd": line_end,
+                "source": source,
+                "isMarkdownCell": is_markdown_cell
+            })
 
         return statements
 
@@ -144,13 +125,13 @@ del _register_pdit_formatter
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
         return ansi_escape.sub('', text)
 
-    def _process_mime_data(self, data: Dict) -> List[OutputItem]:
-        """Process MIME bundle data into OutputItems.
+    def _process_mime_data(self, data: dict) -> list[dict]:
+        """Process MIME bundle data into output dicts.
 
         Passes through MIME types directly instead of translating to custom types.
         Uses priority order: image > html > json > plain text.
         """
-        output: List[OutputItem] = []
+        output: list[dict] = []
 
         # Priority order for MIME types - pass through directly
         # Check for any image type
@@ -158,23 +139,23 @@ del _register_pdit_formatter
         if image_types:
             # Use first image type found (they're usually in priority order)
             mime_type = image_types[0]
-            output.append(OutputItem(type=mime_type, content=data[mime_type]))
+            output.append({"type": mime_type, "content": data[mime_type]})
         elif 'text/html' in data:
-            output.append(OutputItem(type="text/html", content=data['text/html']))
+            output.append({"type": "text/html", "content": data['text/html']})
         elif 'application/json' in data:
             json_data = data['application/json']
-            output.append(OutputItem(type="application/json", content=json.dumps(json_data)))
+            output.append({"type": "application/json", "content": json.dumps(json_data)})
         elif 'text/plain' in data:
-            output.append(OutputItem(type="text/plain", content=data['text/plain']))
+            output.append({"type": "text/plain", "content": data['text/plain']})
 
         return output
 
-    def _execute_code(self, code: str) -> List[OutputItem]:
+    def _execute_code(self, code: str) -> list[dict]:
         """Execute code in kernel and collect output."""
         if self.kc is None:
-            return [OutputItem(type="error", content="Kernel not started")]
+            return [{"type": "error", "content": "Kernel not started"}]
 
-        output: List[OutputItem] = []
+        output: list[dict] = []
 
         msg_id = self.kc.execute(code)
 
@@ -196,10 +177,10 @@ del _register_pdit_formatter
                 # stdout/stderr - merge consecutive outputs of same type
                 stream_name = content['name']  # 'stdout' or 'stderr'
                 text = content['text']
-                if output and output[-1].type == stream_name:
-                    output[-1] = OutputItem(type=stream_name, content=output[-1].content + text)
+                if output and output[-1]["type"] == stream_name:
+                    output[-1] = {"type": stream_name, "content": output[-1]["content"] + text}
                 else:
-                    output.append(OutputItem(type=stream_name, content=text))
+                    output.append({"type": stream_name, "content": text})
             elif msg_type == 'execute_result':
                 # Expression result
                 data = content['data']
@@ -209,30 +190,30 @@ del _register_pdit_formatter
                 data = content['data']
                 output.extend(self._process_mime_data(data))
             elif msg_type == 'error':
-                # Exception
-                ename = content['ename']
-                evalue = content['evalue']
+                # Exception - strip ANSI codes from traceback
                 tb = '\n'.join(content['traceback'])
-                # Strip ANSI codes from traceback
                 tb = self._strip_ansi(tb)
-                output.append(OutputItem(type="error", content=f"{tb}"))
+                output.append({"type": "error", "content": tb})
 
         return output
 
-    def _has_error(self, output: List[OutputItem]) -> bool:
+    def _has_error(self, output: list[dict]) -> bool:
         """Check whether output contains an error."""
-        return any(
-            item.type == "error"
-            for item in output
-        )
+        return any(item["type"] == "error" for item in output)
 
     def execute_script(
         self,
         script: str,
-        line_range: Optional[tuple[int, int]] = None,
-        script_name: Optional[str] = None
-    ) -> Generator[Union[List[ExpressionInfo], ExecutionResult], None, None]:
-        """Execute Python script, yielding results as each statement completes."""
+        line_range: tuple[int, int] | None = None,
+        script_name: str | None = None
+    ) -> Generator[dict, None, None]:
+        """Execute Python script, yielding SSE-ready dicts as each statement completes.
+
+        Yields:
+            First: {"type": "expressions", "expressions": [{"lineStart": N, "lineEnd": N}, ...]}
+            Then for each statement: {"lineStart": N, "lineEnd": N, "output": [...], "isInvisible": bool}
+            On error during execution, the final result dict will have output with type="error"
+        """
         # Parse script
         try:
             statements = self._parse_script(script)
@@ -240,60 +221,55 @@ del _register_pdit_formatter
             error_line = e.lineno or 1
             error_buffer = io.StringIO()
             traceback.print_exc(file=error_buffer)
-            yield ExecutionResult(
-                node_index=0,
-                line_start=error_line,
-                line_end=error_line,
-                output=[OutputItem(type="error", content=error_buffer.getvalue())],
-                is_invisible=False
-            )
+            # Yield expressions first (just the error location)
+            yield {
+                "type": "expressions",
+                "expressions": [{"lineStart": error_line, "lineEnd": error_line}]
+            }
+            # Then yield the error result
+            yield {
+                "lineStart": error_line,
+                "lineEnd": error_line,
+                "output": [{"type": "error", "content": error_buffer.getvalue()}],
+                "isInvisible": False
+            }
             return
 
         # Filter by line range
-        from_line = to_line = None
         if line_range:
             from_line, to_line = line_range
-
-        filtered = []
-        for stmt in statements:
-            if line_range:
-                if stmt.line_end < from_line or stmt.line_start > to_line:
-                    continue
-            filtered.append(stmt)
+            statements = [
+                stmt for stmt in statements
+                if not (stmt["lineEnd"] < from_line or stmt["lineStart"] > to_line)
+            ]
 
         # Yield expression info
-        yield [
-            ExpressionInfo(
-                node_index=stmt.node_index,
-                line_start=stmt.line_start,
-                line_end=stmt.line_end
-            )
-            for stmt in filtered
-        ]
+        yield {
+            "type": "expressions",
+            "expressions": [
+                {"lineStart": stmt["lineStart"], "lineEnd": stmt["lineEnd"]}
+                for stmt in statements
+            ]
+        }
 
         # Execute each statement
-        for stmt in filtered:
-            if stmt.is_markdown_cell:
+        for stmt in statements:
+            if stmt["isMarkdownCell"]:
                 # For markdown cells, just return the string content
-                # Strip quotes and output as markdown
                 try:
-                    # Evaluate the string literal to get its value
-                    value = ast.literal_eval(stmt.source)
-                    output = [OutputItem(type="text/markdown", content=str(value).strip())]
+                    value = ast.literal_eval(stmt["source"])
+                    output = [{"type": "text/markdown", "content": str(value).strip()}]
                 except (ValueError, SyntaxError):
-                    # If it's not a valid literal, execute it as code
-                    output = self._execute_code(stmt.source)
+                    output = self._execute_code(stmt["source"])
             else:
-                output = self._execute_code(stmt.source)
+                output = self._execute_code(stmt["source"])
 
-            result = ExecutionResult(
-                node_index=stmt.node_index,
-                line_start=stmt.line_start,
-                line_end=stmt.line_end,
-                output=output,
-                is_invisible=len(output) == 0
-            )
-            yield result
+            yield {
+                "lineStart": stmt["lineStart"],
+                "lineEnd": stmt["lineEnd"],
+                "output": output,
+                "isInvisible": len(output) == 0
+            }
 
             if self._has_error(output):
                 break
