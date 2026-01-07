@@ -53,6 +53,14 @@ def shutdown_all_sessions() -> None:
         delete_session(session_id)
 
 
+def is_keyboard_interrupt(result: ExecutionResult) -> bool:
+    """Check if an execution result represents a KeyboardInterrupt."""
+    return any(
+        item.type == "error" and "KeyboardInterrupt" in item.content
+        for item in result.output
+    )
+
+
 def signal_shutdown():
     """Signal all SSE connections to close and cleanup. Called by cli.py before server shutdown."""
     shutdown_event.set()
@@ -207,6 +215,8 @@ async def execute_script(request: ExecuteScriptRequest):
 
         # Use a queue to communicate between the blocking executor thread and async generator
         event_queue: queue.Queue = queue.Queue()
+        expression_infos: list = []
+        executed_count = 0
 
         def run_executor():
             """Run the blocking executor in a thread, pushing events to the queue."""
@@ -245,6 +255,8 @@ async def execute_script(request: ExecuteScriptRequest):
                     event = payload
                     # First event is expression list
                     if isinstance(event, list):
+                        expression_infos = event
+                        executed_count = 0
                         yield format_sse({
                             "type": "expressions",
                             "expressions": [
@@ -257,6 +269,7 @@ async def execute_script(request: ExecuteScriptRequest):
                         })
                     # Subsequent events are execution results
                     elif isinstance(event, ExecutionResult):
+                        executed_count += 1
                         expr_result = ExpressionResult(
                             lineStart=event.line_start,
                             lineEnd=event.line_end,
@@ -267,6 +280,22 @@ async def execute_script(request: ExecuteScriptRequest):
                             isInvisible=event.is_invisible
                         )
                         yield format_sse(expr_result.model_dump())
+
+                        if is_keyboard_interrupt(event):
+                            remaining = expression_infos[executed_count:]
+                            if remaining:
+                                yield format_sse({
+                                    "type": "cancelled",
+                                    "expressions": [
+                                        {
+                                            "lineStart": expr.line_start,
+                                            "lineEnd": expr.line_end
+                                        }
+                                        for expr in remaining
+                                    ]
+                                })
+                            yield format_sse({"type": "complete"})
+                            break
 
         except Exception as e:
             yield format_sse({"type": "error", "message": str(e)})

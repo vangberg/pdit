@@ -219,6 +219,13 @@ del _register_pdit_formatter
 
         return output
 
+    def _is_keyboard_interrupt(self, output: List[OutputItem]) -> bool:
+        """Check whether output contains a KeyboardInterrupt traceback."""
+        return any(
+            item.type == "error" and "KeyboardInterrupt" in item.content
+            for item in output
+        )
+
     def execute_script(
         self,
         script: str,
@@ -279,13 +286,17 @@ del _register_pdit_formatter
             else:
                 output = self._execute_code(stmt.source)
 
-            yield ExecutionResult(
+            result = ExecutionResult(
                 node_index=stmt.node_index,
                 line_start=stmt.line_start,
                 line_end=stmt.line_end,
                 output=output,
                 is_invisible=len(output) == 0
             )
+            yield result
+
+            if self._is_keyboard_interrupt(output):
+                break
 
     def reset(self) -> None:
         """Reset the kernel (restart it)."""

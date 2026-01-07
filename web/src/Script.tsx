@@ -89,6 +89,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
     lineGroups,
     setLineGroups,
     handleExecutionEvent,
+    cancelPendingExecutions,
     resetExecutionState,
   } = useResults();
 
@@ -163,6 +164,17 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
         })) {
           console.log("Execute event:", event);
 
+          if (event.type === "cancelled") {
+            const { lineGroups: cancelledGroups, staleGroupIds } =
+              cancelPendingExecutions(event.expressions);
+            editorRef.current?.applyExecutionUpdate({
+              doc: script,
+              lineGroups: cancelledGroups,
+              staleGroupIds: Array.from(staleGroupIds),
+            });
+            continue;
+          }
+
           // Track the last executed line end
           if (event.type === "done") {
             const lineEnd = event.expression.lineEnd;
@@ -194,7 +206,13 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
 
       return { lastExecutedLineEnd };
     },
-    [handleExecutionEvent, resetExecutionState, scriptPath, sessionId],
+    [
+      handleExecutionEvent,
+      cancelPendingExecutions,
+      resetExecutionState,
+      scriptPath,
+      sessionId,
+    ],
   );
 
   const handleExecuteWithReset = useCallback(

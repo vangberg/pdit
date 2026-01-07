@@ -159,6 +159,9 @@ export function useResults() {
   );
   const [lineGroups, setLineGroups] = useState<LineGroup[]>([]);
 
+  const expressionsRef = useRef<Map<number, Expression>>(expressions);
+  expressionsRef.current = expressions;
+
   // Mutable ref for ongoing execution state
   const executionStateRef = useRef<ExecutionState | null>(null);
 
@@ -186,8 +189,10 @@ export function useResults() {
 
       const state = executionStateRef.current;
 
+      const currentExpressions = expressionsRef.current;
+
       if (event.type === 'expressions') {
-        handleExpressionsEvent(state, event.expressions, expressions);
+        handleExpressionsEvent(state, event.expressions, currentExpressions);
       } else if (event.type === 'done') {
         handleDoneEvent(state, event.expression);
       }
@@ -197,7 +202,7 @@ export function useResults() {
 
       // Compute line groups - use state.currentLineGroups to avoid stale closure
       const { newStore, groups } = processExecutionResults(
-        expressions,
+        currentExpressions,
         allExpressions,
         {
           currentLineGroups: state.currentLineGroups,
@@ -209,6 +214,7 @@ export function useResults() {
       state.currentLineGroups = groups;
 
       setExpressions(newStore);
+      expressionsRef.current = newStore;
       setLineGroups(groups);
 
       // Get IDs of done expressions
@@ -218,7 +224,62 @@ export function useResults() {
 
       return { lineGroups: groups, doneIds };
     },
-    [expressions]
+    []
+  );
+
+  const cancelPendingExecutions = useCallback(
+    (
+      ranges: Array<{ lineStart: number; lineEnd: number }>
+    ): { lineGroups: LineGroup[]; staleGroupIds: Set<string> } => {
+      const state = executionStateRef.current;
+      if (!state) {
+        return { lineGroups, staleGroupIds: new Set() };
+      }
+
+      const canceledIds = new Set<number>();
+      for (const range of ranges) {
+        const key = lineRangeKey(range.lineStart, range.lineEnd);
+        const expr = state.expressionsByRange.get(key);
+        if (!expr) {
+          continue;
+        }
+        if (expr.state === 'pending' || expr.state === 'executing') {
+          canceledIds.add(expr.id);
+          state.expressionsByRange.set(key, { ...expr, state: 'done' });
+        }
+      }
+
+      if (canceledIds.size === 0) {
+        return { lineGroups: state.currentLineGroups, staleGroupIds: new Set() };
+      }
+
+      const currentExpressions = expressionsRef.current;
+      const allExpressions = Array.from(state.expressionsByRange.values());
+      const { newStore, groups } = processExecutionResults(
+        currentExpressions,
+        allExpressions,
+        {
+          currentLineGroups: state.currentLineGroups,
+          lineRange: state.lineRange,
+        }
+      );
+
+      state.currentLineGroups = groups;
+      setExpressions(newStore);
+      expressionsRef.current = newStore;
+      setLineGroups(groups);
+
+      const staleGroupIds = new Set(
+        groups
+          .filter((group) =>
+            group.resultIds.some((id) => canceledIds.has(id))
+          )
+          .map((group) => group.id)
+      );
+
+      return { lineGroups: groups, staleGroupIds };
+    },
+    [lineGroups]
   );
 
   /**
@@ -263,6 +324,7 @@ export function useResults() {
     setLineGroups: updateLineGroups,
     addExpressions,
     handleExecutionEvent,
+    cancelPendingExecutions,
     resetExecutionState,
   };
 }

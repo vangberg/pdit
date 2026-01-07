@@ -25,10 +25,16 @@ export interface ExpressionResult {
   isInvisible?: boolean;
 }
 
+export interface CancelledExpression {
+  lineStart: number;
+  lineEnd: number;
+}
+
 // Events yielded by executeScript
 export type ExecutionEvent =
   | { type: 'expressions'; expressions: Expression[] }
-  | { type: 'done'; expression: Expression };
+  | { type: 'done'; expression: Expression }
+  | { type: 'cancelled'; expressions: CancelledExpression[] };
 
 // Global counter for expression IDs
 let globalIdCounter = 1;
@@ -126,6 +132,17 @@ export class PythonServerBackend {
             );
             expressionList.push(...expressions);
             yield { type: 'expressions', expressions };
+            continue;
+          }
+
+          if (data.type === 'cancelled') {
+            const cancelled: CancelledExpression[] = data.expressions.map(
+              (expr: { lineStart: number; lineEnd: number }) => ({
+                lineStart: expr.lineStart,
+                lineEnd: expr.lineEnd,
+              })
+            );
+            yield { type: 'cancelled', expressions: cancelled };
             continue;
           }
 

@@ -40,6 +40,7 @@ import {
   resultGroupingExtension,
   setLineGroups,
   setLastExecutedIds,
+  setStaleGroupIds,
   lineGroupsField,
 } from "./result-grouping-plugin";
 import { LineGroup } from "./compute-line-groups";
@@ -59,6 +60,7 @@ export interface EditorHandles {
     doc: string;
     lineGroups: LineGroup[];
     lastExecutedResultIds?: number[];
+    staleGroupIds?: string[];
   }) => void;
   executeCurrent: () => void;
   focus: () => void;
@@ -259,10 +261,12 @@ export function Editor({
         doc,
         lineGroups,
         lastExecutedResultIds,
+        staleGroupIds,
       }: {
         doc: string;
         lineGroups: LineGroup[];
         lastExecutedResultIds?: number[];
+        staleGroupIds?: string[];
       }) => {
         const view = viewRef.current;
         if (!view) {
@@ -272,6 +276,9 @@ export function Editor({
         const effects: any[] = [setLineGroups.of(lineGroups)];
         if (lastExecutedResultIds) {
           effects.push(setLastExecutedIds.of(lastExecutedResultIds));
+        }
+        if (staleGroupIds) {
+          effects.push(setStaleGroupIds.of(staleGroupIds));
         }
 
         const transaction: any = {

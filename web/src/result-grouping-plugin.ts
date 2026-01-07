@@ -59,6 +59,12 @@ export const setLastExecutedIds = StateEffect.define<number[]>({
   },
 });
 
+export const setStaleGroupIds = StateEffect.define<string[]>({
+  map(value) {
+    return value;
+  },
+});
+
 export const groupRangesField = StateField.define<RangeSet<GroupValue>>({
   create() {
     // Start with an empty set so decorations simply produce nothing until the
@@ -273,6 +279,21 @@ export const staleGroupIdsField = StateField.define<Set<string>>({
 
   update(stale, tr) {
     const groups = tr.state.field(lineGroupsField);
+    let explicitStale: string[] | null = null;
+    for (const effect of tr.effects) {
+      if (effect.is(setStaleGroupIds)) {
+        explicitStale = effect.value;
+      }
+    }
+
+    if (explicitStale) {
+      if (groups.length === 0) {
+        return new Set();
+      }
+      const groupIds = new Set(groups.map((group) => group.id));
+      return new Set(explicitStale.filter((id) => groupIds.has(id)));
+    }
+
     const hasSetLineGroups = tr.effects.some((effect) =>
       effect.is(setLineGroups)
     );

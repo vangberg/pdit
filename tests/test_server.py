@@ -195,8 +195,8 @@ class TestExecuteScriptEndpoint:
                 if data_str.strip():
                     try:
                         data = json.loads(data_str)
-                        # Skip expressions event (sent before execution) and complete event
-                        if data.get('type') in ('expressions', 'complete'):
+                        # Skip expressions/cancelled events and complete event
+                        if data.get('type') in ('expressions', 'cancelled', 'complete'):
                             continue
                         results.append(data)
                     except json.JSONDecodeError:
