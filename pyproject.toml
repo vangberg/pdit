@@ -61,8 +61,8 @@ exclude = ["tests*"]
 [tool.setuptools.package-data]
 "*" = ["*.html", "*.js", "*.css"]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21.0",
     "black>=23.0",
