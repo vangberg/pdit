@@ -12,7 +12,7 @@
 - `uv run honcho start` runs backend + frontend with hot reload (recommended).
 - `make dev` runs backend + `npm run dev` in a single shell.
 - `cd web && npm run build` builds frontend assets into `pdit/_static/` (required before committing frontend changes).
-- `uv run pytest` runs Python tests; `cd web && npm test` runs Vitest.
+- `uv run pytest` runs Python tests; `cd web && npm test` runs Vitest and starts a backend automatically with token auth disabled.
 
 ## Coding Style & Naming Conventions
 - Python is formatted with Black (line length 100) and linted with Ruff; keep new code consistent.
@@ -22,7 +22,7 @@
 ## Testing Guidelines
 - Pytest naming: `tests/test_*.py`, `Test*` classes, `test_*` functions (configured in `pyproject.toml`).
 - Example targeted run: `uv run pytest tests/test_server.py::test_health -v`.
-- Frontend tests use Vitest: `cd web && npm test`.
+- Frontend tests use Vitest: `cd web && npm test` (auto-starts backend with token auth disabled).
 
 ## Commit & Pull Request Guidelines
 - Commit messages are short, imperative, and sentence case (e.g., “Remove uv.lock from version control”).

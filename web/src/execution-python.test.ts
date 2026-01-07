@@ -1,8 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { executeScript, Expression, ExecutionEvent } from './execution-python';
 
 // Test session ID - each test file uses a unique session
 const TEST_SESSION_ID = 'test-session-execution-python';
+const TOKEN_STORAGE_KEY = "pdit.token";
+
+beforeAll(() => {
+  const token = import.meta.env.VITE_PDIT_TOKEN;
+  if (token) {
+    sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
+  }
+});
 
 // Helper to collect done expressions from execution events
 async function collectExpressions(

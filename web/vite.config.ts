@@ -24,7 +24,7 @@ export default defineConfig({
     open: '/',
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8888',
+        target: `http://127.0.0.1:${process.env.VITE_PDIT_BACKEND_PORT || "8888"}`,
         changeOrigin: true,
       },
     },

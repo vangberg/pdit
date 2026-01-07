@@ -59,5 +59,5 @@ uv run pytest
 
 # Frontend tests
 cd web
-npm test
+npm test  # Starts a backend automatically with token auth disabled
 ```
