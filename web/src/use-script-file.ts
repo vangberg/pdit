@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from "react";
+import { addAuthHeaders, withAuthQuery } from "./api-auth";
 
 interface UseScriptFileOptions {
   onFileChange?: (newContent: string) => void; // Callback when file changes (enables watching)
@@ -56,7 +57,7 @@ export function useScriptFile(
     // Initialize session to start kernel immediately (all modes)
     fetch("/api/init-session", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: addAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ sessionId }),
     }).catch((err) => console.error("Failed to init session:", err));
 
@@ -76,7 +77,9 @@ export function useScriptFile(
     try {
       // Create EventSource - handles both initial load AND watching!
       const eventSource = new EventSource(
-        `/api/watch-file?path=${encodeURIComponent(scriptPath)}&sessionId=${encodeURIComponent(sessionId)}`
+        withAuthQuery(
+          `/api/watch-file?path=${encodeURIComponent(scriptPath)}&sessionId=${encodeURIComponent(sessionId)}`
+        )
       );
 
       eventSourceRef.current = eventSource;

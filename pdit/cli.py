@@ -11,6 +11,8 @@ import sys
 import time
 import threading
 import webbrowser
+import secrets
+import urllib.parse
 from pathlib import Path
 from typing import Optional
 
@@ -89,6 +91,7 @@ def start(
     port: Optional[int] = None,
     host: str = "127.0.0.1",
     no_browser: bool = False,
+    no_token_auth: bool = False,
 ):
     """Start the pdit server with optional script."""
 
@@ -123,16 +126,29 @@ def start(
             typer.echo(f"Error: Port {port} is already in use", err=True)
             sys.exit(1)
 
-    # Build URL
-    url = f"http://{host}:{actual_port}"
-    if script_path:
-        url += f"?script={script_path}"
-
-    typer.echo(f"Starting pdit server on {host}:{actual_port}")
-
-    # Pass port to server via environment variable for CORS configuration
+    # Pass port/token to server via environment variables for CORS and auth
     import os
     os.environ["PDIT_PORT"] = str(actual_port)
+    token = None
+    if no_token_auth:
+        os.environ.pop("PDIT_TOKEN", None)
+    else:
+        token = os.environ.get("PDIT_TOKEN")
+        if not token:
+            token = secrets.token_urlsafe(24)
+            os.environ["PDIT_TOKEN"] = token
+
+    # Build URL with token and optional script
+    url = f"http://{host}:{actual_port}"
+    params = {}
+    if script_path:
+        params["script"] = script_path
+    if token:
+        params["token"] = token
+    if params:
+        url = f"{url}?{urllib.parse.urlencode(params)}"
+
+    typer.echo(f"Starting pdit server on {host}:{actual_port}")
 
     # Configure and create server
     config = uvicorn.Config(
@@ -196,6 +212,10 @@ def main_command(
         bool,
         typer.Option("--no-browser", help="Don't open browser automatically")
     ] = False,
+    no_token_auth: Annotated[
+        bool,
+        typer.Option("--no-token-auth", help="Disable token authentication for API access")
+    ] = False,
 ):
     """Start the pdit server, or export a script to HTML with --export."""
     if export:
@@ -218,7 +238,7 @@ def main_command(
             output_path.write_text(html_output)
             typer.echo(f"Exported to {output_path}")
     else:
-        start(script, port, host, no_browser)
+        start(script, port, host, no_browser, no_token_auth)
 
 
 def main():

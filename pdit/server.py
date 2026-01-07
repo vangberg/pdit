@@ -15,10 +15,10 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from .ipython_executor import IPythonExecutor
@@ -134,6 +134,17 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan
 )
+
+
+@app.middleware("http")
+async def require_token(request: Request, call_next):
+    """Require a token for API routes when configured."""
+    token = os.environ.get("PDIT_TOKEN")
+    if token and request.url.path.startswith("/api") and request.method != "OPTIONS":
+        provided = request.headers.get("X-PDIT-Token") or request.query_params.get("token")
+        if provided != token:
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    return await call_next(request)
 
 # Configure CORS origins based on server port
 # Environment variable is set by cli.py before server starts

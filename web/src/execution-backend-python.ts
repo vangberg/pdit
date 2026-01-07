@@ -3,6 +3,7 @@
  * Connects to local Python server for code execution with real-time results.
  */
 
+import { addAuthHeaders } from './api-auth';
 export interface OutputItem {
   // MIME types: 'text/plain', 'text/html', 'text/markdown', 'image/png', 'application/json'
   // Stream types: 'stdout', 'stderr', 'error'
@@ -56,10 +57,10 @@ export class PythonServerBackend {
     // Use Fetch API with POST (EventSource only supports GET)
     const response = await fetch('/api/execute-script', {
       method: 'POST',
-      headers: {
+      headers: addAuthHeaders({
         'Content-Type': 'application/json',
         'Accept': 'text/event-stream',
-      },
+      }),
       body: JSON.stringify({
         script,
         sessionId: options.sessionId,
@@ -174,7 +175,7 @@ export class PythonServerBackend {
    * Reset the execution namespace.
    */
   async reset(): Promise<void> {
-    await fetch('/api/reset', { method: 'POST' });
+    await fetch('/api/reset', { method: 'POST', headers: addAuthHeaders() });
   }
 
   /**
@@ -183,6 +184,7 @@ export class PythonServerBackend {
   async isAvailable(): Promise<boolean> {
     try {
       const response = await fetch('/api/health', {
+        headers: addAuthHeaders(),
         signal: AbortSignal.timeout(1000), // 1 second timeout
       });
       return response.ok;

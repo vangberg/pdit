@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useDropdownNavigation, DropdownList } from "./Dropdown";
+import { addAuthHeaders } from "./api-auth";
 
 interface FuzzyFinderProps {
   isOpen: boolean;
@@ -93,7 +94,7 @@ export function FuzzyFinder({ isOpen, onClose, onSelect }: FuzzyFinderProps) {
   useEffect(() => {
     if (isOpen) {
       setIsLoading(true);
-      fetch("/api/list-files")
+      fetch("/api/list-files", { headers: addAuthHeaders() })
         .then((res) => res.json())
         .then((data) => {
           setFiles(data.files);

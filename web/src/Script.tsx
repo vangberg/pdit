@@ -11,6 +11,7 @@ import { useResults } from "./results";
 import { useScriptFile } from "./use-script-file";
 import { LineGroupLayout } from "./line-group-layout";
 import { useScriptSettings } from "./use-script-settings";
+import { addAuthHeaders } from "./api-auth";
 
 const DEFAULT_CODE = ``;
 
@@ -277,9 +278,9 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
     try {
       await fetch("/api/interrupt", {
         method: "POST",
-        headers: {
+        headers: addAuthHeaders({
           "Content-Type": "application/json",
-        },
+        }),
         body: JSON.stringify({ sessionId }),
       });
     } catch (error) {
@@ -296,9 +297,9 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
     try {
       const response = await fetch("/api/save-file", {
         method: "POST",
-        headers: {
+        headers: addAuthHeaders({
           "Content-Type": "application/json",
-        },
+        }),
         body: JSON.stringify({
           path: scriptPath,
           content: doc.toString(),

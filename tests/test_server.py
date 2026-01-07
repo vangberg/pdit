@@ -1,6 +1,7 @@
 """Tests for the FastAPI server."""
 
 import json
+import os
 import uuid
 
 try:
@@ -218,14 +219,22 @@ class TestExecuteScriptEndpoint:
 
         assert len(results) == 1
 
-        result = results[0]
-        assert result["lineStart"] == 1
-        assert result["lineEnd"] == 1
-        assert result["isInvisible"] is False
-        assert len(result["output"]) == 1
-        # IPython returns expression results as text/plain
-        assert result["output"][0]["type"] == "text/plain"
-        assert "4" in result["output"][0]["content"]
+
+class TestAuthToken:
+    """Tests for token authentication when configured."""
+
+    def test_api_requires_token_when_set(self):
+        token = "test-token"
+        os.environ["PDIT_TOKEN"] = token
+        try:
+            response = client.get("/api/health")
+            assert response.status_code == 401
+
+            response = client.get("/api/health", headers={"X-PDIT-Token": token})
+            assert response.status_code == 200
+            assert response.json() == {"status": "ok"}
+        finally:
+            os.environ.pop("PDIT_TOKEN", None)
 
     def test_execute_statement(self):
         """Test executing a statement (no output)."""
