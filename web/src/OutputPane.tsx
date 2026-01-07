@@ -103,9 +103,13 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
           }
 
           const layout = lineGroupLayouts?.get(group.id);
-          const groupClassName = group.allInvisible
-            ? "output-group output-group-invisible"
-            : "output-group";
+          const groupClassName = [
+            "output-group",
+            group.allInvisible ? "output-group-invisible" : "",
+            group.hasError ? "output-group-error" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
 
           const style: CSSProperties = {};
            if (layout && !readerMode) {

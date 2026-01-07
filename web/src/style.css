@@ -26,6 +26,7 @@
   --text-secondary: #333;
   --text-dim: #666;
   --error: #cc0000;
+  --error-soft: #d97a7a;
   --warning: #cc8800;
 }
 
@@ -400,6 +401,10 @@ h1 {
   padding: 0 6px;
   padding-left: 8px;
   border-radius: 0;
+}
+
+.output-group-error {
+  border-left-color: var(--error-soft);
 }
 
 .output-content.reader-mode .output-group {
@@ -1242,4 +1247,3 @@ table tbody td a:hover {
     display: none;
   }
 }
-
