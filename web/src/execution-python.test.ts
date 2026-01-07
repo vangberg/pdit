@@ -27,8 +27,8 @@ describe('executeScript', () => {
     expect(results[0].lineStart).toBe(1);
     expect(results[0].lineEnd).toBe(1);
     expect(results[0].result?.output).toHaveLength(1);
-    expect(results[0].result?.output[0].type).toBe('stdout');
-    expect(results[0].result?.output[0].content).toBe('4\n');
+    expect(results[0].result?.output[0].type).toBe('text/plain');
+    expect(results[0].result?.output[0].content).toBe('4');
   });
 
   it('executes an assignment statement with no visible output', async () => {
@@ -65,7 +65,7 @@ x + y`;
 
     expect(results[2].lineStart).toBe(3);
     expect(results[2].lineEnd).toBe(3);
-    expect(results[2].result?.output[0].content).toBe('15\n');
+    expect(results[2].result?.output[0].content).toBe('15');
   });
 
   it('captures error messages', async () => {
@@ -109,7 +109,7 @@ x`;
     const results = await collectExpressions(script);
 
     expect(results).toHaveLength(3);
-    expect(results[2].result?.output[0].content).toBe('10\n');
+    expect(results[2].result?.output[0].content).toBe('10');
   });
 
   it('handles multi-line statements', async () => {
@@ -126,14 +126,14 @@ greet("Python")`;
 
     expect(results[1].lineStart).toBe(4);
     expect(results[1].lineEnd).toBe(4);
-    expect(results[1].result?.output[0].content).toBe("'Hello, Python!'\n");
+    expect(results[1].result?.output[0].content).toBe("'Hello, Python!'");
   });
 
   it('handles list comprehensions', async () => {
     const results = await collectExpressions('[i**2 for i in range(5)]');
 
     expect(results).toHaveLength(1);
-    expect(results[0].result?.output[0].content).toBe('[0, 1, 4, 9, 16]\n');
+    expect(results[0].result?.output[0].content).toBe('[0, 1, 4, 9, 16]');
   });
 
   it('handles expressions that return None', async () => {
@@ -179,7 +179,7 @@ x`;
     expect(results[0].result?.output[0].content).toBe('Starting\n');
     expect(results[1].result?.isInvisible).toBe(true);
     expect(results[2].result?.output[0].content).toBe('Result:\n');
-    expect(results[3].result?.output[0].content).toBe('8\n');
+    expect(results[3].result?.output[0].content).toBe('8');
   });
 
   it('emits expressions event before results', async () => {
