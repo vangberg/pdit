@@ -1,8 +1,7 @@
 """
 Shared data structures for pdit executors.
 
-This module provides common data classes used by both the xeus-python
-and legacy executors.
+This module provides common data classes used by executors.
 """
 
 from dataclasses import dataclass

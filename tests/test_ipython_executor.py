@@ -1,14 +1,14 @@
-"""Tests for XeusPythonExecutor."""
+"""Tests for IPythonExecutor."""
 
 import pytest
-from pdit.xeus_executor import XeusPythonExecutor, Statement
+from pdit.ipython_executor import IPythonExecutor, Statement
 from pdit.executor import OutputItem
 
 
 @pytest.fixture
 def executor():
     """Create and return a fresh executor instance."""
-    exec_instance = XeusPythonExecutor()
+    exec_instance = IPythonExecutor()
     yield exec_instance
     # Cleanup
     exec_instance.shutdown()
@@ -117,7 +117,7 @@ class TestCodeExecution:
         assert result.line_end == 1
         assert result.is_invisible is False
         assert len(result.output) == 1
-        # xeus-python returns results as text/plain
+        # IPython returns results as text/plain
         assert result.output[0].type == "text/plain"
         assert "4" in result.output[0].content
 

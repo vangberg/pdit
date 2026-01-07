@@ -140,7 +140,7 @@ class TestExecuteScriptEndpoint:
         assert result["lineEnd"] == 1
         assert result["isInvisible"] is False
         assert len(result["output"]) == 1
-        # xeus-python returns expression results as text/plain
+        # IPython returns expression results as text/plain
         assert result["output"][0]["type"] == "text/plain"
         assert "4" in result["output"][0]["content"]
 
@@ -298,7 +298,7 @@ class TestExecuteScriptEndpoint:
         results = self._parse_sse_response(response)
 
         result = results[0]
-        # xeus-python may split output into multiple items
+        # IPython may split output into multiple items
         assert len(result["output"]) >= 1
         stdout_outputs = [o for o in result["output"] if o["type"] == "stdout"]
         assert len(stdout_outputs) >= 1

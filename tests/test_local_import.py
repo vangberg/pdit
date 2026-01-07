@@ -1,7 +1,7 @@
 import os
 import sys
 import pytest
-from pdit.xeus_executor import XeusPythonExecutor
+from pdit.ipython_executor import IPythonExecutor
 
 class TestLocalImport:
     def test_local_import(self, tmp_path):
@@ -15,7 +15,7 @@ class TestLocalImport:
         os.chdir(tmp_path)
 
         try:
-            executor = XeusPythonExecutor()
+            executor = IPythonExecutor()
             
             script = "import local_bar\nprint(local_bar.y)"
             

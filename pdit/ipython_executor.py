@@ -1,7 +1,7 @@
 """
-xeus-python kernel executor using jupyter_client.
+IPython kernel executor using jupyter_client.
 
-Uses xeus-python kernel with jupyter_client for reliable messaging.
+Uses IPython kernel with jupyter_client for reliable messaging.
 """
 
 import ast
@@ -9,6 +9,7 @@ import io
 import json
 import logging
 import re
+import time
 import traceback
 from dataclasses import dataclass
 from typing import Any, Dict, Generator, List, Optional, Union
@@ -37,19 +38,19 @@ class Statement:
     is_markdown_cell: bool = False
 
 
-class XeusPythonExecutor:
-    """Python executor using xeus-python kernel."""
+class IPythonExecutor:
+    """Python executor using IPython kernel."""
 
     def __init__(self):
-        """Initialize executor and start xeus-python kernel."""
+        """Initialize executor and start IPython kernel."""
         self.km: Optional[KernelManager] = None
         self.kc: Optional[BlockingKernelClient] = None
         self._start_kernel()
 
     def _start_kernel(self) -> None:
-        """Start xeus-python kernel."""
-        # Use xpython kernel
-        self.km = KernelManager(kernel_name='xpython')
+        """Start IPython kernel."""
+        # Use python3 (IPython) kernel
+        self.km = KernelManager(kernel_name='python3')
         self.km.start_kernel()
         self.kc = self.km.client()
         self.kc.start_channels()
@@ -68,15 +69,22 @@ class XeusPythonExecutor:
         if self.kc is None:
             raise RuntimeError("Kernel client not initialized")
         msg_id = self.kc.execute(code, silent=True)
-        # Wait for execution to complete
-        while True:
-            msg = self.kc.get_iopub_msg(timeout=5)
-            if msg['parent_header'].get('msg_id') == msg_id:
-                if msg['msg_type'] == 'status' and msg['content']['execution_state'] == 'idle':
-                    break
-                elif msg['msg_type'] == 'error':
-                    # Formatter registration or other setup failed
-                    raise RuntimeError(f"Silent execution failed: {msg['content']['ename']}: {msg['content']['evalue']}")
+        # Wait for execution to complete by checking for 'idle' status on iopub
+        # We need to handle messages that may not match our msg_id (from kernel startup)
+        timeout_total = 30  # Total timeout in seconds
+        start_time = time.time()
+        while time.time() - start_time < timeout_total:
+            try:
+                msg = self.kc.get_iopub_msg(timeout=1)
+                if msg['parent_header'].get('msg_id') == msg_id:
+                    if msg['msg_type'] == 'status' and msg['content']['execution_state'] == 'idle':
+                        return
+                    elif msg['msg_type'] == 'error':
+                        raise RuntimeError(f"Silent execution failed: {msg['content']['ename']}: {msg['content']['evalue']}")
+            except Exception:
+                # Queue empty, keep waiting
+                continue
+        raise RuntimeError("Silent execution timed out")
 
     def _register_display_formatters(self) -> None:
         """Register custom display formatters for DataFrames."""
@@ -170,13 +178,9 @@ del _register_pdit_formatter
 
         msg_id = self.kc.execute(code)
 
-        # Collect output messages
+        # Collect output messages (no timeout - code can run indefinitely)
         while True:
-            try:
-                msg = self.kc.get_iopub_msg(timeout=30)
-            except Exception as e:
-                output.append(OutputItem(type="error", content=f"Timeout waiting for kernel: {e}"))
-                break
+            msg = self.kc.get_iopub_msg()
 
             # Only process messages for our execution
             if msg['parent_header'].get('msg_id') != msg_id:
