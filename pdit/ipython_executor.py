@@ -299,6 +299,11 @@ del _register_pdit_formatter
             # Re-register display formatters after restart
             self._register_display_formatters()
 
+    def interrupt(self) -> None:
+        """Send an interrupt signal to the kernel."""
+        if self.km:
+            self.km.interrupt_kernel()
+
     def shutdown(self) -> None:
         """Shutdown the kernel."""
         if self.kc:

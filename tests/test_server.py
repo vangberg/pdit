@@ -90,6 +90,89 @@ class TestResetEndpoint:
         assert has_cleared
 
 
+class TestInterruptEndpoint:
+    """Tests for /interrupt endpoint."""
+
+    # Class-level session - shared across all tests, cleaned up once at end
+    session_id = str(uuid.uuid4())
+
+    @classmethod
+    def teardown_class(cls):
+        """Clean up the session after all tests in class."""
+        if HAS_FASTAPI:
+            delete_session(cls.session_id)
+
+    def _parse_sse_response(self, response):
+        """Parse SSE response into list of results."""
+        results = []
+        lines = response.text.split('\n')
+        for line in lines:
+            if line.startswith('data: '):
+                data_str = line[6:]  # Remove 'data: ' prefix
+                if data_str.strip():
+                    try:
+                        data = json.loads(data_str)
+                        if data.get('type') not in ('expressions', 'complete'):
+                            results.append(data)
+                    except json.JSONDecodeError:
+                        pass
+        return results
+
+    def test_interrupt_endpoint(self):
+        """Test that interrupt endpoint returns OK."""
+        if not HAS_FASTAPI:
+            return  # Skip if FastAPI not installed
+
+        # Initialize the session first
+        client.post("/api/init-session", json={"sessionId": self.session_id})
+
+        # Send interrupt (even with nothing running, should return OK)
+        response = client.post("/api/interrupt", json={
+            "sessionId": self.session_id
+        })
+
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
+
+    def test_interrupt_stops_execution(self):
+        """Test that interrupt actually stops running code."""
+        if not HAS_FASTAPI:
+            return  # Skip if FastAPI not installed
+
+        import concurrent.futures
+        import time
+
+        # Use ThreadPoolExecutor to run execution and interrupt concurrently
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            # Start long-running execution
+            def run_execution():
+                return client.post("/api/execute-script", json={
+                    "script": "import time\nfor i in range(100):\n    time.sleep(0.1)",
+                    "sessionId": self.session_id
+                })
+
+            execution_future = executor.submit(run_execution)
+
+            # Wait for execution to start, then interrupt
+            time.sleep(0.3)
+            client.post("/api/interrupt", json={"sessionId": self.session_id})
+
+            # Get execution result (should complete quickly due to interrupt)
+            try:
+                response = execution_future.result(timeout=5)
+                results = self._parse_sse_response(response)
+
+                # Should have KeyboardInterrupt error
+                has_interrupt = any(
+                    "KeyboardInterrupt" in str(out.get("content", ""))
+                    for r in results
+                    for out in r.get("output", [])
+                )
+                assert has_interrupt, f"Expected KeyboardInterrupt in output, got: {results}"
+            except concurrent.futures.TimeoutError:
+                pytest.fail("Execution did not complete after interrupt")
+
+
 class TestExecuteScriptEndpoint:
     """Tests for /execute-script endpoint."""
 

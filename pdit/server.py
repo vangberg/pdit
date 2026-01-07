@@ -270,6 +270,26 @@ async def reset(request: ResetRequest):
     return {"status": "ok"}
 
 
+class InterruptRequest(BaseModel):
+    """Request to interrupt kernel execution."""
+    sessionId: str
+
+
+@app.post("/api/interrupt")
+async def interrupt(request: InterruptRequest):
+    """Send an interrupt signal to the kernel.
+
+    This sends SIGINT to the kernel, which will raise KeyboardInterrupt
+    in any currently running code.
+
+    Returns:
+        Status OK
+    """
+    executor = get_or_create_session(request.sessionId)
+    executor.interrupt()
+    return {"status": "ok"}
+
+
 @app.get("/api/watch-file")
 async def watch_file(path: str, sessionId: str):
     """Watch a file and stream initial content + changes via SSE.
