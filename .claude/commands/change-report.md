@@ -2,7 +2,7 @@ Generate a standalone HTML file documenting the recent code changes.
 
 ## Instructions
 
-1. Run `git diff HEAD` (or `git diff main` if on a feature branch) to get the changes
+1. Run `jj diff` (or `jj diff --from main` if on a feature branch) to get the changes
 2. For any new files, read their full contents
 3. Create an HTML file named after the feature (e.g., `change-reports/feature-name-changes.html`) with:
 
