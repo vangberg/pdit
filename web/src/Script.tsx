@@ -80,7 +80,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
     code: initialCode,
     diskContent,
     isLoading: isLoadingScript,
-    // connectionState, // TODO: Use for connection status UI
+    connectionState,
     error: scriptError,
     sessionId,
     wsClient,
@@ -159,6 +159,11 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
       script: string,
       options?: { lineRange?: { from: number; to: number }; reset?: boolean },
     ): Promise<{ lastExecutedLineEnd?: number }> => {
+      if (connectionState === "disconnected") {
+        console.warn("Cannot execute: WebSocket disconnected");
+        return {};
+      }
+
       // Extract script name from path (just the filename)
       const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
       let lastExecutedLineEnd: number | undefined;
@@ -220,6 +225,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
       resetExecutionState,
       scriptPath,
       sessionId,
+      connectionState,
     ],
   );
 
@@ -232,6 +238,11 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
 
   const handleExecuteCurrent = useCallback(
     async (script: string, lineRange: { from: number; to: number }) => {
+      if (connectionState === "disconnected") {
+        console.warn("Cannot execute: WebSocket disconnected");
+        return;
+      }
+
       const { lastExecutedLineEnd } = await handleExecute(script, {
         lineRange,
       });
@@ -240,7 +251,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
       const lineToAdvanceFrom = lastExecutedLineEnd ?? lineRange.to;
       editorRef.current?.advanceCursorToNextStatement(lineToAdvanceFrom);
     },
-    [handleExecute],
+    [handleExecute, connectionState],
   );
 
   const handleExecuteAll = useCallback(
@@ -403,6 +414,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
         isFuzzyFinderOpen={isFuzzyFinderOpen}
         onFuzzyFinderOpenChange={setIsFuzzyFinderOpen}
         isExecuting={isExecuting}
+        connectionState={connectionState}
       />
       <div
         className={
@@ -422,7 +434,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
             onLineGroupsChange={handleLineGroupsChange}
             onLineGroupLayoutChange={handleLineGroupLayoutChange}
             lineGroupHeights={lineGroupHeights}
-            readOnly={isExecuting}
+            readOnly={isExecuting || connectionState === "disconnected"}
           />
         </div>
         <div className={readerMode ? "output-half output-full" : "output-half"}>

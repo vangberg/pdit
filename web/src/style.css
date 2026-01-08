@@ -134,6 +134,18 @@ body {
   background: #f97316;
 }
 
+.top-bar-status-dot.connected {
+  background: #93c5fd;
+}
+
+.top-bar-status-dot.connecting {
+  background: #f97316;
+}
+
+.top-bar-status-dot.disconnected {
+  background: #ef4444;
+}
+
 .top-bar-conflict-compact {
   display: flex;
   align-items: center;
@@ -172,6 +184,12 @@ body {
   border-color: var(--accent-alt);
 }
 
+.top-bar-conflict-button-primary:disabled {
+  cursor: not-allowed;
+  background: #6b7280;
+  border-color: #6b7280;
+}
+
 .top-bar-conflict-button-secondary {
   position: relative;
   background: transparent;
@@ -191,6 +209,12 @@ body {
   color: var(--bg-primary);
 }
 
+.top-bar-conflict-button-secondary:disabled {
+  cursor: not-allowed;
+  color: #6b7280;
+  border-color: #6b7280;
+}
+
 .top-bar-status-text {
   font-size: 0.75rem;
   text-transform: uppercase;
@@ -204,6 +228,18 @@ body {
 
 .top-bar-status-text.initializing {
   color: var(--warning);
+}
+
+.top-bar-status-text.connected {
+  color: #93c5fd;
+}
+
+.top-bar-status-text.connecting {
+  color: #f97316;
+}
+
+.top-bar-status-text.disconnected {
+  color: #f87171;
 }
 
 /* Toggle switch styles */
@@ -236,6 +272,22 @@ body {
 .top-bar-toggle:hover {
   background: #93c5fd;
   color: #1f2937;
+}
+
+.top-bar-toggle:disabled {
+  cursor: not-allowed;
+  color: #6b7280;
+  border-color: #6b7280;
+}
+
+.top-bar-toggle:disabled .top-bar-toggle-switch {
+  background: #6b7280;
+  border-color: #6b7280;
+}
+
+.top-bar-toggle:disabled .top-bar-toggle-knob {
+  background: #9ca3af;
+  border-color: #9ca3af;
 }
 
 .top-bar-toggle.enabled {
@@ -878,13 +930,14 @@ h1 {
 .top-bar-split-button-main:disabled {
   cursor: not-allowed;
   color: #6b7280;
-  border-color: #e5e7eb;
+  border-color: #6b7280;
 }
 
 .top-bar-split-button-arrow:disabled {
   cursor: not-allowed;
   color: #6b7280;
-  border-color: #e5e7eb;
+  border-color: #6b7280;
+  border-left-color: #6b7280;
 }
 
 .top-bar-dropdown-menu {
@@ -937,6 +990,17 @@ h1 {
 .top-bar-dropdown-item.selected {
   background: var(--accent);
   color: var(--bg-primary);
+}
+
+.top-bar-dropdown-item.disabled {
+  cursor: not-allowed;
+  color: #6b7280;
+}
+
+.top-bar-dropdown-item.disabled:hover,
+.top-bar-dropdown-item.disabled.selected {
+  background: transparent;
+  color: #6b7280;
 }
 
 .top-bar-dropdown-item-shortcut {

@@ -1,6 +1,6 @@
 /**
  * WebSocket client for unified session communication.
- * Handles file watching, code execution, interrupts, and reconnection.
+ * Handles file watching, code execution, and interrupts.
  */
 
 import { getAuthToken } from "./api-auth";
@@ -9,8 +9,7 @@ import type { OutputItem } from "./execution-backend-python";
 export type ConnectionState =
   | "connecting"
   | "connected"
-  | "disconnected"
-  | "reconnecting";
+  | "disconnected";
 
 // Messages from server to client
 export type ServerMessage =
@@ -42,9 +41,6 @@ type MessageHandler = (msg: ServerMessage) => void;
 export class WebSocketClient {
   private ws: WebSocket | null = null;
   private sessionId: string;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 10;
-  private reconnectDelay = 1000;
   private connectionState: ConnectionState = "disconnected";
   private messageHandlers = new Map<string, MessageHandler>();
   private onConnectionChange?: (state: ConnectionState) => void;
@@ -74,11 +70,9 @@ export class WebSocketClient {
     this.ws = new WebSocket(url.toString());
 
     this.ws.onopen = () => {
-      this.reconnectAttempts = 0;
-      this.reconnectDelay = 1000;
       this.setConnectionState("connected");
 
-      // Re-send watch request if we were watching before reconnect
+      // Re-send watch request if we were watching before
       if (this.pendingWatchPath) {
         this.send({ type: "watch", path: this.pendingWatchPath });
       }
@@ -96,35 +90,15 @@ export class WebSocketClient {
     this.ws.onclose = (event) => {
       this.ws = null;
       if (!this.intentionallyClosed && event.code !== 1000) {
-        this.attemptReconnect();
-      } else {
         this.setConnectionState("disconnected");
+        return;
       }
+      this.setConnectionState("disconnected");
     };
 
     this.ws.onerror = (error) => {
       console.error("WebSocket error:", error);
     };
-  }
-
-  private attemptReconnect(): void {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      this.setConnectionState("disconnected");
-      return;
-    }
-
-    this.setConnectionState("reconnecting");
-    this.reconnectAttempts++;
-
-    const delay = this.reconnectDelay + Math.random() * 1000;
-    setTimeout(() => {
-      if (!this.intentionallyClosed) {
-        this.connect();
-      }
-    }, delay);
-
-    // Exponential backoff, max 30s
-    this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000);
   }
 
   send(message: ClientMessage): void {
