@@ -1,14 +1,44 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import { executeScript, Expression, ExecutionEvent } from './execution-python';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { executeScript, backend, Expression, ExecutionEvent } from './execution-python';
+import { WebSocketClient } from './websocket-client';
 
 // Test session ID - each test file uses a unique session
 const TEST_SESSION_ID = 'test-session-execution-python';
 const TOKEN_STORAGE_KEY = "pdit.token";
 
-beforeAll(() => {
+let wsClient: WebSocketClient;
+
+beforeAll(async () => {
   const token = import.meta.env.VITE_PDIT_TOKEN;
   if (token) {
     sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
+  }
+
+  // Create WebSocket connection for tests
+  wsClient = new WebSocketClient({
+    sessionId: TEST_SESSION_ID,
+  });
+  wsClient.connect();
+
+  // Wait for connection
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('WebSocket connection timeout')), 5000);
+    const checkConnection = setInterval(() => {
+      if (wsClient.isConnected) {
+        clearInterval(checkConnection);
+        clearTimeout(timeout);
+        resolve();
+      }
+    }, 50);
+  });
+
+  // Set the WebSocket client on the backend
+  backend.setWebSocketClient(wsClient);
+});
+
+afterAll(() => {
+  if (wsClient) {
+    wsClient.close();
   }
 });
 

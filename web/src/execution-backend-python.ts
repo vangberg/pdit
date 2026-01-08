@@ -1,9 +1,10 @@
 /**
- * Python server backend using SSE streaming.
+ * Python server backend using WebSocket streaming.
  * Connects to local Python server for code execution with real-time results.
  */
 
-import { addAuthHeaders } from './api-auth';
+import { WebSocketClient } from "./websocket-client";
+
 export interface OutputItem {
   // MIME types: 'text/plain', 'text/html', 'text/markdown', 'image/png', 'application/json'
   // Stream types: 'stdout', 'stderr', 'error'
@@ -11,7 +12,7 @@ export interface OutputItem {
   content: string;
 }
 
-export type ExpressionState = 'pending' | 'executing' | 'done';
+export type ExpressionState = "pending" | "executing" | "done";
 
 export interface Expression {
   id: number;
@@ -33,16 +34,26 @@ export interface CancelledExpression {
 
 // Events yielded by executeScript
 export type ExecutionEvent =
-  | { type: 'expressions'; expressions: Expression[] }
-  | { type: 'done'; expression: Expression }
-  | { type: 'cancelled'; expressions: CancelledExpression[] };
+  | { type: "expressions"; expressions: Expression[] }
+  | { type: "done"; expression: Expression }
+  | { type: "cancelled"; expressions: CancelledExpression[] };
 
 // Global counter for expression IDs
 let globalIdCounter = 1;
 
 export class PythonServerBackend {
+  private wsClient: WebSocketClient | null = null;
+
   /**
-   * Execute a Python script with SSE streaming.
+   * Set the WebSocket client to use for execution.
+   * This should be called with the client from useScriptFile.
+   */
+  setWebSocketClient(client: WebSocketClient | null): void {
+    this.wsClient = client;
+  }
+
+  /**
+   * Execute a Python script with WebSocket streaming.
    * Yields events as execution progresses: pending, executing, done.
    */
   async *executeScript(
@@ -54,120 +65,79 @@ export class PythonServerBackend {
       reset?: boolean;
     }
   ): AsyncGenerator<ExecutionEvent, void, unknown> {
-    // Use Fetch API with POST (EventSource only supports GET)
-    const response = await fetch('/api/execute-script', {
-      method: 'POST',
-      headers: addAuthHeaders({
-        'Content-Type': 'application/json',
-        'Accept': 'text/event-stream',
-      }),
-      body: JSON.stringify({
-        script,
-        sessionId: options.sessionId,
-        scriptName: options.scriptName,
-        lineRange: options.lineRange,
-        reset: options.reset,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    if (!this.wsClient) {
+      throw new Error("WebSocket client not set");
     }
 
-    if (!response.body) {
-      throw new Error('Response body is null');
+    if (!this.wsClient.isConnected) {
+      throw new Error("WebSocket not connected");
     }
-
-    // Parse SSE stream manually
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
 
     // Track expressions by their order for correlating results
     const expressionList: Expression[] = [];
     let nextResultIndex = 0;
 
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        // Process complete SSE messages (delimited by \n\n)
-        const messages = buffer.split('\n\n');
-        buffer = messages.pop() || ''; // Keep incomplete message in buffer
-
-        for (const message of messages) {
-          if (!message.trim()) continue;
-
-          // Parse SSE format: "data: <json>"
-          const dataMatch = message.match(/^data: (.+)$/m);
-          if (!dataMatch) continue;
-
-          const data = JSON.parse(dataMatch[1]);
-
-          // Handle completion event
-          if (data.type === 'complete') {
-            return;
-          }
-
-          // Handle error event
-          if (data.type === 'error') {
-            throw new Error(data.message);
-          }
-
-          // Handle expressions list (first event from backend)
-          if (data.type === 'expressions') {
-            const expressions: Expression[] = data.expressions.map(
-              (expr: { lineStart: number; lineEnd: number }) => {
-                const id = globalIdCounter++;
-                return {
-                  id,
-                  lineStart: expr.lineStart,
-                  lineEnd: expr.lineEnd,
-                  state: 'pending' as const,
-                };
-              }
-            );
-            expressionList.push(...expressions);
-            yield { type: 'expressions', expressions };
-            continue;
-          }
-
-          if (data.type === 'cancelled') {
-            const cancelled: CancelledExpression[] = data.expressions.map(
-              (expr: { lineStart: number; lineEnd: number }) => ({
+      for await (const msg of this.wsClient.executeStream({
+        script,
+        lineRange: options.lineRange,
+        scriptName: options.scriptName,
+        reset: options.reset,
+      })) {
+        // Handle expressions list (first event from backend)
+        if (msg.type === "expressions") {
+          const expressions: Expression[] = msg.expressions.map(
+            (expr: { lineStart: number; lineEnd: number }) => {
+              const id = globalIdCounter++;
+              return {
+                id,
                 lineStart: expr.lineStart,
                 lineEnd: expr.lineEnd,
-              })
-            );
-            yield { type: 'cancelled', expressions: cancelled };
-            continue;
-          }
+                state: "pending" as const,
+              };
+            }
+          );
+          expressionList.push(...expressions);
+          yield { type: "expressions", expressions };
+          continue;
+        }
 
-          // Handle result event (statement execution complete)
-          // Results arrive in order, so use array index to correlate
+        if (msg.type === "cancelled") {
+          const cancelled: CancelledExpression[] = msg.expressions.map(
+            (expr: { lineStart: number; lineEnd: number }) => ({
+              lineStart: expr.lineStart,
+              lineEnd: expr.lineEnd,
+            })
+          );
+          yield { type: "cancelled", expressions: cancelled };
+          continue;
+        }
+
+        // Handle result event (statement execution complete)
+        if (msg.type === "result") {
           const expr = expressionList[nextResultIndex++];
           const id = expr?.id ?? globalIdCounter++;
           yield {
-            type: 'done',
+            type: "done",
             expression: {
               id,
-              lineStart: data.lineStart,
-              lineEnd: data.lineEnd,
-              state: 'done' as const,
+              lineStart: msg.lineStart,
+              lineEnd: msg.lineEnd,
+              state: "done" as const,
               result: {
-                output: data.output,
-                isInvisible: data.isInvisible,
+                output: msg.output,
+                isInvisible: msg.isInvisible,
               },
             },
           };
         }
       }
-    } finally {
-      reader.releaseLock();
+    } catch (err) {
+      // Re-throw with more context
+      if (err instanceof Error) {
+        throw err;
+      }
+      throw new Error(String(err));
     }
   }
 
@@ -175,21 +145,24 @@ export class PythonServerBackend {
    * Reset the execution namespace.
    */
   async reset(): Promise<void> {
-    await fetch('/api/reset', { method: 'POST', headers: addAuthHeaders() });
+    if (this.wsClient?.isConnected) {
+      this.wsClient.send({ type: "reset" });
+    }
   }
 
   /**
-   * Check if the server is available.
+   * Interrupt the current execution.
    */
-  async isAvailable(): Promise<boolean> {
-    try {
-      const response = await fetch('/api/health', {
-        headers: addAuthHeaders(),
-        signal: AbortSignal.timeout(1000), // 1 second timeout
-      });
-      return response.ok;
-    } catch {
-      return false;
+  interrupt(): void {
+    if (this.wsClient?.isConnected) {
+      this.wsClient.send({ type: "interrupt" });
     }
+  }
+
+  /**
+   * Check if the WebSocket is connected.
+   */
+  isAvailable(): boolean {
+    return this.wsClient?.isConnected ?? false;
   }
 }

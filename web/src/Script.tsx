@@ -1,7 +1,7 @@
 import "./style.css";
 import { Editor, EditorHandles } from "./Editor";
 import { OutputPane } from "./OutputPane";
-import { executeScript } from "./execution-python";
+import { executeScript, backend } from "./execution-python";
 import { Text } from "@codemirror/state";
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { LineGroup } from "./compute-line-groups";
@@ -80,11 +80,18 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
     code: initialCode,
     diskContent,
     isLoading: isLoadingScript,
+    // connectionState, // TODO: Use for connection status UI
     error: scriptError,
     sessionId,
+    wsClient,
   } = useScriptFile(scriptPath, DEFAULT_CODE, {
     onFileChange: handleFileChange,
   });
+
+  // Set WebSocket client on the backend when it changes
+  useEffect(() => {
+    backend.setWebSocketClient(wsClient);
+  }, [wsClient]);
   const {
     expressions,
     lineGroups,
@@ -274,19 +281,9 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
     setReaderMode(!readerMode);
   }, [readerMode, setReaderMode]);
 
-  const handleInterrupt = useCallback(async () => {
-    try {
-      await fetch("/api/interrupt", {
-        method: "POST",
-        headers: addAuthHeaders({
-          "Content-Type": "application/json",
-        }),
-        body: JSON.stringify({ sessionId }),
-      });
-    } catch (error) {
-      console.error("Error sending interrupt:", error);
-    }
-  }, [sessionId]);
+  const handleInterrupt = useCallback(() => {
+    backend.interrupt();
+  }, []);
 
   const handleSave = useCallback(async () => {
     if (!scriptPath || !doc) {

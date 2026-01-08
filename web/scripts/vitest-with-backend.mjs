@@ -28,7 +28,7 @@ function checkHealth(port) {
         method: "GET",
         host: BACKEND_HOST,
         port,
-        path: "/api/health",
+        path: "/api/list-files",
         timeout: 500,
       },
       (res) => {

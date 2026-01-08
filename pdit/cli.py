@@ -70,11 +70,11 @@ class Server(uvicorn.Server):
                 time.sleep(1e-3)
             yield
         finally:
-            # Signal SSE connections to close before shutting down server
+            # Signal WebSocket connections to close before shutting down server
             from .server import signal_shutdown
             signal_shutdown()
 
-            # Give SSE connections a moment to close
+            # Give connections a moment to close
             time.sleep(0.2)
 
             # Clean shutdown
