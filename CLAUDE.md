@@ -73,3 +73,7 @@ Built assets go to `pdit/_static/` and are committed to git. The `@dist` branch 
 - Tests use `pytest-asyncio` with `asyncio_mode = "auto"`
 - Server tests use class-scoped fixtures to share kernel instances (faster)
 - IPython executor tests use module-scoped fixtures for the same reason
+
+## Version Control
+
+This project uses [jj (Jujutsu)](https://github.com/martinvonz/jj) instead of git.
