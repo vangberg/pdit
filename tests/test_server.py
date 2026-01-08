@@ -219,23 +219,6 @@ class TestExecuteScriptEndpoint:
 
         assert len(results) == 1
 
-
-class TestAuthToken:
-    """Tests for token authentication when configured."""
-
-    def test_api_requires_token_when_set(self):
-        token = "test-token"
-        os.environ["PDIT_TOKEN"] = token
-        try:
-            response = client.get("/api/health")
-            assert response.status_code == 401
-
-            response = client.get("/api/health", headers={"X-PDIT-Token": token})
-            assert response.status_code == 200
-            assert response.json() == {"status": "ok"}
-        finally:
-            os.environ.pop("PDIT_TOKEN", None)
-
     def test_execute_statement(self):
         """Test executing a statement (no output)."""
         if not HAS_FASTAPI:
@@ -396,6 +379,23 @@ class TestAuthToken:
         assert len(stdout_outputs) >= 1
         combined_output = "".join(o["content"] for o in stdout_outputs)
         assert "Hello, World!" in combined_output
+
+
+class TestAuthToken:
+    """Tests for token authentication when configured."""
+
+    def test_api_requires_token_when_set(self):
+        token = "test-token"
+        os.environ["PDIT_TOKEN"] = token
+        try:
+            response = client.get("/api/health")
+            assert response.status_code == 401
+
+            response = client.get("/api/health", headers={"X-PDIT-Token": token})
+            assert response.status_code == 200
+            assert response.json() == {"status": "ok"}
+        finally:
+            os.environ.pop("PDIT_TOKEN", None)
 
 
 class TestReadFileEndpoint:

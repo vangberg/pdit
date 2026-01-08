@@ -16,25 +16,27 @@ class TestLocalImport:
 
         try:
             executor = IPythonExecutor()
-            
+
             script = "import local_bar\nprint(local_bar.y)"
-            
+
             results = list(executor.execute_script(script))
-            
+
             error_found = None
             output_found = False
-            
+
             for res in results:
-                if isinstance(res, list): continue
-                for out in res.output:
-                    if out.type == "error":
-                        error_found = out.content
-                    if out.type == "stdout" and "100" in out.content:
+                # Skip expressions event
+                if res.get("type") == "expressions":
+                    continue
+                for out in res.get("output", []):
+                    if out["type"] == "error":
+                        error_found = out["content"]
+                    if out["type"] == "stdout" and "100" in out["content"]:
                         output_found = True
-            
+
             if error_found:
                 pytest.fail(f"Import failed with error: {error_found}")
-            
+
             assert output_found, "Did not find expected output '100'"
 
         finally:

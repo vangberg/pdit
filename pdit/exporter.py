@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .executor import ExecutionResult
 from .ipython_executor import IPythonExecutor
 
 
@@ -23,19 +22,20 @@ def execute_script(script_content: str, script_name: str) -> list[dict[str, Any]
     expression_id = 0
 
     try:
-        for result in executor.execute_script(script_content, script_name=script_name):
-            if isinstance(result, list):
-                # First yield is list of ExpressionInfo - skip
+        for event in executor.execute_script(script_content, script_name=script_name):
+            # Skip the expressions list event
+            if event.get("type") == "expressions":
                 continue
-            elif isinstance(result, ExecutionResult):
+            # Result events have output field
+            if "output" in event:
                 expressions.append({
                     "id": expression_id,
-                    "lineStart": result.line_start,
-                    "lineEnd": result.line_end,
+                    "lineStart": event["lineStart"],
+                    "lineEnd": event["lineEnd"],
                     "state": "done",
                     "result": {
-                        "output": [{"type": item.type, "content": item.content} for item in result.output],
-                        "isInvisible": result.is_invisible
+                        "output": event["output"],
+                        "isInvisible": event["isInvisible"]
                     }
                 })
                 expression_id += 1
