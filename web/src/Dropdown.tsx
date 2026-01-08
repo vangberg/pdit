@@ -62,6 +62,7 @@ export interface DropdownListProps<T> {
   className?: string;
   itemClassName?: string;
   listRef?: React.RefObject<HTMLDivElement | null>;
+  isItemDisabled?: (item: T) => boolean;
 }
 
 export function DropdownList<T>({
@@ -74,6 +75,7 @@ export function DropdownList<T>({
   className,
   itemClassName,
   listRef,
+  isItemDisabled,
   ...props
 }: DropdownListProps<T> & Omit<React.HTMLAttributes<HTMLDivElement>, "onSelect">) {
   const internalRef = useRef<HTMLDivElement>(null);
@@ -92,16 +94,24 @@ export function DropdownList<T>({
     <div ref={ref} className={className} {...props}>
       {items.map((item, index) => {
           const isSelected = index === selectedIndex;
+          const isDisabled = isItemDisabled?.(item) ?? false;
           const key = keyExtractor ? keyExtractor(item) : index;
           return (
             <div
               key={key}
-              className={`${itemClassName || ""} ${isSelected ? "selected" : ""}`}
+              className={`${itemClassName || ""} ${isSelected ? "selected" : ""} ${isDisabled ? "disabled" : ""}`}
               onClick={(e) => {
                 e.stopPropagation();
+                if (isDisabled) {
+                  return;
+                }
                 onSelect(item);
               }}
-              onMouseEnter={() => onHover(index)}
+              onMouseEnter={() => {
+                if (!isDisabled) {
+                  onHover(index);
+                }
+              }}
             >
               {renderItem(item, isSelected)}
             </div>

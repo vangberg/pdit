@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { PathEditor } from "./PathEditor";
 import { useDropdownNavigation, DropdownList } from "./Dropdown";
 import { Play, BookOpen, Zap, Save, Square } from "lucide-react";
+import type { ConnectionState } from "./websocket-client";
 
 interface TopBarProps {
   onRunAll: () => void;
@@ -21,6 +22,7 @@ interface TopBarProps {
   isFuzzyFinderOpen?: boolean;
   onFuzzyFinderOpenChange?: (open: boolean) => void;
   isExecuting?: boolean;
+  connectionState?: ConnectionState;
 }
 
 function detectMacOS(): boolean {
@@ -92,6 +94,7 @@ interface ToggleSwitchProps {
   showTooltip: boolean;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
+  disabled?: boolean;
 }
 
 function ToggleSwitch({
@@ -102,7 +105,8 @@ function ToggleSwitch({
   tooltip,
   showTooltip,
   onMouseEnter,
-  onMouseLeave
+  onMouseLeave,
+  disabled
 }: ToggleSwitchProps) {
   return (
     <div
@@ -115,6 +119,7 @@ function ToggleSwitch({
         onClick={() => onToggle(!enabled)}
         role="switch"
         aria-checked={enabled}
+        disabled={disabled}
       >
         {icon && <span className="top-bar-toggle-icon">{icon}</span>}
         <span className="top-bar-toggle-label">{label}</span>
@@ -132,13 +137,15 @@ function RunButton({
   onRunCurrent,
   onInterrupt,
   isExecuting,
-  shortcuts
+  shortcuts,
+  disabled
 }: {
   onRunAll: () => void;
   onRunCurrent?: () => void;
   onInterrupt?: () => void;
   isExecuting?: boolean;
   shortcuts: { current: string; all: string };
+  disabled?: boolean;
 }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [lastRunMode, setLastRunMode] = useState<"all" | "current">("current");
@@ -149,9 +156,21 @@ function RunButton({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const options = useMemo(() => [
-    { id: "current", label: "Run Current", shortcut: shortcuts.current, action: onRunCurrent, disabled: !onRunCurrent },
-    { id: "all", label: "Run All", shortcut: shortcuts.all, action: onRunAll },
-  ], [onRunAll, onRunCurrent, shortcuts.current, shortcuts.all]);
+    {
+      id: "current",
+      label: "Run Current",
+      shortcut: shortcuts.current,
+      action: onRunCurrent,
+      disabled: !onRunCurrent || !!isExecuting
+    },
+    {
+      id: "all",
+      label: "Run All",
+      shortcut: shortcuts.all,
+      action: onRunAll,
+      disabled: !!isExecuting
+    },
+  ], [onRunAll, onRunCurrent, shortcuts.current, shortcuts.all, isExecuting]);
 
   const handleOptionSelect = (option: typeof options[0]) => {
      if (option.disabled) return;
@@ -181,12 +200,6 @@ function RunButton({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (isExecuting) {
-      setIsDropdownOpen(false);
-    }
-  }, [isExecuting]);
-
   // Focus dropdown when opened
   useEffect(() => {
     if (isDropdownOpen) {
@@ -200,6 +213,9 @@ function RunButton({
   }, [isDropdownOpen, lastRunMode, setSelectedIndex]);
 
   const handleMainClick = () => {
+    if (disabled) {
+      return;
+    }
     if (isExecuting) {
       onInterrupt?.();
       return;
@@ -217,7 +233,8 @@ function RunButton({
   const label = isExecuting ? "STOP" : "RUN CURRENT";
   const tooltip = undefined;
   const icon = isExecuting ? <Square size={14} className="top-bar-icon" /> : <Play size={14} className="top-bar-icon" />;
-  const isDisabled = isExecuting ? !onInterrupt : false;
+  const isDisabled = disabled || (isExecuting ? !onInterrupt : false);
+  const isArrowDisabled = disabled;
 
   return (
     <div 
@@ -242,7 +259,7 @@ function RunButton({
         className={`top-bar-split-button-arrow ${isDropdownOpen ? "active" : ""}`}
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         onKeyDown={handleArrowKeyDown}
-        disabled={isExecuting}
+        disabled={isArrowDisabled}
         onMouseEnter={() => setHoveredPart("arrow")}
         onMouseLeave={() => setHoveredPart(null)}
         aria-haspopup="true"
@@ -260,6 +277,7 @@ function RunButton({
           selectedIndex={selectedIndex}
           onSelect={handleOptionSelect}
           onHover={setSelectedIndex}
+          isItemDisabled={(option) => option.disabled}
           keyExtractor={(opt) => opt.id}
           tabIndex={-1}
           style={{ outline: 'none' }}
@@ -293,13 +311,26 @@ export function TopBar({
   onAutorunToggle,
   isFuzzyFinderOpen,
   onFuzzyFinderOpenChange,
-  isExecuting
+  isExecuting,
+  connectionState
 }: TopBarProps) {
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
   const shortcuts = getShortcuts();
   const isMac = detectMacOS();
   const saveShortcut = isMac ? "Command + S" : "Ctrl + S";
+  const hasStatus = connectionState !== undefined;
+  const statusLabelMap: Record<ConnectionState, string> = {
+    connected: "Connected",
+    connecting: "Connecting",
+    disconnected: "Disconnected"
+  };
+  const statusClassMap: Record<ConnectionState, string> = {
+    connected: "connected",
+    connecting: "connecting",
+    disconnected: "disconnected"
+  };
+  const isDisconnected = connectionState === "disconnected";
 
   return (
     <div className="top-bar">
@@ -310,6 +341,7 @@ export function TopBar({
           onInterrupt={onInterrupt}
           isExecuting={isExecuting}
           shortcuts={shortcuts}
+          disabled={isDisconnected}
         />
 
         <ToggleSwitch
@@ -321,6 +353,7 @@ export function TopBar({
           showTooltip={hoveredButton === "reader"}
           onMouseEnter={() => setHoveredButton("reader")}
           onMouseLeave={() => setHoveredButton(null)}
+          disabled={isDisconnected}
         />
 
         {onAutorunToggle && (
@@ -333,6 +366,7 @@ export function TopBar({
             showTooltip={hoveredButton === "autorun"}
             onMouseEnter={() => setHoveredButton("autorun")}
             onMouseLeave={() => setHoveredButton(null)}
+            disabled={isDisconnected}
           />
         )}
 
@@ -340,7 +374,7 @@ export function TopBar({
           <ActionButton
             label="SAVE"
             onClick={onSave || (() => {})}
-            disabled={!(hasUnsavedChanges ?? false)}
+            disabled={isDisconnected || !(hasUnsavedChanges ?? false)}
             onMouseEnter={() => setHoveredButton("save")}
             onMouseLeave={() => setHoveredButton(null)}
             tooltip={saveShortcut}
@@ -354,7 +388,24 @@ export function TopBar({
           onPathChange={onPathChange}
           isFuzzyFinderOpen={isFuzzyFinderOpen}
           onFuzzyFinderOpenChange={onFuzzyFinderOpenChange}
+          disabled={isDisconnected}
         />
+
+        {hasStatus && connectionState && (
+          <div
+            className="top-bar-status"
+            onMouseEnter={() => setHoveredButton("status")}
+            onMouseLeave={() => setHoveredButton(null)}
+          >
+            <span className={`top-bar-status-dot ${statusClassMap[connectionState]}`} />
+            <span className={`top-bar-status-text ${statusClassMap[connectionState]}`}>
+              {statusLabelMap[connectionState]}
+            </span>
+            {hoveredButton === "status" && connectionState === "disconnected" && (
+              <Tooltip text="Refresh the page to reconnect." />
+            )}
+          </div>
+        )}
 
         {hasConflict && (
           <div className="top-bar-conflict-compact">
@@ -371,6 +422,7 @@ export function TopBar({
             <button
               className="top-bar-conflict-button-primary"
               onClick={onReloadFromDisk}
+              disabled={isDisconnected}
               onMouseEnter={() => setHoveredButton("reload")}
               onMouseLeave={() => setHoveredButton(null)}
             >
@@ -380,6 +432,7 @@ export function TopBar({
             <button
               className="top-bar-conflict-button-secondary"
               onClick={onKeepChanges}
+              disabled={isDisconnected}
               onMouseEnter={() => setHoveredButton("keep")}
               onMouseLeave={() => setHoveredButton(null)}
             >

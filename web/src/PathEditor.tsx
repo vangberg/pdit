@@ -6,6 +6,7 @@ interface PathEditorProps {
   onPathChange: ((newPath: string) => void) | undefined;
   isFuzzyFinderOpen?: boolean;
   onFuzzyFinderOpenChange?: (open: boolean) => void;
+  disabled?: boolean;
 }
 
 function detectMacOS(): boolean {
@@ -16,7 +17,8 @@ export function PathEditor({
   scriptPath,
   onPathChange,
   isFuzzyFinderOpen = false,
-  onFuzzyFinderOpenChange
+  onFuzzyFinderOpenChange,
+  disabled = false
 }: PathEditorProps) {
   const [isEditingPath, setIsEditingPath] = useState(false);
   const [editedPath, setEditedPath] = useState(scriptPath || "");
@@ -41,6 +43,13 @@ export function PathEditor({
     }
   }, [isEditingPath]);
 
+  useEffect(() => {
+    if (disabled) {
+      setIsEditingPath(false);
+      setShowTooltip(false);
+      setIsFuzzyFinderOpen(false);
+    }
+  }, [disabled]);
 
   const handleFuzzySelect = (path: string) => {
     if (onPathChange) {
@@ -77,6 +86,7 @@ export function PathEditor({
           onChange={(e) => setEditedPath(e.target.value)}
           onBlur={() => setIsEditingPath(false)}
           onKeyDown={handleKeyDown}
+          disabled={disabled}
           style={{
             background: "#333",
             color: "#eee",
@@ -98,9 +108,9 @@ export function PathEditor({
         <span
           style={{
             fontSize: "12px",
-            color: "#ccc",
-            cursor: onPathChange ? "pointer" : "default",
-            borderBottom: onPathChange ? "1px dotted #666" : "none",
+            color: disabled ? "#777" : "#ccc",
+            cursor: !disabled && onPathChange ? "pointer" : "default",
+            borderBottom: !disabled && onPathChange ? "1px dotted #666" : "none",
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -108,11 +118,11 @@ export function PathEditor({
             display: "inline-block"
           }}
           onClick={() => {
-            if (onPathChange) {
+            if (!disabled && onPathChange) {
               setIsFuzzyFinderOpen(true);
             }
           }}
-          onMouseEnter={() => onPathChange && setShowTooltip(true)}
+          onMouseEnter={() => !disabled && onPathChange && setShowTooltip(true)}
           onMouseLeave={() => setShowTooltip(false)}
         >
           {display}
@@ -121,26 +131,30 @@ export function PathEditor({
         <span
           style={{
             fontSize: "12px",
-            color: "#888",
-            cursor: "pointer",
+            color: disabled ? "#777" : "#888",
+            cursor: disabled ? "default" : "pointer",
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
             maxWidth: "200px",
             display: "inline-block"
           }}
-          onClick={() => setIsFuzzyFinderOpen(true)}
-          onMouseEnter={() => setShowTooltip(true)}
+          onClick={() => {
+            if (!disabled) {
+              setIsFuzzyFinderOpen(true);
+            }
+          }}
+          onMouseEnter={() => !disabled && setShowTooltip(true)}
           onMouseLeave={() => setShowTooltip(false)}
         >
           Open file...
         </span>
       ) : null}
-      {showTooltip && !isFuzzyFinderOpen && (
+      {showTooltip && !isFuzzyFinderOpen && !disabled && (
         <div className="top-bar-tooltip">{shortcut}</div>
       )}
       <FuzzyFinder
-        isOpen={isFuzzyFinderOpen}
+        isOpen={!disabled && isFuzzyFinderOpen}
         onClose={() => setIsFuzzyFinderOpen(false)}
         onSelect={handleFuzzySelect}
       />

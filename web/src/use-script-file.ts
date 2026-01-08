@@ -97,7 +97,7 @@ export function useScriptFile(
       setIsLoading(false);
     }
 
-    // When reconnected, re-send watch request
+    // When connected, re-send watch request if needed
     if (state === "connected") {
       watchRequestSent.current = false;
     }
