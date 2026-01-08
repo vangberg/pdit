@@ -27,6 +27,9 @@ uv run honcho start
 # Frontend tests
 cd web && npm test
 
+# Run all tests (backend + frontend)
+make test
+
 # Rebuild frontend assets (required before committing frontend changes)
 cd web && npm install && npm run build
 ```
