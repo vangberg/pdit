@@ -38,9 +38,9 @@ cd web && npm install && npm run build
 
 ### Backend (Python)
 
-- `pdit/server.py` - FastAPI server with SSE streaming for real-time execution results
+- `pdit/server.py` - FastAPI server with a unified WebSocket for real-time execution + file watching
 - `pdit/ipython_executor.py` - IPython kernel management via jupyter_client; parses Python into statements using AST and executes each statement, yielding results
-- `pdit/file_watcher.py` - Watches script files for changes, notifies frontend via SSE
+- `pdit/file_watcher.py` - Watches script files for changes, notifies frontend via WebSocket messages
 - `pdit/cli.py` - Typer CLI entry point
 - `pdit/exporter.py` - HTML export functionality
 
@@ -50,19 +50,19 @@ cd web && npm install && npm run build
 - `web/src/Editor.tsx` - CodeMirror 6 editor component
 - `web/src/Output.tsx` - Renders execution results (stdout, errors, dataframes, images)
 - `web/src/compute-line-groups.ts` - Groups results by source lines
-- `web/src/execution-python.ts` - SSE client for streaming execution results
+- `web/src/websocket-client.ts` - WebSocket client for file watching and execution streaming
 
 ### Key Data Flow
 
 1. User edits code in CodeMirror editor
-2. On Cmd+Enter, frontend POSTs to `/api/execute-script` with code and line range
-3. Server parses code into statements, yields expression list first, then executes each statement
-4. Results stream back as SSE events with line numbers for grouping
+2. Frontend opens `/ws/session?sessionId=...` and starts watching the script file
+3. On Cmd+Enter, frontend sends `{"type":"execute", ...}` over the WebSocket
+4. Server parses code into statements, sends an expressions list, then sends results as each statement completes
 5. Frontend groups results by line ranges and displays inline
 
 ### Session Management
 
-Each browser tab gets a unique session ID. Sessions map to IPython kernel instances. Sessions are cleaned up when the SSE watch-file connection closes.
+Each browser tab gets a unique session ID. Sessions map to IPython kernel instances. Sessions are cleaned up when the WebSocket connection closes.
 
 ## Frontend Build
 

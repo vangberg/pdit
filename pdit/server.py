@@ -2,11 +2,13 @@
 FastAPI server for local Python code execution.
 
 Provides HTTP endpoints for:
-- Executing Python scripts
-- Reading files from disk
-- Resetting execution state
-- Health checks
+- Listing Python files
+- Saving files to disk
 - Serving static frontend files
+
+And a WebSocket endpoint for:
+- Executing Python scripts
+- Watching a script file for changes
 """
 
 import asyncio
@@ -19,14 +21,13 @@ from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
-from pydantic import BaseModel, Field
+from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel
 
 from .ipython_executor import IPythonExecutor
-from .sse import format_sse
 from .file_watcher import FileWatcher
 
-# Global shutdown event for SSE/WebSocket connections (threading.Event works across threads)
+# Global shutdown event for WebSocket connections (threading.Event works across threads)
 shutdown_event = threading.Event()
 
 
@@ -78,15 +79,9 @@ def is_error_result(result: dict) -> bool:
 
 
 def signal_shutdown():
-    """Signal all SSE connections to close and cleanup. Called by cli.py before server shutdown."""
+    """Signal WebSocket connections to close and cleanup. Called by cli.py before server shutdown."""
     shutdown_event.set()
     shutdown_all_sessions()
-
-
-# Pydantic models for API
-class ReadFileResponse(BaseModel):
-    """Response from reading a file."""
-    content: str
 
 
 class SaveFileRequest(BaseModel):
@@ -95,16 +90,11 @@ class SaveFileRequest(BaseModel):
     content: str
 
 
-class ResetRequest(BaseModel):
-    """Request to reset execution namespace."""
-    sessionId: str
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage app lifecycle - cleanup on shutdown."""
     yield
-    # Signal all SSE connections to close and shutdown kernels
+    # Signal all connections to close and shutdown kernels
     shutdown_event.set()
     shutdown_all_sessions()
 
@@ -148,207 +138,11 @@ app.add_middleware(
 )
 
 
-@app.get("/api/health")
-async def health():
-    """Health check endpoint.
-
-    Returns:
-        Status OK if server is running
-    """
-    return {"status": "ok"}
-
-
-@app.post("/api/init-session")
-async def init_session(request: ResetRequest):
-    """Initialize a session and start its kernel.
-
-    This endpoint is called on page load to start the kernel immediately,
-    so it's ready when the user first runs code.
-
-    Args:
-        request: Session ID to initialize
-
-    Returns:
-        Status OK
-    """
-    get_or_create_session(request.sessionId)
-    return {"status": "ok"}
-
-
-@app.post("/api/execute-script")
-async def execute_script(request: Request):
-    """Stream execution results as Server-Sent Events.
-
-    Executor yields SSE-ready dicts directly, server is passthrough.
-
-    Returns:
-        StreamingResponse with text/event-stream media type
-    """
-    body = await request.json()
-    session_id = body["sessionId"]
-    script = body["script"]
-    script_name = body.get("scriptName")
-    line_range = None
-    if lr := body.get("lineRange"):
-        line_range = (lr["from"], lr["to"])
-    reset = body.get("reset", False)
-
-    session = get_or_create_session(session_id)
-    if reset:
-        session.executor.reset()
-
-    async def generate_events():
-        expressions: list[dict] = []
-        executed_count = 0
-
-        # Sentinel to detect StopIteration (can't raise StopIteration in coroutines)
-        _DONE = object()
-
-        def next_event(gen):
-            try:
-                return next(gen)
-            except StopIteration:
-                return _DONE
-
-        try:
-            gen = session.executor.execute_script(script, line_range, script_name)
-            while True:
-                event = await asyncio.to_thread(next_event, gen)
-                if event is _DONE:
-                    yield format_sse({"type": "complete"})
-                    break
-
-                # Passthrough: executor yields SSE-ready dicts
-                yield format_sse(event)
-
-                # Track expressions for cancelled handling
-                if event.get("type") == "expressions":
-                    expressions = event["expressions"]
-                    executed_count = 0
-                elif "output" in event:
-                    executed_count += 1
-                    if is_error_result(event):
-                        remaining = expressions[executed_count:]
-                        if remaining:
-                            yield format_sse({"type": "cancelled", "expressions": remaining})
-                        yield format_sse({"type": "complete"})
-                        break
-
-        except Exception as e:
-            yield format_sse({"type": "error", "message": str(e)})
-        finally:
-            # Interrupt kernel if client disconnects mid-execution
-            try:
-                session.executor.interrupt()
-            except Exception:
-                pass
-
-    return StreamingResponse(
-        generate_events(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-        }
-    )
-
-
-@app.post("/api/reset")
-async def reset(request: ResetRequest):
-    """Reset the execution namespace.
-
-    Clears all variables and imported modules from the execution state.
-
-    Returns:
-        Status OK
-    """
-    session = get_or_create_session(request.sessionId)
-    session.executor.reset()
-    return {"status": "ok"}
-
-
-class InterruptRequest(BaseModel):
-    """Request to interrupt kernel execution."""
-    sessionId: str
-
-
-@app.post("/api/interrupt")
-async def interrupt(request: InterruptRequest):
-    """Send an interrupt signal to the kernel.
-
-    This sends SIGINT to the kernel, which will raise KeyboardInterrupt
-    in any currently running code.
-
-    Returns:
-        Status OK
-    """
-    session = get_or_create_session(request.sessionId)
-    session.executor.interrupt()
-    return {"status": "ok"}
-
-
-@app.get("/api/watch-file")
-async def watch_file(path: str, sessionId: str):
-    """Watch a file and stream initial content + changes via SSE.
-
-    This unified endpoint eliminates the need for separate /api/read-file.
-    It sends an initial event with file content, then streams change events.
-    When the SSE connection closes, the associated session is cleaned up.
-
-    Args:
-        path: Absolute path to the file to watch
-        sessionId: Session ID for cleanup on disconnect
-
-    Returns:
-        StreamingResponse with text/event-stream media type
-
-    SSE Events:
-        - initial: Initial file content (sent first)
-        - fileChanged: File was modified (includes new content)
-        - fileDeleted: File was deleted (closes connection)
-        - error: Error occurred (closes connection)
-    """
-    # Each watcher gets its own stop event for cleanup on disconnect
-    watcher_stop_event = threading.Event()
-
-    async def generate_events():
-        watcher = FileWatcher(path, stop_event=watcher_stop_event)
-
-        try:
-            async for event in watcher.watch_with_initial():
-                # Check if server is shutting down
-                if shutdown_event.is_set():
-                    break
-
-                # Direct serialization using asdict()
-                yield format_sse(asdict(event))
-
-                # Stop after terminal events
-                if event.type in ("fileDeleted", "error"):
-                    break
-        finally:
-            # Signal watcher to stop (important for cleanup on client disconnect)
-            watcher_stop_event.set()
-            # Clean up session when SSE connection closes
-            delete_session(sessionId)
-
-    return StreamingResponse(
-        generate_events(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        }
-    )
-
-
 # WebSocket endpoint for unified session communication
 @app.websocket("/ws/session")
 async def websocket_session(websocket: WebSocket, sessionId: str, token: Optional[str] = None):
     """Unified WebSocket endpoint for file watching and code execution.
 
-    This replaces the separate SSE endpoints with a single bidirectional connection.
     The WebSocket connection lifecycle is tied to the session - when the connection
     closes, the session is cleaned up.
 
@@ -526,33 +320,6 @@ async def _handle_ws_execute(websocket: WebSocket, session: Session, data: dict)
     finally:
         with session.lock:
             session.is_executing = False
-
-
-@app.get("/api/read-file", response_model=ReadFileResponse)
-async def read_file(path: str):
-    """Read a file from the filesystem.
-
-    Args:
-        path: Absolute path to the file to read
-
-    Returns:
-        File contents as text
-
-    Raises:
-        HTTPException: If file not found or cannot be read
-
-    Note:
-        Security consideration: This endpoint allows reading any file
-        the server has access to. Path validation should be added.
-    """
-    try:
-        file_path = Path(path)
-        content = file_path.read_text()
-        return ReadFileResponse(content=content)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=f"File not found: {path}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
 
 
 class ListFilesResponse(BaseModel):

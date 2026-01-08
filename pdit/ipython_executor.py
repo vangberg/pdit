@@ -2,7 +2,7 @@
 IPython kernel executor using jupyter_client.
 
 Uses IPython kernel with jupyter_client for reliable messaging.
-Yields SSE-ready dicts directly for minimal server overhead.
+Yields event dicts directly for minimal server overhead.
 """
 
 import ast
@@ -207,7 +207,7 @@ del _register_pdit_formatter
         line_range: tuple[int, int] | None = None,
         script_name: str | None = None
     ) -> Generator[dict, None, None]:
-        """Execute Python script, yielding SSE-ready dicts as each statement completes.
+        """Execute Python script, yielding event dicts as each statement completes.
 
         Yields:
             First: {"type": "expressions", "expressions": [{"lineStart": N, "lineEnd": N}, ...]}
