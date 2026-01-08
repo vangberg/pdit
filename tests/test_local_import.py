@@ -3,8 +3,17 @@ import sys
 import pytest
 from pdit.ipython_executor import IPythonExecutor
 
+
+async def collect_results(async_gen):
+    """Helper to collect all results from an async generator."""
+    results = []
+    async for item in async_gen:
+        results.append(item)
+    return results
+
+
 class TestLocalImport:
-    def test_local_import(self, tmp_path):
+    async def test_local_import(self, tmp_path):
         """Test that importing a local module works."""
         # Create a dummy local module
         local_module = tmp_path / "local_bar.py"
@@ -19,7 +28,7 @@ class TestLocalImport:
 
             script = "import local_bar\nprint(local_bar.y)"
 
-            results = list(executor.execute_script(script))
+            results = await collect_results(executor.execute_script(script))
 
             error_found = None
             output_found = False
@@ -40,5 +49,5 @@ class TestLocalImport:
             assert output_found, "Did not find expected output '100'"
 
         finally:
-            executor.shutdown()
+            await executor.shutdown()
             os.chdir(cwd)

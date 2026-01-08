@@ -36,7 +36,7 @@ class Session:
     """Represents a session with an IPython executor and state tracking."""
     executor: IPythonExecutor
     is_executing: bool = False
-    lock: threading.Lock = field(default_factory=threading.Lock)
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     file_watcher_task: Optional[asyncio.Task] = None
     watcher_stop_event: Optional[threading.Event] = None
 
@@ -47,30 +47,39 @@ _sessions_lock = threading.Lock()  # Thread-safe session creation/deletion
 
 
 def get_or_create_session(session_id: str) -> Session:
-    """Get existing session or create a new one lazily (thread-safe)."""
+    """Get existing session or create a new one (thread-safe).
+
+    The kernel starts immediately in the background so it's ready when the user
+    executes code. File watching and other operations don't wait for the kernel.
+    """
     with _sessions_lock:
         if session_id not in _sessions:
-            _sessions[session_id] = Session(executor=IPythonExecutor())
+            executor = IPythonExecutor()
+            executor.start()  # Start kernel in background immediately
+            _sessions[session_id] = Session(executor=executor)
         return _sessions[session_id]
 
 
-def delete_session(session_id: str) -> None:
-    """Delete a session if it exists, shutting down its kernel (thread-safe)."""
+async def delete_session(session_id: str) -> None:
+    """Delete a session if it exists, shutting down its kernel."""
+    session = None
     with _sessions_lock:
         if session_id in _sessions:
             session = _sessions.pop(session_id)
-            # Stop file watcher if running
-            if session.watcher_stop_event:
-                session.watcher_stop_event.set()
-            if session.file_watcher_task:
-                session.file_watcher_task.cancel()
-            session.executor.shutdown()
+
+    # Do async cleanup outside the lock to avoid blocking other connections
+    if session:
+        if session.watcher_stop_event:
+            session.watcher_stop_event.set()
+        if session.file_watcher_task:
+            session.file_watcher_task.cancel()
+        await session.executor.shutdown()
 
 
-def shutdown_all_sessions() -> None:
+async def shutdown_all_sessions() -> None:
     """Shutdown all active sessions. Called on server shutdown."""
     for session_id in list(_sessions.keys()):
-        delete_session(session_id)
+        await delete_session(session_id)
 
 
 def is_error_result(result: dict) -> bool:
@@ -81,7 +90,14 @@ def is_error_result(result: dict) -> bool:
 def signal_shutdown():
     """Signal WebSocket connections to close and cleanup. Called by cli.py before server shutdown."""
     shutdown_event.set()
-    shutdown_all_sessions()
+    # Run async shutdown in a new event loop if called from sync context
+    try:
+        loop = asyncio.get_running_loop()
+        # If there's a running loop, schedule it
+        asyncio.create_task(shutdown_all_sessions())
+    except RuntimeError:
+        # No running loop, create one
+        asyncio.run(shutdown_all_sessions())
 
 
 class SaveFileRequest(BaseModel):
@@ -96,7 +112,7 @@ async def lifespan(app: FastAPI):
     yield
     # Signal all connections to close and shutdown kernels
     shutdown_event.set()
-    shutdown_all_sessions()
+    await shutdown_all_sessions()
 
 
 # FastAPI app
@@ -195,10 +211,10 @@ async def websocket_session(websocket: WebSocket, sessionId: str, token: Optiona
                     )
 
             elif msg_type == "interrupt":
-                session.executor.interrupt()
+                await session.executor.interrupt()
 
             elif msg_type == "reset":
-                session.executor.reset()
+                await session.executor.reset()
 
     except WebSocketDisconnect:
         pass
@@ -216,7 +232,7 @@ async def websocket_session(websocket: WebSocket, sessionId: str, token: Optiona
             except asyncio.CancelledError:
                 pass
         # Clean up session when WebSocket closes
-        delete_session(sessionId)
+        await delete_session(sessionId)
 
 
 async def _handle_ws_watch(websocket: WebSocket, session: Session, path: str) -> None:
@@ -254,7 +270,7 @@ async def _handle_ws_watch(websocket: WebSocket, session: Session, path: str) ->
 async def _handle_ws_execute(websocket: WebSocket, session: Session, data: dict) -> None:
     """Handle code execution request over WebSocket with busy detection."""
     # Check if already executing
-    with session.lock:
+    async with session.lock:
         if session.is_executing:
             await websocket.send_json({"type": "busy"})
             return
@@ -268,29 +284,13 @@ async def _handle_ws_execute(websocket: WebSocket, session: Session, data: dict)
             line_range = (lr["from"], lr["to"])
 
         if data.get("reset"):
-            session.executor.reset()
+            await session.executor.reset()
 
         # Track expressions for cancelled handling
         expressions: list[dict] = []
         executed_count = 0
 
-        # Sentinel to detect StopIteration
-        _DONE = object()
-
-        def next_event(gen):
-            try:
-                return next(gen)
-            except StopIteration:
-                return _DONE
-
-        gen = session.executor.execute_script(script, line_range, script_name)
-
-        while True:
-            event = await asyncio.to_thread(next_event, gen)
-            if event is _DONE:
-                await websocket.send_json({"type": "complete"})
-                break
-
+        async for event in session.executor.execute_script(script, line_range, script_name):
             # Add type field to result messages (executor yields without type)
             if "output" in event and "type" not in event:
                 event = {"type": "result", **event}
@@ -309,16 +309,18 @@ async def _handle_ws_execute(websocket: WebSocket, session: Session, data: dict)
                     if remaining:
                         await websocket.send_json({"type": "cancelled", "expressions": remaining})
                     await websocket.send_json({"type": "complete"})
-                    break
+                    return
+
+        await websocket.send_json({"type": "complete"})
 
     except WebSocketDisconnect:
         # Client disconnected, interrupt execution
-        session.executor.interrupt()
+        await session.executor.interrupt()
         raise
     except Exception as e:
         await websocket.send_json({"type": "error", "message": str(e)})
     finally:
-        with session.lock:
+        async with session.lock:
             session.is_executing = False
 
 

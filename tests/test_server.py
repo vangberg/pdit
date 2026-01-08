@@ -1,5 +1,6 @@
 """Tests for the FastAPI server."""
 
+import asyncio
 import os
 import uuid
 
@@ -14,6 +15,11 @@ try:
     HAS_FASTAPI = True
 except ImportError:
     HAS_FASTAPI = False
+
+
+def cleanup_session(session_id: str) -> None:
+    """Run async delete_session in a new event loop."""
+    asyncio.run(delete_session(session_id))
 
 
 if HAS_FASTAPI:
@@ -112,7 +118,7 @@ class TestWebSocketEndpoint:
     def teardown_class(cls):
         """Clean up the session after all tests in class."""
         if HAS_FASTAPI:
-            delete_session(cls.session_id)
+            cleanup_session(cls.session_id)
 
     def test_websocket_connect_disconnect(self):
         """Test WebSocket connection and session cleanup."""
@@ -212,7 +218,7 @@ class TestWebSocketEndpoint:
                 msg = ws.receive_json()
                 assert msg["type"] == "complete"
         finally:
-            delete_session(test_session)
+            cleanup_session(test_session)
 
     def test_websocket_busy_rejection(self):
         """Test that concurrent executions are rejected with busy."""
@@ -261,7 +267,7 @@ class TestWebSocketEndpoint:
 
                 assert test_passed[0], f"Expected busy message, got: {messages}"
         finally:
-            delete_session(test_session)
+            cleanup_session(test_session)
 
     def test_websocket_interrupt(self):
         """Test interrupt via WebSocket."""
@@ -304,7 +310,7 @@ class TestWebSocketEndpoint:
                 )
                 assert has_interrupt, f"Expected KeyboardInterrupt, got: {messages}"
         finally:
-            delete_session(test_session)
+            cleanup_session(test_session)
 
     def test_websocket_reset(self):
         """Test reset via WebSocket."""
@@ -349,7 +355,7 @@ class TestWebSocketEndpoint:
                 )
                 assert has_cleared, f"Expected 'cleared' in output, got: {messages}"
         finally:
-            delete_session(test_session)
+            cleanup_session(test_session)
 
     def test_websocket_auth(self):
         """Test token authentication for WebSocket."""
@@ -375,7 +381,7 @@ class TestWebSocketEndpoint:
                 assert msg["type"] == "expressions"
         finally:
             os.environ.pop("PDIT_TOKEN", None)
-            delete_session("auth-test")
+            cleanup_session("auth-test")
 
 
 if __name__ == "__main__":

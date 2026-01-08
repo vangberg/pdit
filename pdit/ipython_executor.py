@@ -6,16 +6,15 @@ Yields event dicts directly for minimal server overhead.
 """
 
 import ast
+import asyncio
 import io
 import json
 import logging
 import re
-import time
 import traceback
-from typing import Any, Generator
+from typing import Any, AsyncGenerator, Optional
 
-from jupyter_client import KernelManager
-from jupyter_client.blocking import BlockingKernelClient
+from jupyter_client import AsyncKernelManager
 
 
 logger = logging.getLogger(__name__)
@@ -25,25 +24,42 @@ class IPythonExecutor:
     """Python executor using IPython kernel."""
 
     def __init__(self):
-        """Initialize executor and start IPython kernel."""
-        self.km: Optional[KernelManager] = None
-        self.kc: Optional[BlockingKernelClient] = None
-        self._start_kernel()
+        """Initialize executor. Call start() to begin kernel startup."""
+        self.km: Optional[AsyncKernelManager] = None
+        self.kc = None  # AsyncKernelClient
+        self._startup_task: Optional[asyncio.Task] = None
 
-    def _start_kernel(self) -> None:
-        """Start IPython kernel."""
+    def start(self) -> None:
+        """Start IPython kernel in the background.
+
+        This is non-blocking - it creates a background task to start the kernel.
+        Use wait_ready() to wait for the kernel to be ready before executing code.
+        """
+        if self._startup_task is None:
+            self._startup_task = asyncio.create_task(self._do_start())
+
+    async def wait_ready(self) -> None:
+        """Wait for the kernel to be ready. Starts the kernel if not already started."""
+        if self._startup_task is None:
+            self._startup_task = asyncio.create_task(self._do_start())
+        await self._startup_task
+
+    async def _do_start(self) -> None:
+        """Internal: Actually start the IPython kernel."""
         # Use python3 (IPython) kernel
-        self.km = KernelManager(kernel_name='python3')
-        self.km.start_kernel()
+        self.km = AsyncKernelManager(kernel_name='python3')
+        await self.km.start_kernel()
         self.kc = self.km.client()
         self.kc.start_channels()
         # Wait for kernel to be ready
-        self.kc.wait_for_ready(timeout=30)
+        await self.kc.wait_for_ready(timeout=30)
+        # Drain any startup messages
+        await self._drain_iopub()
         # Register display formatters
-        self._register_display_formatters()
+        await self._register_display_formatters()
 
 
-    def _execute_silent(self, code: str) -> None:
+    async def _execute_silent(self, code: str) -> None:
         """Execute code without capturing output (for setup).
 
         Raises:
@@ -55,21 +71,22 @@ class IPythonExecutor:
         # Wait for execution to complete by checking for 'idle' status on iopub
         # We need to handle messages that may not match our msg_id (from kernel startup)
         timeout_total = 30  # Total timeout in seconds
-        start_time = time.time()
-        while time.time() - start_time < timeout_total:
+        loop = asyncio.get_running_loop()
+        start_time = loop.time()
+        while loop.time() - start_time < timeout_total:
             try:
-                msg = self.kc.get_iopub_msg(timeout=1)
+                msg = await asyncio.wait_for(self.kc.get_iopub_msg(), timeout=1)
                 if msg['parent_header'].get('msg_id') == msg_id:
                     if msg['msg_type'] == 'status' and msg['content']['execution_state'] == 'idle':
                         return
                     elif msg['msg_type'] == 'error':
                         raise RuntimeError(f"Silent execution failed: {msg['content']['ename']}: {msg['content']['evalue']}")
-            except Exception:
+            except asyncio.TimeoutError:
                 # Queue empty, keep waiting
                 continue
         raise RuntimeError("Silent execution timed out")
 
-    def _register_display_formatters(self) -> None:
+    async def _register_display_formatters(self) -> None:
         """Register custom display formatters for DataFrames."""
         formatter_code = """
 def _register_pdit_formatter():
@@ -92,7 +109,7 @@ def _register_pdit_formatter():
 _register_pdit_formatter()
 del _register_pdit_formatter
 """
-        self._execute_silent(formatter_code)
+        await self._execute_silent(formatter_code)
 
     def _parse_script(self, script: str) -> list[dict]:
         """Parse Python script into statement dicts using AST."""
@@ -150,7 +167,7 @@ del _register_pdit_formatter
 
         return output
 
-    def _execute_code(self, code: str) -> list[dict]:
+    async def _execute_code(self, code: str) -> list[dict]:
         """Execute code in kernel and collect output."""
         if self.kc is None:
             return [{"type": "error", "content": "Kernel not started"}]
@@ -161,7 +178,7 @@ del _register_pdit_formatter
 
         # Collect output messages (no timeout - code can run indefinitely)
         while True:
-            msg = self.kc.get_iopub_msg()
+            msg = await self.kc.get_iopub_msg()
 
             # Only process messages for our execution
             if msg['parent_header'].get('msg_id') != msg_id:
@@ -201,12 +218,12 @@ del _register_pdit_formatter
         """Check whether output contains an error."""
         return any(item["type"] == "error" for item in output)
 
-    def execute_script(
+    async def execute_script(
         self,
         script: str,
         line_range: tuple[int, int] | None = None,
         script_name: str | None = None
-    ) -> Generator[dict, None, None]:
+    ) -> AsyncGenerator[dict, None]:
         """Execute Python script, yielding event dicts as each statement completes.
 
         Yields:
@@ -214,6 +231,9 @@ del _register_pdit_formatter
             Then for each statement: {"lineStart": N, "lineEnd": N, "output": [...], "isInvisible": bool}
             On error during execution, the final result dict will have output with type="error"
         """
+        # Wait for kernel to be ready
+        await self.wait_ready()
+
         # Parse script
         try:
             statements = self._parse_script(script)
@@ -260,9 +280,9 @@ del _register_pdit_formatter
                     value = ast.literal_eval(stmt["source"])
                     output = [{"type": "text/markdown", "content": str(value).strip()}]
                 except (ValueError, SyntaxError):
-                    output = self._execute_code(stmt["source"])
+                    output = await self._execute_code(stmt["source"])
             else:
-                output = self._execute_code(stmt["source"])
+                output = await self._execute_code(stmt["source"])
 
             yield {
                 "lineStart": stmt["lineStart"],
@@ -274,34 +294,57 @@ del _register_pdit_formatter
             if self._has_error(output):
                 break
 
-    def reset(self) -> None:
+    async def reset(self) -> None:
         """Reset the kernel (restart it)."""
+        # Wait for startup to complete first
+        await self.wait_ready()
         if self.km:
-            self.km.restart_kernel()
             if self.kc:
                 self.kc.stop_channels()
+            await self.km.restart_kernel()
             self.kc = self.km.client()
             self.kc.start_channels()
-            self.kc.wait_for_ready(timeout=30)
-            # Re-register display formatters after restart
-            self._register_display_formatters()
+            await self.kc.wait_for_ready(timeout=30)
+            await self._drain_iopub()
+            await self._register_display_formatters()
 
-    def interrupt(self) -> None:
+    async def _drain_iopub(self) -> None:
+        """Drain any pending messages from iopub channel."""
+        if self.kc is None:
+            return
+        while True:
+            try:
+                await asyncio.wait_for(self.kc.get_iopub_msg(), timeout=0.1)
+            except asyncio.TimeoutError:
+                break
+
+    async def interrupt(self) -> None:
         """Send an interrupt signal to the kernel."""
         if self.km:
-            self.km.interrupt_kernel()
+            await self.km.interrupt_kernel()
 
-    def shutdown(self) -> None:
+    async def shutdown(self) -> None:
         """Shutdown the kernel."""
+        # Cancel startup if still in progress
+        if self._startup_task and not self._startup_task.done():
+            self._startup_task.cancel()
+            try:
+                await self._startup_task
+            except asyncio.CancelledError:
+                pass
+        self._startup_task = None
+
         if self.kc:
             self.kc.stop_channels()
+            self.kc = None
         if self.km:
-            self.km.shutdown_kernel(now=True)
-
-    def __del__(self):
-        """Cleanup on deletion."""
-        try:
-            self.shutdown()
-        except Exception as e:
-            # Suppress exceptions during cleanup to avoid issues during interpreter shutdown
-            logger.debug(f"Exception during executor cleanup: {e}")
+            try:
+                # shutdown_kernel can hang with async client, so add timeout
+                await asyncio.wait_for(self.km.shutdown_kernel(now=True), timeout=5)
+            except asyncio.TimeoutError:
+                # Force kill the kernel process if shutdown hangs
+                if self.km.has_kernel:
+                    self.km.kernel.kill()
+            except Exception:
+                pass
+            self.km = None
