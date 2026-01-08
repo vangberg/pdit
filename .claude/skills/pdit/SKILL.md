@@ -1,6 +1,6 @@
 ---
 name: pdit
-description: "Collaborate with users running pdit, an interactive Python editor with inline execution results. Use when user mentions pdit, runs 'uv run pdit', or is doing collaborative Python development where they see live execution output in a browser."
+description: "Collaborate with users running pdit, an interactive Python editor with inline execution results. Use when user mentions pdit, runs 'pdit', or is doing collaborative Python development where they see live execution output in a browser."
 ---
 
 # pdit Collaboration
@@ -12,20 +12,8 @@ split-pane interface: code editor (left) and streaming execution results (right)
 
 **Starting pdit:**
 
-pdit runs using `uv run --with` so it's available without modifying the project:
-
 ```bash
-uv run --with git+https://github.com/vangberg/pdit@dist pdit script.py
-```
-
-**Note:** The `@dist` branch contains pre-built frontend assets, so no Node.js or build step is needed.
-
-**Upgrading pdit:**
-
-Since pdit is run with `--with`, it will fetch the latest version each time. To force a fresh fetch:
-
-```bash
-uv cache clean pdit
+pdit script.py
 ```
 
 **IMPORTANT: Run with `run_in_background: true` in the Bash tool so you can continue editing.**
@@ -40,7 +28,7 @@ Server runs on `localhost:8888`, browser opens automatically.
 **Exporting to HTML:**
 
 ```bash
-uv run --with git+https://github.com/vangberg/pdit@dist pdit --export script.py
+pdit --export script.py
 ```
 
 This executes the script and generates `script.html` - a self-contained HTML file that can be opened in any browser without a server.
