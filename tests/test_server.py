@@ -483,6 +483,281 @@ class TestSaveFileEndpoint:
 # Integration testing of the SSE endpoint should be done with a real browser or httpx.
 
 
+class TestWebSocketEndpoint:
+    """Tests for /ws/session WebSocket endpoint."""
+
+    session_id = str(uuid.uuid4())
+
+    @classmethod
+    def teardown_class(cls):
+        """Clean up the session after all tests in class."""
+        if HAS_FASTAPI:
+            delete_session(cls.session_id)
+
+    def test_websocket_connect_disconnect(self):
+        """Test WebSocket connection and session cleanup."""
+        if not HAS_FASTAPI:
+            return
+
+        test_session = str(uuid.uuid4())
+        with client.websocket_connect(f"/ws/session?sessionId={test_session}") as ws:
+            # Connection established - session should exist now
+            pass
+        # After disconnect, session should be cleaned up
+        # (we can't easily verify this without accessing _sessions, but it shouldn't error)
+
+    def test_websocket_execute_simple(self):
+        """Test code execution via WebSocket."""
+        if not HAS_FASTAPI:
+            return
+
+        with client.websocket_connect(f"/ws/session?sessionId={self.session_id}") as ws:
+            # Send execute message
+            ws.send_json({
+                "type": "execute",
+                "script": "2 + 2"
+            })
+
+            # Should receive expressions event first
+            msg = ws.receive_json()
+            assert msg["type"] == "expressions"
+            assert len(msg["expressions"]) == 1
+
+            # Then result
+            msg = ws.receive_json()
+            assert "lineStart" in msg
+            assert "output" in msg
+            assert "4" in msg["output"][0]["content"]
+
+            # Then complete
+            msg = ws.receive_json()
+            assert msg["type"] == "complete"
+
+    def test_websocket_execute_multiple_statements(self):
+        """Test executing multiple statements via WebSocket."""
+        if not HAS_FASTAPI:
+            return
+
+        with client.websocket_connect(f"/ws/session?sessionId={self.session_id}") as ws:
+            ws.send_json({
+                "type": "execute",
+                "script": "a = 1\nb = 2\na + b"
+            })
+
+            # Expressions event
+            msg = ws.receive_json()
+            assert msg["type"] == "expressions"
+            assert len(msg["expressions"]) == 3
+
+            # Three results
+            results = []
+            for _ in range(3):
+                msg = ws.receive_json()
+                results.append(msg)
+
+            # Complete
+            msg = ws.receive_json()
+            assert msg["type"] == "complete"
+
+            # Verify results
+            assert results[0]["isInvisible"] is True
+            assert results[1]["isInvisible"] is True
+            assert results[2]["isInvisible"] is False
+            assert "3" in results[2]["output"][0]["content"]
+
+    def test_websocket_execute_with_error(self):
+        """Test that errors are captured via WebSocket."""
+        if not HAS_FASTAPI:
+            return
+
+        test_session = str(uuid.uuid4())
+        try:
+            with client.websocket_connect(f"/ws/session?sessionId={test_session}") as ws:
+                ws.send_json({
+                    "type": "execute",
+                    "script": "1 / 0"
+                })
+
+                # Expressions
+                msg = ws.receive_json()
+                assert msg["type"] == "expressions"
+
+                # Result with error
+                msg = ws.receive_json()
+                assert len(msg["output"]) == 1
+                assert msg["output"][0]["type"] == "error"
+                assert "ZeroDivisionError" in msg["output"][0]["content"]
+
+                # Complete
+                msg = ws.receive_json()
+                assert msg["type"] == "complete"
+        finally:
+            delete_session(test_session)
+
+    def test_websocket_busy_rejection(self):
+        """Test that concurrent executions are rejected with busy."""
+        if not HAS_FASTAPI:
+            return
+
+        import time
+        import threading
+
+        test_session = str(uuid.uuid4())
+        received_busy = threading.Event()
+        test_passed = [False]
+
+        try:
+            with client.websocket_connect(f"/ws/session?sessionId={test_session}") as ws:
+                # Use exec to avoid multi-statement which sends results immediately
+                ws.send_json({
+                    "type": "execute",
+                    "script": "exec('import time\\ntime.sleep(10)')"
+                })
+
+                # Wait for execution to start
+                msg = ws.receive_json()
+                assert msg.get("type") == "expressions"
+
+                # Now try to send another execution while the first is running
+                # We need to send it quickly before exec completes
+                ws.send_json({
+                    "type": "execute",
+                    "script": "1 + 1"
+                })
+
+                # Collect messages - we should get busy for the second request
+                messages = []
+                interrupt_sent = False
+                for _ in range(10):  # Limit iterations
+                    msg = ws.receive_json()
+                    messages.append(msg)
+                    if msg.get("type") == "busy":
+                        test_passed[0] = True
+                        if not interrupt_sent:
+                            ws.send_json({"type": "interrupt"})
+                            interrupt_sent = True
+                    if msg.get("type") == "complete":
+                        break
+
+                assert test_passed[0], f"Expected busy message, got: {messages}"
+        finally:
+            delete_session(test_session)
+
+    def test_websocket_interrupt(self):
+        """Test interrupt via WebSocket."""
+        if not HAS_FASTAPI:
+            return
+
+        import time
+        import threading
+
+        test_session = str(uuid.uuid4())
+        try:
+            with client.websocket_connect(f"/ws/session?sessionId={test_session}") as ws:
+                # Use exec to make it a single statement that sleeps
+                ws.send_json({
+                    "type": "execute",
+                    "script": "exec('import time\\ntime.sleep(30)')"
+                })
+
+                # Receive expressions
+                msg = ws.receive_json()
+                assert msg.get("type") == "expressions"
+
+                # Wait a bit then interrupt
+                time.sleep(0.5)
+                ws.send_json({"type": "interrupt"})
+
+                # Collect all messages until complete
+                messages = []
+                while True:
+                    msg = ws.receive_json()
+                    messages.append(msg)
+                    if msg.get("type") == "complete":
+                        break
+
+                # Should have KeyboardInterrupt in one of the result messages
+                has_interrupt = any(
+                    "KeyboardInterrupt" in str(out.get("content", ""))
+                    for m in messages
+                    for out in m.get("output", [])
+                )
+                assert has_interrupt, f"Expected KeyboardInterrupt, got: {messages}"
+        finally:
+            delete_session(test_session)
+
+    def test_websocket_reset(self):
+        """Test reset via WebSocket."""
+        if not HAS_FASTAPI:
+            return
+
+        test_session = str(uuid.uuid4())
+        try:
+            with client.websocket_connect(f"/ws/session?sessionId={test_session}") as ws:
+                # Set a variable
+                ws.send_json({
+                    "type": "execute",
+                    "script": "ws_test_var = 42"
+                })
+                # Drain events until complete
+                while True:
+                    msg = ws.receive_json()
+                    if msg.get("type") == "complete":
+                        break
+
+                # Reset
+                ws.send_json({"type": "reset"})
+
+                # Try to use the variable - should fail
+                ws.send_json({
+                    "type": "execute",
+                    "script": "try:\n    ws_test_var\nexcept NameError:\n    print('cleared')"
+                })
+
+                # Drain to complete and check output
+                messages = []
+                while True:
+                    msg = ws.receive_json()
+                    messages.append(msg)
+                    if msg.get("type") == "complete":
+                        break
+
+                has_cleared = any(
+                    "cleared" in str(out.get("content", ""))
+                    for m in messages
+                    for out in m.get("output", [])
+                )
+                assert has_cleared, f"Expected 'cleared' in output, got: {messages}"
+        finally:
+            delete_session(test_session)
+
+    def test_websocket_auth(self):
+        """Test token authentication for WebSocket."""
+        if not HAS_FASTAPI:
+            return
+
+        token = "ws-test-token"
+        os.environ["PDIT_TOKEN"] = token
+        try:
+            # Without token - should fail
+            try:
+                with client.websocket_connect(f"/ws/session?sessionId=auth-test") as ws:
+                    # If we get here, auth didn't work
+                    pass
+                assert False, "Expected WebSocket to reject without token"
+            except Exception:
+                pass  # Expected - connection should fail
+
+            # With token - should work
+            with client.websocket_connect(f"/ws/session?sessionId=auth-test&token={token}") as ws:
+                ws.send_json({"type": "execute", "script": "1 + 1"})
+                msg = ws.receive_json()
+                assert msg["type"] == "expressions"
+        finally:
+            os.environ.pop("PDIT_TOKEN", None)
+            delete_session("auth-test")
+
+
 if __name__ == "__main__":
     """Run tests without pytest for development."""
     import sys

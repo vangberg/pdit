@@ -1,5 +1,9 @@
-import { useEffect, useState, useRef, useMemo } from "react";
-import { addAuthHeaders, withAuthQuery } from "./api-auth";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import {
+  WebSocketClient,
+  ConnectionState,
+  ServerMessage,
+} from "./websocket-client";
 
 interface UseScriptFileOptions {
   onFileChange?: (newContent: string) => void; // Callback when file changes (enables watching)
@@ -9,22 +13,22 @@ interface UseScriptFileResult {
   code: string | null; // Initial code (from load)
   diskContent: string | null; // Latest content from disk
   isLoading: boolean; // Loading initial file
-  isWatching: boolean; // SSE connection active
+  connectionState: ConnectionState; // WebSocket connection state
   error: Error | null; // Any errors
   sessionId: string; // Unique session ID for this page load
+  wsClient: WebSocketClient | null; // WebSocket client for execution
 }
 
 /**
  * Hook to load a script file and optionally watch for changes.
  *
- * Uses the unified /api/watch-file endpoint which sends initial content
- * via SSE, then streams file changes. This eliminates the need for a
- * separate /api/read-file endpoint.
+ * Uses a unified WebSocket connection for file watching and code execution.
+ * The WebSocket connection lifecycle is tied to the session.
  *
  * @param scriptPath - Absolute path to the script file (from URL query param)
  * @param defaultCode - Default code to use if no script path provided or on error
  * @param options - Optional configuration (provide onFileChange to enable watching)
- * @returns Object with code content, disk content, loading state, watching state, and error
+ * @returns Object with code content, disk content, loading state, connection state, error, and WebSocket client
  */
 export function useScriptFile(
   scriptPath: string | null,
@@ -32,7 +36,6 @@ export function useScriptFile(
   options: UseScriptFileOptions = {}
 ): UseScriptFileResult {
   const { onFileChange } = options;
-  const watchForChanges = !!onFileChange;
 
   // Generate stable session ID once on hook init
   const sessionId = useMemo(() => crypto.randomUUID(), []);
@@ -40,119 +43,129 @@ export function useScriptFile(
   const [code, setCode] = useState<string | null>(null);
   const [diskContent, setDiskContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isWatching, setIsWatching] = useState(false);
+  const [connectionState, setConnectionState] =
+    useState<ConnectionState>("disconnected");
   const [error, setError] = useState<Error | null>(null);
+  const [wsClient, setWsClient] = useState<WebSocketClient | null>(null);
 
-  const eventSourceRef = useRef<EventSource | null>(null);
   const hasReceivedInitialContent = useRef(false);
   const onFileChangeRef = useRef(onFileChange);
+  const scriptPathRef = useRef(scriptPath);
+  const watchRequestSent = useRef(false);
 
-  // Keep callback ref up to date
+  // Keep refs up to date
   useEffect(() => {
     onFileChangeRef.current = onFileChange;
   }, [onFileChange]);
 
-  // Single effect for both loading AND watching
   useEffect(() => {
-    // Initialize session to start kernel immediately (all modes)
-    fetch("/api/init-session", {
-      method: "POST",
-      headers: addAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ sessionId }),
-    }).catch((err) => console.error("Failed to init session:", err));
+    scriptPathRef.current = scriptPath;
+    watchRequestSent.current = false; // Reset when path changes
+  }, [scriptPath]);
 
-    // No script path → use default (scratchpad mode)
+  // Handle WebSocket messages
+  const handleMessage = useCallback((msg: ServerMessage) => {
+    if (msg.type === "initial") {
+      console.log("Received initial file content");
+      setCode(msg.content);
+      setDiskContent(msg.content);
+      setIsLoading(false);
+      hasReceivedInitialContent.current = true;
+    } else if (msg.type === "fileChanged") {
+      console.log("File changed on disk");
+      setDiskContent(msg.content);
+      if (onFileChangeRef.current) {
+        onFileChangeRef.current(msg.content);
+      }
+    } else if (msg.type === "fileDeleted") {
+      setError(new Error("File was deleted"));
+    } else if (msg.type === "error") {
+      // Only handle file-related errors, not execution errors
+      if (!hasReceivedInitialContent.current) {
+        setError(new Error(msg.message));
+        setIsLoading(false);
+      }
+    }
+  }, []);
+
+  // Handle connection state changes
+  const handleConnectionChange = useCallback((state: ConnectionState) => {
+    setConnectionState(state);
+
+    if (state === "disconnected" && !hasReceivedInitialContent.current) {
+      setError(new Error("Failed to connect to server"));
+      setIsLoading(false);
+    }
+
+    // When reconnected, re-send watch request
+    if (state === "connected") {
+      watchRequestSent.current = false;
+    }
+  }, []);
+
+  // Single effect for WebSocket connection
+  useEffect(() => {
+    // Reset state
+    hasReceivedInitialContent.current = false;
+    watchRequestSent.current = false;
+    setError(null);
+
+    // No script path -> use default (scratchpad mode)
     if (!scriptPath) {
       setCode(defaultCode);
       setDiskContent(defaultCode);
       setIsLoading(false);
-      return;
+    } else {
+      setIsLoading(true);
     }
 
-    // Reset state for new path
-    hasReceivedInitialContent.current = false;
-    setIsLoading(true);
-    setError(null);
+    // Create WebSocket client
+    const client = new WebSocketClient({
+      sessionId,
+      onConnectionChange: handleConnectionChange,
+      onMessage: handleMessage,
+    });
 
-    try {
-      // Create EventSource - handles both initial load AND watching!
-      const eventSource = new EventSource(
-        withAuthQuery(
-          `/api/watch-file?path=${encodeURIComponent(scriptPath)}&sessionId=${encodeURIComponent(sessionId)}`
-        )
-      );
+    setWsClient(client);
+    client.connect();
 
-      eventSourceRef.current = eventSource;
-
-      eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-
-        if (data.type === "initial") {
-          // First event - initial file content
-          console.log("Received initial file content");
-          setCode(data.content);
-          setDiskContent(data.content);
-          setIsLoading(false);
-          hasReceivedInitialContent.current = true;
-
-          // If not watching, close connection after initial load
-          if (!watchForChanges) {
-            eventSource.close();
-          }
-        } else if (data.type === "fileChanged") {
-          // Subsequent events - file was modified
-          console.log("File changed on disk");
-          setDiskContent(data.content);
-          if (onFileChangeRef.current) {
-            onFileChangeRef.current(data.content);
-          }
-        } else if (data.type === "fileDeleted") {
-          setError(new Error("File was deleted"));
-          eventSource.close();
-        } else if (data.type === "error") {
-          setError(new Error(data.message));
-          setIsLoading(false);
-          eventSource.close();
-        }
-      };
-
-      eventSource.onerror = (err) => {
-        console.error("EventSource error:", err);
-
-        // Close the connection to prevent automatic reconnection
-        eventSource.close();
-
-        // Only set error if we haven't received initial content yet
-        if (!hasReceivedInitialContent.current) {
-          setError(new Error("Failed to load file"));
-          setIsLoading(false);
-        } else {
-          setError(new Error("Connection to file watcher lost"));
-        }
-        setIsWatching(false);
-      };
-
-      eventSource.onopen = () => {
-        console.log("EventSource connection opened");
-        setIsWatching(watchForChanges);
-      };
-    } catch (err) {
-      console.error("Error setting up file watcher:", err);
-      const error = err instanceof Error ? err : new Error(String(err));
-      setError(error);
-      setIsLoading(false);
-      setIsWatching(false);
-    }
-
-    // Cleanup: close EventSource on unmount or path change
+    // Cleanup: close WebSocket on unmount
     return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
-        setIsWatching(false);
-      }
+      client.close();
+      setWsClient(null);
     };
-  }, [scriptPath, defaultCode, watchForChanges, sessionId]);
+  }, [sessionId, defaultCode, handleMessage, handleConnectionChange]);
 
-  return { code, diskContent, isLoading, isWatching, error, sessionId };
+  // Send watch request when connected and we have a path
+  useEffect(() => {
+    if (
+      wsClient?.isConnected &&
+      scriptPath &&
+      !watchRequestSent.current &&
+      !hasReceivedInitialContent.current
+    ) {
+      watchRequestSent.current = true;
+      wsClient.send({ type: "watch", path: scriptPath });
+    }
+  }, [connectionState, scriptPath, wsClient]);
+
+  // Handle scriptPath changes after initial connection
+  useEffect(() => {
+    if (wsClient?.isConnected && scriptPath) {
+      hasReceivedInitialContent.current = false;
+      watchRequestSent.current = false;
+      setIsLoading(true);
+      setError(null);
+    }
+  }, [scriptPath]);
+
+  return {
+    code,
+    diskContent,
+    isLoading,
+    connectionState,
+    error,
+    sessionId,
+    wsClient,
+  };
 }

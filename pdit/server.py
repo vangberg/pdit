@@ -13,10 +13,10 @@ import asyncio
 import os
 import threading
 from contextlib import asynccontextmanager
-from dataclasses import asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
@@ -26,25 +26,44 @@ from .ipython_executor import IPythonExecutor
 from .sse import format_sse
 from .file_watcher import FileWatcher
 
-# Global shutdown event for SSE connections (threading.Event works across threads)
+# Global shutdown event for SSE/WebSocket connections (threading.Event works across threads)
 shutdown_event = threading.Event()
 
-# Session registry: maps session_id -> IPythonExecutor
-_sessions: dict[str, IPythonExecutor] = {}
+
+@dataclass
+class Session:
+    """Represents a session with an IPython executor and state tracking."""
+    executor: IPythonExecutor
+    is_executing: bool = False
+    lock: threading.Lock = field(default_factory=threading.Lock)
+    file_watcher_task: Optional[asyncio.Task] = None
+    watcher_stop_event: Optional[threading.Event] = None
 
 
-def get_or_create_session(session_id: str) -> IPythonExecutor:
-    """Get existing session or create a new one lazily."""
-    if session_id not in _sessions:
-        _sessions[session_id] = IPythonExecutor()
-    return _sessions[session_id]
+# Session registry: maps session_id -> Session
+_sessions: dict[str, Session] = {}
+_sessions_lock = threading.Lock()  # Thread-safe session creation/deletion
+
+
+def get_or_create_session(session_id: str) -> Session:
+    """Get existing session or create a new one lazily (thread-safe)."""
+    with _sessions_lock:
+        if session_id not in _sessions:
+            _sessions[session_id] = Session(executor=IPythonExecutor())
+        return _sessions[session_id]
 
 
 def delete_session(session_id: str) -> None:
-    """Delete a session if it exists, shutting down its kernel."""
-    if session_id in _sessions:
-        executor = _sessions.pop(session_id)
-        executor.shutdown()
+    """Delete a session if it exists, shutting down its kernel (thread-safe)."""
+    with _sessions_lock:
+        if session_id in _sessions:
+            session = _sessions.pop(session_id)
+            # Stop file watcher if running
+            if session.watcher_stop_event:
+                session.watcher_stop_event.set()
+            if session.file_watcher_task:
+                session.file_watcher_task.cancel()
+            session.executor.shutdown()
 
 
 def shutdown_all_sessions() -> None:
@@ -174,9 +193,9 @@ async def execute_script(request: Request):
         line_range = (lr["from"], lr["to"])
     reset = body.get("reset", False)
 
-    executor = get_or_create_session(session_id)
+    session = get_or_create_session(session_id)
     if reset:
-        executor.reset()
+        session.executor.reset()
 
     async def generate_events():
         expressions: list[dict] = []
@@ -192,7 +211,7 @@ async def execute_script(request: Request):
                 return _DONE
 
         try:
-            gen = executor.execute_script(script, line_range, script_name)
+            gen = session.executor.execute_script(script, line_range, script_name)
             while True:
                 event = await asyncio.to_thread(next_event, gen)
                 if event is _DONE:
@@ -220,7 +239,7 @@ async def execute_script(request: Request):
         finally:
             # Interrupt kernel if client disconnects mid-execution
             try:
-                executor.interrupt()
+                session.executor.interrupt()
             except Exception:
                 pass
 
@@ -243,8 +262,8 @@ async def reset(request: ResetRequest):
     Returns:
         Status OK
     """
-    executor = get_or_create_session(request.sessionId)
-    executor.reset()
+    session = get_or_create_session(request.sessionId)
+    session.executor.reset()
     return {"status": "ok"}
 
 
@@ -263,8 +282,8 @@ async def interrupt(request: InterruptRequest):
     Returns:
         Status OK
     """
-    executor = get_or_create_session(request.sessionId)
-    executor.interrupt()
+    session = get_or_create_session(request.sessionId)
+    session.executor.interrupt()
     return {"status": "ok"}
 
 
@@ -322,6 +341,191 @@ async def watch_file(path: str, sessionId: str):
             "X-Accel-Buffering": "no",
         }
     )
+
+
+# WebSocket endpoint for unified session communication
+@app.websocket("/ws/session")
+async def websocket_session(websocket: WebSocket, sessionId: str, token: Optional[str] = None):
+    """Unified WebSocket endpoint for file watching and code execution.
+
+    This replaces the separate SSE endpoints with a single bidirectional connection.
+    The WebSocket connection lifecycle is tied to the session - when the connection
+    closes, the session is cleaned up.
+
+    Query Parameters:
+        sessionId: Unique session identifier
+        token: Optional authentication token (required if PDIT_TOKEN env var is set)
+
+    Message Protocol (Client -> Server):
+        {"type": "watch", "path": "/absolute/path.py"}
+        {"type": "execute", "script": "...", "lineRange?": {"from": N, "to": N}, "scriptName?": "...", "reset?": false}
+        {"type": "interrupt"}
+        {"type": "reset"}
+
+    Message Protocol (Server -> Client):
+        File events: {"type": "initial/fileChanged/fileDeleted", "path": "...", "content": "...", "timestamp": N}
+        Execution: {"type": "expressions/result/cancelled/complete/busy", ...}
+        Errors: {"type": "error", "message": "..."}
+    """
+    # Validate token if configured
+    expected_token = os.environ.get("PDIT_TOKEN")
+    if expected_token and token != expected_token:
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
+
+    await websocket.accept()
+
+    session = get_or_create_session(sessionId)
+    execute_task: Optional[asyncio.Task] = None
+
+    try:
+        while True:
+            # Check for server shutdown
+            if shutdown_event.is_set():
+                break
+
+            data = await websocket.receive_json()
+            msg_type = data.get("type")
+
+            if msg_type == "watch":
+                await _handle_ws_watch(websocket, session, data.get("path", ""))
+
+            elif msg_type == "execute":
+                # Run execution in background so we can process interrupt/reset
+                if execute_task is not None and not execute_task.done():
+                    # Already executing - send busy
+                    await websocket.send_json({"type": "busy"})
+                else:
+                    execute_task = asyncio.create_task(
+                        _handle_ws_execute(websocket, session, data)
+                    )
+
+            elif msg_type == "interrupt":
+                session.executor.interrupt()
+
+            elif msg_type == "reset":
+                session.executor.reset()
+
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        try:
+            await websocket.send_json({"type": "error", "message": str(e)})
+        except Exception:
+            pass
+    finally:
+        # Cancel any running execution task
+        if execute_task is not None and not execute_task.done():
+            execute_task.cancel()
+            try:
+                await execute_task
+            except asyncio.CancelledError:
+                pass
+        # Clean up session when WebSocket closes
+        delete_session(sessionId)
+
+
+async def _handle_ws_watch(websocket: WebSocket, session: Session, path: str) -> None:
+    """Handle file watch request over WebSocket."""
+    # Stop existing watcher if any
+    if session.watcher_stop_event:
+        session.watcher_stop_event.set()
+    if session.file_watcher_task:
+        session.file_watcher_task.cancel()
+        try:
+            await session.file_watcher_task
+        except asyncio.CancelledError:
+            pass
+
+    # Create new watcher
+    session.watcher_stop_event = threading.Event()
+    watcher = FileWatcher(path, stop_event=session.watcher_stop_event)
+
+    async def watch_loop():
+        try:
+            async for event in watcher.watch_with_initial():
+                if shutdown_event.is_set():
+                    break
+                await websocket.send_json(asdict(event))
+                if event.type in ("fileDeleted", "error"):
+                    break
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            pass  # Connection may have closed
+
+    session.file_watcher_task = asyncio.create_task(watch_loop())
+
+
+async def _handle_ws_execute(websocket: WebSocket, session: Session, data: dict) -> None:
+    """Handle code execution request over WebSocket with busy detection."""
+    # Check if already executing
+    with session.lock:
+        if session.is_executing:
+            await websocket.send_json({"type": "busy"})
+            return
+        session.is_executing = True
+
+    try:
+        script = data.get("script", "")
+        script_name = data.get("scriptName")
+        line_range = None
+        if lr := data.get("lineRange"):
+            line_range = (lr["from"], lr["to"])
+
+        if data.get("reset"):
+            session.executor.reset()
+
+        # Track expressions for cancelled handling
+        expressions: list[dict] = []
+        executed_count = 0
+
+        # Sentinel to detect StopIteration
+        _DONE = object()
+
+        def next_event(gen):
+            try:
+                return next(gen)
+            except StopIteration:
+                return _DONE
+
+        gen = session.executor.execute_script(script, line_range, script_name)
+
+        while True:
+            event = await asyncio.to_thread(next_event, gen)
+            if event is _DONE:
+                await websocket.send_json({"type": "complete"})
+                break
+
+            # Add type field to result messages (executor yields without type)
+            if "output" in event and "type" not in event:
+                event = {"type": "result", **event}
+
+            # Send event to client
+            await websocket.send_json(event)
+
+            # Track expressions for cancelled handling
+            if event.get("type") == "expressions":
+                expressions = event["expressions"]
+                executed_count = 0
+            elif event.get("type") == "result":
+                executed_count += 1
+                if is_error_result(event):
+                    remaining = expressions[executed_count:]
+                    if remaining:
+                        await websocket.send_json({"type": "cancelled", "expressions": remaining})
+                    await websocket.send_json({"type": "complete"})
+                    break
+
+    except WebSocketDisconnect:
+        # Client disconnected, interrupt execution
+        session.executor.interrupt()
+        raise
+    except Exception as e:
+        await websocket.send_json({"type": "error", "message": str(e)})
+    finally:
+        with session.lock:
+            session.is_executing = False
 
 
 @app.get("/api/read-file", response_model=ReadFileResponse)

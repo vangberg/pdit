@@ -1,6 +1,6 @@
 /**
  * Main execution interface for Python code.
- * Uses Python server backend for local execution with SSE streaming.
+ * Uses Python server backend for local execution with WebSocket streaming.
  */
 
 import { PythonServerBackend } from './execution-backend-python';
@@ -8,7 +8,8 @@ import { PythonServerBackend } from './execution-backend-python';
 // Re-export types from backend
 export type { OutputItem, Expression, ExpressionResult, ExecutionEvent, ExpressionState } from './execution-backend-python';
 
-const backend = new PythonServerBackend();
+// Singleton backend instance - call setWebSocketClient to configure
+export const backend = new PythonServerBackend();
 
 /**
  * Execute Python code using the server backend.
