@@ -250,7 +250,12 @@ function RunButton({
         onMouseLeave={() => setHoveredPart(null)}
       >
         {icon}
-        <span className="top-bar-label">{label}</span>
+        <span className="top-bar-label top-bar-run-label">
+          <span className="top-bar-run-label-text">{label}</span>
+          <span className="top-bar-run-label-measure" aria-hidden="true">
+            RUN CURRENT
+          </span>
+        </span>
       </button>
       {hoveredPart === "main" && tooltip && <Tooltip text={tooltip} />}
       

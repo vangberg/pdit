@@ -913,6 +913,18 @@ h1 {
   height: 32px;
 }
 
+.top-bar-run-label {
+  display: inline-grid;
+}
+
+.top-bar-run-label > span {
+  grid-area: 1 / 1;
+}
+
+.top-bar-run-label-measure {
+  visibility: hidden;
+}
+
 .top-bar-split-button-arrow {
   background: transparent;
   color: #e5e7eb;
