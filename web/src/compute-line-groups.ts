@@ -1,6 +1,6 @@
 import { Expression } from "./execution";
 
-export type LineGroupState = 'pending' | 'executing' | 'done';
+export type LineGroupState = 'pending' | 'executing' | 'done' | 'cancelled';
 
 export interface LineGroup {
   id: string;
@@ -104,15 +104,20 @@ export function computeLineGroups(results: Expression[]): LineGroup[] {
 
       // Compute group state from expression states:
       // - Any executing → executing
+      // - Any cancelled → cancelled (takes precedence over pending/done)
+      // - Any pending → pending
       // - All done → done
-      // - Otherwise → pending
       let groupState: LineGroupState = 'done';
       for (const result of groupResults) {
         if (result.state === 'executing') {
           groupState = 'executing';
           break;
         }
-        if (result.state === 'pending') {
+        if (result.state === 'cancelled') {
+          groupState = 'cancelled';
+          // Don't break - executing takes precedence
+        }
+        if (result.state === 'pending' && groupState !== 'cancelled') {
           groupState = 'pending';
         }
       }

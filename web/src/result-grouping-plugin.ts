@@ -417,10 +417,12 @@ function mergeSnappedRanges(
       const mergedAllInvisible = current.value.allInvisible && next.value.allInvisible;
       const mergedHasError = current.value.hasError || next.value.hasError;
 
-      // Merged state: any executing → executing, any pending → pending, otherwise done
+      // Merged state: any executing → executing, any cancelled → cancelled, any pending → pending, otherwise done
       let mergedState: LineGroupState = 'done';
       if (current.value.state === 'executing' || next.value.state === 'executing') {
         mergedState = 'executing';
+      } else if (current.value.state === 'cancelled' || next.value.state === 'cancelled') {
+        mergedState = 'cancelled';
       } else if (current.value.state === 'pending' || next.value.state === 'pending') {
         mergedState = 'pending';
       }
@@ -502,7 +504,8 @@ export const lineGroupBackgroundField = StateField.define<DecorationSet>({
       const isRecent = group.resultIds.some(id => lastExecutedIds.has(id));
       const isStale = group.state === 'done' && staleGroupIds.has(group.id);
 
-      if (isStale) {
+      // Skip stale and cancelled groups - they should not show visual feedback
+      if (isStale || group.state === 'cancelled') {
         continue;
       }
 

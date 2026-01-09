@@ -245,7 +245,7 @@ export function useResults() {
         }
         if (expr.state === 'pending' || expr.state === 'executing') {
           canceledIds.add(expr.id);
-          state.expressionsByRange.set(key, { ...expr, state: 'done' });
+          state.expressionsByRange.set(key, { ...expr, state: 'cancelled' });
         }
       }
 

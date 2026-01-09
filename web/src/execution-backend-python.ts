@@ -12,7 +12,7 @@ export interface OutputItem {
   content: string;
 }
 
-export type ExpressionState = "pending" | "executing" | "done";
+export type ExpressionState = "pending" | "executing" | "done" | "cancelled";
 
 export interface Expression {
   id: number;
