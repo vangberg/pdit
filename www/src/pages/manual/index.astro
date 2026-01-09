@@ -1,0 +1,69 @@
+---
+import ManualLayout from '../../layouts/ManualLayout.astro';
+---
+
+<ManualLayout title="Manual" description="pdit user manual and documentation">
+  <h1>Getting Started</h1>
+
+  <p>
+    pdit is an interactive Python editor that displays execution results inline,
+    right next to the code that produced them. It's designed for exploratory
+    programming, data analysis, and learning Python.
+  </p>
+
+  <h2>Installation</h2>
+
+  <p>Install pdit using pip:</p>
+
+  <pre><code>pip install pdit</code></pre>
+
+  <p>Or with uv:</p>
+
+  <pre><code>uv pip install pdit</code></pre>
+
+  <h2>Quick Start</h2>
+
+  <p>Create a Python file and run it with pdit:</p>
+
+  <pre><code># example.py
+import pandas as pd
+
+df = pd.DataFrame({'{'}
+    'name': ['Alice', 'Bob', 'Charlie'],
+    'age': [25, 30, 35]
+{'}'})
+
+df</code></pre>
+
+  <pre><code>pdit example.py</code></pre>
+
+  <p>
+    This opens your default browser with the pdit interface. Press
+    <code>Cmd+Enter</code> (or <code>Ctrl+Enter</code>) to execute the code.
+  </p>
+
+  <h2>How It Works</h2>
+
+  <p>
+    pdit parses your Python code into individual statements using Python's AST
+    module. Each statement is executed in an IPython kernel, and the results are
+    streamed back to the browser in real-time.
+  </p>
+
+  <p>Results are grouped by the lines of code that produced them:</p>
+
+  <ul>
+    <li><strong>Standard output</strong> appears as plain text</li>
+    <li><strong>Return values</strong> are displayed with syntax highlighting</li>
+    <li><strong>DataFrames</strong> render as scrollable tables</li>
+    <li><strong>Plots</strong> appear as inline images</li>
+    <li><strong>Errors</strong> are shown with full tracebacks</li>
+  </ul>
+
+  <h2>Next Steps</h2>
+
+  <p>
+    Explore the sidebar to learn more about pdit's features, keyboard shortcuts,
+    and common workflows.
+  </p>
+</ManualLayout>

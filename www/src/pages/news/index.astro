@@ -1,0 +1,112 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+// For now, we'll define posts manually. In the future, this could use content collections.
+const posts = [
+  {
+    title: 'Introducing pdit',
+    slug: 'introducing-pdit',
+    date: '2024-01-15',
+    description: 'Announcing pdit, an interactive Python editor with inline execution results.',
+  },
+];
+
+const sortedPosts = posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+---
+
+<BaseLayout title="News" description="pdit news, releases, and announcements">
+  <div class="news-index container">
+    <header class="news-header">
+      <h1>News</h1>
+      <p class="text-muted">Releases, updates, and announcements</p>
+    </header>
+
+    <div class="posts-list">
+      {sortedPosts.map((post) => (
+        <article class="post-card">
+          <time class="post-date text-light">
+            {new Date(post.date).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+            })}
+          </time>
+          <h2>
+            <a href={`/news/${post.slug}`}>{post.title}</a>
+          </h2>
+          <p class="text-muted">{post.description}</p>
+        </article>
+      ))}
+    </div>
+
+    {posts.length === 0 && (
+      <p class="no-posts text-muted">No posts yet. Check back soon!</p>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  .news-index {
+    padding: var(--space-2xl) 0;
+    max-width: 42rem;
+  }
+
+  .news-header {
+    margin-bottom: var(--space-2xl);
+  }
+
+  .news-header h1 {
+    margin-bottom: var(--space-sm);
+  }
+
+  .news-header p {
+    margin: 0;
+  }
+
+  .posts-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+  }
+
+  .post-card {
+    padding: var(--space-lg);
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border-light);
+    border-radius: 8px;
+    transition: border-color 0.2s;
+  }
+
+  .post-card:hover {
+    border-color: var(--color-border);
+  }
+
+  .post-date {
+    display: block;
+    font-size: 0.8rem;
+    margin-bottom: var(--space-xs);
+  }
+
+  .post-card h2 {
+    font-size: 1.25rem;
+    margin-bottom: var(--space-sm);
+  }
+
+  .post-card h2 a {
+    color: var(--color-text);
+  }
+
+  .post-card h2 a:hover {
+    color: var(--color-sage-dark);
+  }
+
+  .post-card p {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+
+  .no-posts {
+    text-align: center;
+    padding: var(--space-3xl) 0;
+  }
+</style>

@@ -1,0 +1,67 @@
+---
+import NewsLayout from '../../layouts/NewsLayout.astro';
+---
+
+<NewsLayout
+  title="Introducing pdit"
+  date="2024-01-15"
+  description="Announcing pdit, an interactive Python editor with inline execution results."
+>
+  <p>
+    We're excited to introduce <strong>pdit</strong>, an interactive Python editor
+    that displays execution results inline, right next to your code.
+  </p>
+
+  <h2>Why pdit?</h2>
+
+  <p>
+    Jupyter notebooks are great for exploration, but they can feel heavy for
+    quick scripts. Traditional REPLs are fast but don't preserve your work.
+    pdit sits in between: you write regular Python files, but see results inline
+    like a notebook.
+  </p>
+
+  <h2>Key Features</h2>
+
+  <ul>
+    <li>
+      <strong>Inline results</strong> - Output appears right next to the code
+      that produced it
+    </li>
+    <li>
+      <strong>DataFrames</strong> - Pandas DataFrames render as clean tables
+    </li>
+    <li>
+      <strong>Plots</strong> - Matplotlib figures appear inline automatically
+    </li>
+    <li>
+      <strong>File watching</strong> - Edit in your favorite editor and see
+      updates in real-time
+    </li>
+    <li>
+      <strong>Export</strong> - Share your work as standalone HTML files
+    </li>
+  </ul>
+
+  <h2>Getting Started</h2>
+
+  <p>Install pdit with pip:</p>
+
+  <pre><code>pip install pdit</code></pre>
+
+  <p>Then run it on any Python file:</p>
+
+  <pre><code>pdit script.py</code></pre>
+
+  <p>
+    Check out the <a href="/manual">manual</a> for more details on installation
+    and usage.
+  </p>
+
+  <h2>What's Next</h2>
+
+  <p>
+    This is just the beginning. We're working on more features including better
+    error handling, performance improvements, and more output types. Stay tuned!
+  </p>
+</NewsLayout>

@@ -1,0 +1,219 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Home" description="pdit - Interactive Python editor with inline execution results">
+  <section class="hero">
+    <div class="container">
+      <h1 class="hero-title">pdit</h1>
+      <p class="hero-subtitle">Interactive Python editor with inline execution results</p>
+      <p class="hero-description">
+        Write Python code and see results appear inline, right next to your code.
+        Powered by IPython kernels and displayed in a clean, distraction-free interface.
+      </p>
+
+      <div class="hero-actions">
+        <a href="/manual" class="btn btn-primary">Get Started</a>
+        <a href="https://github.com/vangberg/pdit" class="btn btn-secondary">View on GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo">
+    <div class="container">
+      <div class="video-placeholder">
+        <div class="video-placeholder-inner">
+          <span class="video-icon">▶</span>
+          <p>Demo video coming soon</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="container">
+      <div class="features-grid">
+        <div class="feature">
+          <h3>Inline Results</h3>
+          <p>See execution results displayed inline, grouped by the lines of code that produced them.</p>
+        </div>
+
+        <div class="feature">
+          <h3>DataFrames</h3>
+          <p>Pandas DataFrames render as clean, scrollable tables directly in your editor.</p>
+        </div>
+
+        <div class="feature">
+          <h3>Plots & Images</h3>
+          <p>Matplotlib plots and images appear inline without any extra configuration.</p>
+        </div>
+
+        <div class="feature">
+          <h3>IPython Powered</h3>
+          <p>Full IPython kernel support with magic commands and rich output types.</p>
+        </div>
+
+        <div class="feature">
+          <h3>File Watching</h3>
+          <p>Edit files in your favorite editor and see updates in real-time.</p>
+        </div>
+
+        <div class="feature">
+          <h3>Export</h3>
+          <p>Export your scripts with results to standalone HTML files for sharing.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="install">
+    <div class="container">
+      <h2>Quick Install</h2>
+      <pre><code>pip install pdit</code></pre>
+      <p class="text-muted">Then run <code>pdit script.py</code> to get started.</p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    text-align: center;
+    padding: var(--space-3xl) 0 var(--space-2xl);
+  }
+
+  .hero-title {
+    font-family: var(--font-mono);
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--color-sage-dark);
+    margin-bottom: var(--space-sm);
+  }
+
+  .hero-subtitle {
+    font-size: 1.25rem;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-lg);
+  }
+
+  .hero-description {
+    max-width: 36rem;
+    margin: 0 auto var(--space-xl);
+    color: var(--color-text-muted);
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-block;
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary {
+    background-color: var(--color-sage);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--color-sage-dark);
+    color: white;
+  }
+
+  .btn-secondary {
+    background-color: var(--color-bg-alt);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-border-light);
+    color: var(--color-text);
+  }
+
+  .demo {
+    padding: var(--space-2xl) 0;
+  }
+
+  .video-placeholder {
+    background-color: var(--color-bg-alt);
+    border: 2px dashed var(--color-border);
+    border-radius: 12px;
+    aspect-ratio: 16 / 9;
+    max-width: 56rem;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .video-placeholder-inner {
+    text-align: center;
+    color: var(--color-text-muted);
+  }
+
+  .video-icon {
+    display: block;
+    font-size: 3rem;
+    margin-bottom: var(--space-md);
+    opacity: 0.5;
+  }
+
+  .features {
+    padding: var(--space-3xl) 0;
+    background-color: var(--color-bg-alt);
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: var(--space-xl);
+  }
+
+  .feature {
+    background-color: var(--color-bg-card);
+    padding: var(--space-lg);
+    border-radius: 8px;
+    border: 1px solid var(--color-border-light);
+  }
+
+  .feature h3 {
+    color: var(--color-sage-dark);
+    margin-bottom: var(--space-sm);
+    font-size: 1.1rem;
+  }
+
+  .feature p {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    margin: 0;
+  }
+
+  .install {
+    padding: var(--space-3xl) 0;
+    text-align: center;
+  }
+
+  .install h2 {
+    margin-bottom: var(--space-lg);
+  }
+
+  .install pre {
+    display: inline-block;
+    font-size: 1rem;
+    padding: var(--space-md) var(--space-xl);
+    background-color: var(--color-bg-alt);
+    border: 1px solid var(--color-border);
+  }
+
+  .install p {
+    margin-top: var(--space-md);
+  }
+</style>

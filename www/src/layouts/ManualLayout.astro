@@ -1,0 +1,163 @@
+---
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description } = Astro.props;
+
+const sidebar = [
+  {
+    title: 'Guide',
+    items: [
+      { title: 'Getting Started', href: '/manual' },
+      { title: 'Installation', href: '/manual/installation' },
+      { title: 'Basic Usage', href: '/manual/basic-usage' },
+      { title: 'Keyboard Shortcuts', href: '/manual/shortcuts' },
+    ],
+  },
+  {
+    title: 'Features',
+    items: [
+      { title: 'Inline Results', href: '/manual/inline-results' },
+      { title: 'DataFrames', href: '/manual/dataframes' },
+      { title: 'Plots & Images', href: '/manual/plots' },
+      { title: 'Export', href: '/manual/export' },
+    ],
+  },
+  {
+    title: 'FAQ',
+    items: [
+      { title: 'Common Questions', href: '/manual/faq' },
+      { title: 'Troubleshooting', href: '/manual/troubleshooting' },
+    ],
+  },
+];
+
+const currentPath = Astro.url.pathname;
+---
+
+<BaseLayout title={title} description={description}>
+  <div class="manual-layout container">
+    <aside class="sidebar">
+      <nav class="sidebar-nav">
+        {sidebar.map((group) => (
+          <div class="sidebar-group">
+            <h3 class="sidebar-group-title">{group.title}</h3>
+            <ul class="sidebar-items">
+              {group.items.map((item) => (
+                <li>
+                  <a
+                    href={item.href}
+                    class:list={['sidebar-link', { active: currentPath === item.href }]}
+                  >
+                    {item.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </nav>
+    </aside>
+
+    <article class="content">
+      <slot />
+    </article>
+  </div>
+</BaseLayout>
+
+<style>
+  .manual-layout {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) 1fr;
+    gap: var(--space-2xl);
+    padding-top: var(--space-2xl);
+    padding-bottom: var(--space-2xl);
+  }
+
+  .sidebar {
+    position: sticky;
+    top: calc(60px + var(--space-2xl));
+    height: fit-content;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+
+  .sidebar-group-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-sm);
+  }
+
+  .sidebar-items {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .sidebar-link {
+    display: block;
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  .sidebar-link:hover {
+    color: var(--color-text);
+    background-color: var(--color-bg-alt);
+  }
+
+  .sidebar-link.active {
+    color: var(--color-sage-dark);
+    background-color: var(--color-mint);
+    font-weight: 500;
+  }
+
+  .content {
+    max-width: 48rem;
+  }
+
+  .content :global(h1) {
+    margin-bottom: var(--space-lg);
+  }
+
+  .content :global(h2) {
+    margin-top: var(--space-2xl);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--color-border-light);
+  }
+
+  .content :global(h2:first-of-type) {
+    margin-top: var(--space-xl);
+    padding-top: 0;
+    border-top: none;
+  }
+
+  @media (max-width: 768px) {
+    .manual-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+      position: static;
+      border-bottom: 1px solid var(--color-border-light);
+      padding-bottom: var(--space-lg);
+      margin-bottom: var(--space-lg);
+    }
+  }
+</style>
