@@ -44,6 +44,16 @@ body {
   flex-direction: column;
 }
 
+#app.loading {
+  cursor: wait;
+}
+
+#app.loading .top-bar,
+#app.loading .split-container {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .top-bar {
   background: #2d3748;
   padding: 0.5rem 1rem;
@@ -346,6 +356,7 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   border-top: 1px solid var(--border);
+  transition: opacity 0.15s ease-out;
 }
 
 .editor-half {

@@ -392,19 +392,10 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
     );
   }
 
-  // Show loading state while script is being loaded
-  if (isLoadingScript || initialCode === null) {
-    return (
-      <div id="app">
-        <div style={{ padding: "20px", fontFamily: "monospace" }}>
-          Loading script...
-        </div>
-      </div>
-    );
-  }
+  const isLoading = isLoadingScript || initialCode === null;
 
   return (
-    <div id="app">
+    <div id="app" className={isLoading ? "loading" : ""}>
       <TopBar
         onRunAll={handleRunAll}
         onRunCurrent={handleRunCurrent}
@@ -433,18 +424,20 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
         <div
           className={readerMode ? "editor-half editor-hidden" : "editor-half"}
         >
-          <Editor
-            ref={editorRef}
-            initialCode={initialCode}
-            onInitialDocumentLoad={handleInitialDocumentLoad}
-            onExecuteCurrent={handleExecuteCurrent}
-            onExecuteAll={handleExecuteAll}
-            onDocumentChange={handleDocumentChange}
-            onLineGroupsChange={handleLineGroupsChange}
-            onLineGroupLayoutChange={handleLineGroupLayoutChange}
-            lineGroupHeights={lineGroupHeights}
-            readOnly={isExecuting || connectionState === "disconnected"}
-          />
+          {initialCode !== null && (
+            <Editor
+              ref={editorRef}
+              initialCode={initialCode}
+              onInitialDocumentLoad={handleInitialDocumentLoad}
+              onExecuteCurrent={handleExecuteCurrent}
+              onExecuteAll={handleExecuteAll}
+              onDocumentChange={handleDocumentChange}
+              onLineGroupsChange={handleLineGroupsChange}
+              onLineGroupLayoutChange={handleLineGroupLayoutChange}
+              lineGroupHeights={lineGroupHeights}
+              readOnly={isExecuting || connectionState === "disconnected"}
+            />
+          )}
         </div>
         <div className={readerMode ? "output-half output-full" : "output-half"}>
           <OutputPane
