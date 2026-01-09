@@ -41,3 +41,5 @@ Thumbs.db
 
 todos/
 todo.txt
+www/.astro/
+www/src/env.d.ts
