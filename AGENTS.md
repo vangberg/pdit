@@ -26,6 +26,7 @@
 
 ## Commit & Pull Request Guidelines
 - Commit messages are short, imperative, and sentence case (e.g., “Remove uv.lock from version control”).
+- Use `jj` for version control workflows (git-compatible).
 - PRs should include a concise summary, test results, and screenshots for UI changes.
 
 ## Notes for Contributors
