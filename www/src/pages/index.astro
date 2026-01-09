@@ -1,0 +1,171 @@
+---
+import Nav from '../components/Nav.astro';
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <title>pdit - Interactive Python Editor</title>
+  <meta name="description" content="Interactive Python editor with inline execution results">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #FFFEF5;
+      color: #1a1a1a;
+      line-height: 1.6;
+    }
+    main {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+    .hero {
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 3px solid #1a1a1a;
+    }
+    h1, h2, h3 {
+      font-family: 'Fira Mono', ui-monospace, monospace;
+    }
+    h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      margin-bottom: 0.25rem;
+      letter-spacing: -0.03em;
+    }
+    .subtitle {
+      font-size: 1.25rem;
+      color: #555;
+      margin-bottom: 0;
+    }
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 2.5rem 0 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    h2::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #E63946;
+      flex-shrink: 0;
+    }
+    h2:nth-of-type(2)::before { background: #457B9D; }
+    h2:nth-of-type(3)::before { background: #2A9D8F; }
+    h3 {
+      font-size: 1.1rem;
+      margin: 1.5rem 0 0.75rem;
+    }
+    p {
+      margin-bottom: 1rem;
+    }
+    ul {
+      margin-bottom: 1rem;
+      padding-left: 0;
+      list-style: none;
+    }
+    li {
+      margin-bottom: 0.75rem;
+      padding-left: 1.5rem;
+      position: relative;
+    }
+    li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.4em;
+      width: 8px;
+      height: 8px;
+      background: #FFD700;
+      border: 2px solid #1a1a1a;
+    }
+    li:nth-child(2)::before { background: #E63946; }
+    li:nth-child(3)::before { background: #457B9D; }
+    li:nth-child(4)::before { background: #2A9D8F; }
+    li:nth-child(5)::before { background: #F4A261; }
+    code {
+      font-family: ui-monospace, monospace;
+      background: #1a1a1a;
+      color: #FFD700;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+      font-size: 0.9em;
+    }
+    pre {
+      background: #1a1a1a;
+      padding: 1.25rem;
+      border-radius: 0;
+      border: 3px solid #1a1a1a;
+      overflow-x: auto;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+    pre::before {
+      content: '';
+      position: absolute;
+      top: -3px;
+      left: -3px;
+      right: -3px;
+      height: 6px;
+      background: linear-gradient(90deg, #E63946 25%, #FFD700 25%, #FFD700 50%, #457B9D 50%, #457B9D 75%, #2A9D8F 75%);
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: #fff;
+    }
+    a {
+      color: #E63946;
+      font-weight: 600;
+    }
+    a:hover {
+      color: #457B9D;
+    }
+    strong {
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <Nav />
+  <main>
+    <div class="hero">
+      <h1>pdit</h1>
+      <p class="subtitle">Interactive Python editor with inline execution results</p>
+    </div>
+
+    <h2>What is pdit?</h2>
+    <p>pdit lets you write regular Python files and see execution results inline, like a notebook but without cells. Edit in your browser or your favorite editor—results update in real-time.</p>
+
+    <h3>Quick Start</h3>
+    <pre><code>pip install pdit
+pdit script.py</code></pre>
+    <p>Press Cmd+Enter to execute. See the <a href="/docs/">Manual</a> for more.</p>
+
+    <h2>Features</h2>
+    <ul>
+      <li><strong>Inline results</strong> - Output appears right next to the code that produced it</li>
+      <li><strong>DataFrames</strong> - Pandas DataFrames render as clean tables</li>
+      <li><strong>Plots</strong> - Matplotlib figures appear inline automatically</li>
+      <li><strong>File watching</strong> - Edit in your favorite editor and see updates in real-time</li>
+      <li><strong>Export</strong> - Share your work as standalone HTML files</li>
+    </ul>
+
+    <h2>Why pdit?</h2>
+    <p>Jupyter notebooks are great for exploration, but they can feel heavy for quick scripts. Traditional REPLs are fast but don't preserve your work. pdit sits in between: you write regular Python files, but see results inline like a notebook.</p>
+  </main>
+</body>
+</html>

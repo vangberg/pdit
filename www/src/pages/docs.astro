@@ -1,0 +1,174 @@
+---
+import Nav from '../components/Nav.astro';
+const title = "Manual - pdit";
+---
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <title>{title}</title>
+</head>
+<body>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #FFFEF5; color: #1a1a1a; line-height: 1.6; }
+    .layout { max-width: 800px; margin: 0 auto; padding: 3rem 2rem; display: flex; gap: 3rem; }
+    aside { width: 200px; flex-shrink: 0; position: sticky; top: 2rem; align-self: flex-start; order: 1; }
+    .toc-header { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #888; margin-bottom: 1rem; font-weight: 700; }
+    .toc-section { margin-bottom: 1rem; }
+    .toc-section-title { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.25rem; }
+    .toc-section-title .num { color: #E63946; font-size: 0.9rem; font-weight: 700; }
+    .toc-section:nth-child(3) .num { color: #457B9D; }
+    .toc-section:nth-child(4) .num { color: #2A9D8F; }
+    .toc-section:nth-child(5) .num { color: #F4A261; }
+    .toc-section-title a { color: #1a1a1a; text-decoration: none; font-weight: 600; font-size: 0.95rem; }
+    .toc-section-title a:hover { color: #E63946; }
+    .toc-items { padding-left: 1.25rem; }
+    .toc-items a { display: block; color: #666; text-decoration: none; font-size: 0.875rem; padding: 0.15rem 0; }
+    .toc-items a:hover { color: #E63946; }
+    aside a.active { color: #E63946 !important; }
+    main { flex: 1; min-width: 0; }
+    h1, h2, h3 { font-family: 'Fira Mono', ui-monospace, monospace; }
+    h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+    .subtitle { color: #555; margin-bottom: 2rem; font-size: 1.1rem; }
+    h2 { font-size: 1.5rem; font-weight: 700; margin: 2.5rem 0 1rem; padding-top: 1.5rem; border-top: 3px solid #1a1a1a; display: flex; align-items: center; gap: 0.5rem; }
+    h2::before { content: ''; display: inline-block; width: 8px; height: 8px; background: #E63946; flex-shrink: 0; }
+    h2:nth-of-type(2)::before { background: #FFD700; }
+    h2:nth-of-type(3)::before { background: #457B9D; }
+    h2:nth-of-type(4)::before { background: #2A9D8F; }
+    h2:nth-of-type(5)::before { background: #F4A261; }
+    h2:nth-of-type(6)::before { background: #E63946; }
+    h2:nth-of-type(7)::before { background: #457B9D; }
+    h2:nth-of-type(8)::before { background: #2A9D8F; }
+    h2:nth-of-type(9)::before { background: #FFD700; }
+    h2:nth-of-type(10)::before { background: #F4A261; }
+    h2:first-of-type { margin-top: 0; border-top: none; padding-top: 0; }
+    h3 { font-size: 1.2rem; margin: 1.5rem 0 0.75rem; font-weight: 700; }
+    p { margin-bottom: 1rem; }
+    ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+    li { margin-bottom: 0.5rem; }
+    code { font-family: monospace; background: #1a1a1a; color: #FFD700; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em; }
+    pre { background: #1a1a1a; padding: 1.25rem; border-radius: 0; overflow-x: auto; margin-bottom: 1rem; position: relative; }
+    pre::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #E63946 25%, #FFD700 25%, #FFD700 50%, #457B9D 50%, #457B9D 75%, #2A9D8F 75%); }
+    pre code { background: none; padding: 0; color: #fff; }
+    a { color: #E63946; font-weight: 600; }
+    a:hover { color: #457B9D; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+    th { text-align: left; padding: 0.75rem; border-bottom: 3px solid #1a1a1a; font-weight: 700; }
+    td { text-align: left; padding: 0.75rem; border-bottom: 1px solid #ddd; }
+    tr:hover td { background: #FFF8DC; }
+  </style>
+
+  <Nav />
+
+  <div class="layout">
+    <aside>
+      <div class="toc-header">On this page</div>
+      <div class="toc-section">
+        <div class="toc-section-title"><span class="num">1.</span> <a href="#getting-started">Getting Started</a></div>
+        <div class="toc-items">
+          <a href="#installation">Installation</a>
+          <a href="#basic-usage">Basic Usage</a>
+          <a href="#shortcuts">Keyboard Shortcuts</a>
+        </div>
+      </div>
+
+      <div class="toc-section">
+        <div class="toc-section-title"><span class="num">2.</span> <a href="#results">Results</a></div>
+        <div class="toc-items">
+          <a href="#dataframes">DataFrames</a>
+          <a href="#plots">Plots</a>
+          <a href="#export">Export</a>
+        </div>
+      </div>
+
+      <div class="toc-section">
+        <div class="toc-section-title"><span class="num">3.</span> <a href="#questions">FAQ</a></div>
+      </div>
+
+      <div class="toc-section">
+        <div class="toc-section-title"><span class="num">4.</span> <a href="#troubleshooting">Troubleshooting</a></div>
+      </div>
+    </aside>
+
+    <main>
+      <h1>Manual</h1>
+      <p class="subtitle">Everything you need to know about pdit</p>
+
+      <h2 id="getting-started">Getting Started</h2>
+      <p>pdit is an interactive Python editor that displays execution results inline.</p>
+      <ul>
+        <li><strong>Like notebooks</strong>: Results appear inline with code</li>
+        <li><strong>Like a REPL</strong>: Work with regular .py files</li>
+        <li><strong>Unlike both</strong>: No cell management needed</li>
+      </ul>
+      <h3>Quick Start</h3>
+      <pre><code>pip install pdit
+pdit example.py</code></pre>
+      <p>Press Cmd+Enter to execute.</p>
+
+      <h2 id="installation">Installation</h2>
+      <p>Python 3.9+ required.</p>
+      <pre><code>pip install pdit</code></pre>
+      <p>Or with uv:</p>
+      <pre><code>uvx pdit script.py</code></pre>
+
+      <h2 id="basic-usage">Basic Usage</h2>
+      <pre><code>pdit script.py</code></pre>
+      <p>Press Cmd/Ctrl+Enter to execute. Edit in browser or external editor.</p>
+
+      <h2 id="shortcuts">Keyboard Shortcuts</h2>
+      <table>
+        <tr><th>Shortcut</th><th>Action</th></tr>
+        <tr><td><code>Cmd/Ctrl+Enter</code></td><td>Execute</td></tr>
+        <tr><td><code>Cmd/Ctrl+Z</code></td><td>Undo</td></tr>
+        <tr><td><code>Cmd/Ctrl+/</code></td><td>Comment</td></tr>
+      </table>
+
+      <h2 id="results">Inline Results</h2>
+      <pre><code>x = 10
+x + 5  # Shows: 15</code></pre>
+
+      <h2 id="dataframes">DataFrames</h2>
+      <p>Pandas DataFrames render as tables automatically.</p>
+
+      <h2 id="plots">Plots</h2>
+      <p>Matplotlib figures display inline. Call plt.show().</p>
+
+      <h2 id="export">Export</h2>
+      <pre><code>pdit export script.py -o output.html</code></pre>
+
+      <h2 id="questions">Common Questions</h2>
+      <p><strong>How is pdit different from Jupyter?</strong> Jupyter uses cells; pdit uses .py files with inline results.</p>
+      <p><strong>Virtual environments?</strong> Yes, activate before running pdit.</p>
+      <p><strong>IPython magics?</strong> Yes, %timeit etc. work.</p>
+
+      <h2 id="troubleshooting">Troubleshooting</h2>
+      <p><strong>Browser not opening?</strong> Go to http://localhost:8000 manually.</p>
+      <p><strong>Module not found?</strong> Check your Python environment.</p>
+      <p><strong>Plots not showing?</strong> Call plt.show().</p>
+      <p>Issues? <a href="https://github.com/vangberg/pdit/issues">GitHub</a></p>
+    </main>
+  </div>
+
+  <script>
+    const tocLinks = document.querySelectorAll('aside a[href^="#"]');
+    const sections = document.querySelectorAll('h2[id]');
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          tocLinks.forEach(link => link.classList.remove('active'));
+          const activeLink = document.querySelector(`aside a[href="#${entry.target.id}"]`);
+          if (activeLink) activeLink.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-20% 0px -60% 0px' });
+
+    sections.forEach(section => observer.observe(section));
+  </script>
+</body>
+</html>

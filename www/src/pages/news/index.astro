@@ -1,0 +1,95 @@
+---
+import Nav from '../../components/Nav.astro';
+
+const posts = await Astro.glob('./*.astro');
+const postList = posts
+  .filter(post => post.title) // exclude index
+  .map(post => ({
+    title: post.title,
+    date: post.date,
+    url: post.url
+  }))
+  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <title>News - pdit</title>
+  <meta name="description" content="News, updates, and announcements">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #FFFEF5;
+      color: #1a1a1a;
+      line-height: 1.6;
+    }
+    main {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+    h1, h2, h3 {
+      font-family: 'Fira Mono', ui-monospace, monospace;
+    }
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 2rem;
+      letter-spacing: -0.02em;
+    }
+    ul {
+      list-style: none;
+    }
+    li {
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #eee;
+    }
+    li:first-child {
+      border-top: 3px solid #1a1a1a;
+    }
+    .date {
+      color: #888;
+      font-size: 0.9rem;
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+      min-width: 5rem;
+      font-weight: 600;
+    }
+    a {
+      color: #1a1a1a;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    a:hover {
+      color: #E63946;
+    }
+  </style>
+</head>
+<body>
+  <Nav />
+  <main>
+    <h1>News</h1>
+    <ul>
+      {postList.map(post => (
+        <li>
+          <span class="date">{post.date}</span>
+          <a href={post.url}>{post.title}</a>
+        </li>
+      ))}
+    </ul>
+  </main>
+</body>
+</html>
