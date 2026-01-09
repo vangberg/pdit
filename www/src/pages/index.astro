@@ -20,6 +20,37 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+    }
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      border-bottom: 1px solid #eee;
+    }
+    .logo {
+      font-family: ui-monospace, monospace;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: hsl(140, 70%, 35%);
+      text-decoration: none;
+    }
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+    }
+    .nav-links a {
+      color: #555;
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+    .nav-links a:hover {
+      color: hsl(140, 70%, 35%);
+    }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 2rem;
@@ -56,10 +87,20 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>pdit</h1>
-    <p class="tagline">Interactive Python editor with inline execution results</p>
-    <a href="/guide/getting-started/" class="cta">Get Started</a>
-  </div>
+  <nav>
+    <a href="/" class="logo">pdit</a>
+    <div class="nav-links">
+      <a href="/docs/">Docs</a>
+      <a href="/posts/">Releases</a>
+      <a href="https://github.com/vangberg/pdit">GitHub</a>
+    </div>
+  </nav>
+  <main>
+    <div class="container">
+      <h1>pdit</h1>
+      <p class="tagline">Interactive Python editor with inline execution results</p>
+      <a href="/docs/" class="cta">Get Started</a>
+    </div>
+  </main>
 </body>
 </html>

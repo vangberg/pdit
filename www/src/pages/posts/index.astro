@@ -1,0 +1,155 @@
+---
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Releases - pdit</title>
+  <meta name="description" content="Releases, updates, and announcements">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #fff;
+      color: #1a1a1a;
+      line-height: 1.6;
+    }
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      border-bottom: 1px solid #eee;
+    }
+    .logo {
+      font-family: ui-monospace, monospace;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: hsl(140, 70%, 35%);
+      text-decoration: none;
+    }
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+    }
+    .nav-links a {
+      color: #555;
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+    .nav-links a:hover {
+      color: hsl(140, 70%, 35%);
+    }
+    main {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 2rem;
+    }
+    article {
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid #eee;
+    }
+    article:last-child {
+      border-bottom: none;
+    }
+    h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .date {
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+    h3 {
+      font-size: 1.1rem;
+      margin: 1.5rem 0 0.75rem;
+    }
+    p {
+      margin-bottom: 1rem;
+    }
+    ul {
+      margin-bottom: 1rem;
+      padding-left: 1.5rem;
+    }
+    li {
+      margin-bottom: 0.5rem;
+    }
+    code {
+      font-family: ui-monospace, monospace;
+      background: #f5f5f5;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+      font-size: 0.9em;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin-bottom: 1rem;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+    }
+    a {
+      color: hsl(140, 70%, 35%);
+    }
+    .footer-note {
+      color: #666;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/" class="logo">pdit</a>
+    <div class="nav-links">
+      <a href="/docs/">Docs</a>
+      <a href="/posts/">Releases</a>
+      <a href="https://github.com/vangberg/pdit">GitHub</a>
+    </div>
+  </nav>
+  <main>
+    <h1>Releases</h1>
+
+    <article>
+      <h2>Introducing pdit</h2>
+      <p class="date">January 2024</p>
+
+      <p>We're excited to introduce <strong>pdit</strong>, an interactive Python editor that displays execution results inline.</p>
+
+      <h3>Why pdit?</h3>
+      <p>Jupyter notebooks are great for exploration, but they can feel heavy for quick scripts. Traditional REPLs are fast but don't preserve your work. pdit sits in between: you write regular Python files, but see results inline like a notebook.</p>
+
+      <h3>Key Features</h3>
+      <ul>
+        <li><strong>Inline results</strong> - Output appears right next to the code that produced it</li>
+        <li><strong>DataFrames</strong> - Pandas DataFrames render as clean tables</li>
+        <li><strong>Plots</strong> - Matplotlib figures appear inline automatically</li>
+        <li><strong>File watching</strong> - Edit in your favorite editor and see updates in real-time</li>
+        <li><strong>Export</strong> - Share your work as standalone HTML files</li>
+      </ul>
+
+      <h3>Getting Started</h3>
+      <p>Install with pip and run on any Python file:</p>
+      <pre><code>pip install pdit
+pdit script.py</code></pre>
+      <p>Check out the <a href="/docs/">Getting Started</a> guide for more details.</p>
+    </article>
+
+    <p class="footer-note">More updates coming soon. Follow the <a href="https://github.com/vangberg/pdit">GitHub repo</a> for the latest news.</p>
+  </main>
+</body>
+</html>

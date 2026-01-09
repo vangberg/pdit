@@ -1,0 +1,131 @@
+---
+const title = "Documentation - pdit";
+---
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{title}</title>
+</head>
+<body>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #fff; color: #1a1a1a; line-height: 1.6; }
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 1rem 2rem; border-bottom: 1px solid #eee; }
+    .logo { font-family: monospace; font-size: 1.25rem; font-weight: 600; color: hsl(140, 70%, 35%); text-decoration: none; }
+    .nav-links { display: flex; gap: 1.5rem; }
+    .nav-links a { color: #555; text-decoration: none; }
+    .nav-links a:hover { color: hsl(140, 70%, 35%); }
+    .layout { display: flex; max-width: 1200px; margin: 0 auto; }
+    .sidebar { width: 220px; padding: 2rem; position: sticky; top: 0; height: 100vh; overflow-y: auto; border-right: 1px solid #eee; }
+    .sidebar ul { list-style: none; }
+    .sidebar li { margin-bottom: 0.5rem; }
+    .sidebar a { color: #555; text-decoration: none; font-size: 0.9rem; }
+    .sidebar a:hover { color: hsl(140, 70%, 35%); }
+    .section-title { font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 0.85rem; text-transform: uppercase; }
+    main { flex: 1; padding: 2rem 3rem; max-width: 800px; }
+    h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .subtitle { color: #666; margin-bottom: 2rem; }
+    h2 { font-size: 1.5rem; margin: 3rem 0 1rem; padding-top: 1rem; border-top: 1px solid #eee; }
+    h3 { font-size: 1.2rem; margin: 2rem 0 0.75rem; }
+    p { margin-bottom: 1rem; }
+    ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+    li { margin-bottom: 0.5rem; }
+    code { font-family: monospace; background: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px; }
+    pre { background: #f5f5f5; padding: 1rem; border-radius: 6px; overflow-x: auto; margin-bottom: 1rem; }
+    pre code { background: none; padding: 0; }
+    a { color: hsl(140, 70%, 35%); }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+    th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #eee; }
+  </style>
+
+  <nav>
+    <a href="/" class="logo">pdit</a>
+    <div class="nav-links">
+      <a href="/docs/">Docs</a>
+      <a href="/posts/">Releases</a>
+      <a href="https://github.com/vangberg/pdit">GitHub</a>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="section-title">Guide</div>
+      <ul>
+        <li><a href="#getting-started">Getting Started</a></li>
+        <li><a href="#installation">Installation</a></li>
+        <li><a href="#basic-usage">Basic Usage</a></li>
+        <li><a href="#shortcuts">Keyboard Shortcuts</a></li>
+        <li><a href="#results">Inline Results</a></li>
+        <li><a href="#dataframes">DataFrames</a></li>
+        <li><a href="#plots">Plots</a></li>
+        <li><a href="#export">Export</a></li>
+      </ul>
+      <div class="section-title">FAQ</div>
+      <ul>
+        <li><a href="#questions">Common Questions</a></li>
+        <li><a href="#troubleshooting">Troubleshooting</a></li>
+      </ul>
+    </aside>
+
+    <main>
+      <h1>Documentation</h1>
+      <p class="subtitle">Everything you need to know about pdit</p>
+
+      <h2 id="getting-started">Getting Started</h2>
+      <p>pdit is an interactive Python editor that displays execution results inline.</p>
+      <ul>
+        <li><strong>Like notebooks</strong>: Results appear inline with code</li>
+        <li><strong>Like a REPL</strong>: Work with regular .py files</li>
+        <li><strong>Unlike both</strong>: No cell management needed</li>
+      </ul>
+      <h3>Quick Start</h3>
+      <pre><code>pip install pdit
+pdit example.py</code></pre>
+      <p>Press Cmd+Enter to execute.</p>
+
+      <h2 id="installation">Installation</h2>
+      <p>Python 3.9+ required.</p>
+      <pre><code>pip install pdit</code></pre>
+      <p>Or with uv:</p>
+      <pre><code>uvx pdit script.py</code></pre>
+
+      <h2 id="basic-usage">Basic Usage</h2>
+      <pre><code>pdit script.py</code></pre>
+      <p>Press Cmd/Ctrl+Enter to execute. Edit in browser or external editor.</p>
+
+      <h2 id="shortcuts">Keyboard Shortcuts</h2>
+      <table>
+        <tr><th>Shortcut</th><th>Action</th></tr>
+        <tr><td><code>Cmd/Ctrl+Enter</code></td><td>Execute</td></tr>
+        <tr><td><code>Cmd/Ctrl+Z</code></td><td>Undo</td></tr>
+        <tr><td><code>Cmd/Ctrl+/</code></td><td>Comment</td></tr>
+      </table>
+
+      <h2 id="results">Inline Results</h2>
+      <pre><code>x = 10
+x + 5  # Shows: 15</code></pre>
+
+      <h2 id="dataframes">DataFrames</h2>
+      <p>Pandas DataFrames render as tables automatically.</p>
+
+      <h2 id="plots">Plots</h2>
+      <p>Matplotlib figures display inline. Call plt.show().</p>
+
+      <h2 id="export">Export</h2>
+      <pre><code>pdit export script.py -o output.html</code></pre>
+
+      <h2 id="questions">Common Questions</h2>
+      <p><strong>How is pdit different from Jupyter?</strong> Jupyter uses cells; pdit uses .py files with inline results.</p>
+      <p><strong>Virtual environments?</strong> Yes, activate before running pdit.</p>
+      <p><strong>IPython magics?</strong> Yes, %timeit etc. work.</p>
+
+      <h2 id="troubleshooting">Troubleshooting</h2>
+      <p><strong>Browser not opening?</strong> Go to http://localhost:8000 manually.</p>
+      <p><strong>Module not found?</strong> Check your Python environment.</p>
+      <p><strong>Plots not showing?</strong> Call plt.show().</p>
+      <p>Issues? <a href="https://github.com/vangberg/pdit/issues">GitHub</a></p>
+    </main>
+  </div>
+</body>
+</html>
