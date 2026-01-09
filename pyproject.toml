@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pdit"
+version = "0.1.0"
+description = "Interactive Python code editor with inline execution results"
+readme = "README.md"
+requires-python = ">=3.9,<3.14"
+license = {text = "Private"}
+authors = [
+    {name = "Harry Vangberg"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "typer>=0.9.0",
+    "aiofiles>=23.0.0",
+    "watchfiles>=0.20.0",
+    "jupyter_client>=8.0.0",
+    "ipykernel>=6.29.0",
+    "itables>=2.6.1",
+    "ipython>=8.18.1",
+]
+
+[project.scripts]
+pdit = "pdit.cli:main"
+
+[project.optional-dependencies]
+examples = [
+    "great-tables>=0.20.0",
+    "matplotlib>=3.7.5",
+    "pandas>=2.0.3",
+    "polars>=1.8.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/vangberg/pdit"
+Repository = "https://github.com/vangberg/pdit"
+Issues = "https://github.com/vangberg/pdit/issues"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pdit*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.html", "*.js", "*.css"]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0",
+    "honcho>=1.1.0",
+    "mypy>=1.0",
+    "ruff>=0.1.0",
+    "httpx>=0.28.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+
+[tool.black]
+line-length = 100
+target-version = ["py38", "py39", "py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

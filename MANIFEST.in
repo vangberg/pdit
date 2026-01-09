@@ -1,0 +1,3 @@
+recursive-include pdit/_static *
+global-exclude *.pyc
+global-exclude __pycache__

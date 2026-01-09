@@ -1,0 +1,2 @@
+# Mark static assets as generated
+pdit/_static/* linguist-generated=true
