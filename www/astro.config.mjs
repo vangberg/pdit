@@ -15,15 +15,10 @@ export default defineConfig({
         {
           label: 'Guide',
           items: [
-            { label: 'Getting Started', slug: 'guide/getting-started' },
+            { label: 'Getting Started', slug: '' },
             { label: 'Installation', slug: 'guide/installation' },
             { label: 'Basic Usage', slug: 'guide/basic-usage' },
             { label: 'Keyboard Shortcuts', slug: 'guide/shortcuts' },
-          ],
-        },
-        {
-          label: 'Features',
-          items: [
             { label: 'Inline Results', slug: 'guide/inline-results' },
             { label: 'DataFrames', slug: 'guide/dataframes' },
             { label: 'Plots & Images', slug: 'guide/plots' },
