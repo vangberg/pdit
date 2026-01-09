@@ -33,6 +33,7 @@ dependencies = [
     "itables>=2.6.1",
     "ipython>=8.18.1",
     "markdown>=3.5.0",
+    "markdown-it-py>=3.0.0",
 ]
 
 [project.scripts]

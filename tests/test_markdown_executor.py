@@ -171,21 +171,22 @@ class TestExecutorInterface:
         await executor.shutdown()  # Should not raise
 
 
-class TestLineRangeIgnored:
-    """Tests that line_range parameter is ignored (whole file always rendered)."""
+class TestLineRangeFiltering:
+    """Tests that line_range parameter filters executed chunks."""
 
-    async def test_line_range_ignored(self, executor):
-        """Test that line_range parameter is ignored."""
+    async def test_line_range_filters_chunks(self, executor):
+        """Test that line_range only executes overlapping chunks."""
         script = """# Line 1
-# Line 2
-# Line 3"""
-        # Even with line_range, the whole file should be rendered
-        results = await collect_results(executor.execute_script(script, line_range=(2, 2)))
 
-        # The expression should still cover all lines
+# Line 3
+"""
+        results = await collect_results(executor.execute_script(script, line_range=(3, 3)))
+
         expressions_event = results[0]
-        assert expressions_event["expressions"][0]["lineStart"] == 1
-        assert expressions_event["expressions"][0]["lineEnd"] == 3
+        expressions = expressions_event["expressions"]
+        assert len(expressions) == 1
+        assert expressions[0]["lineStart"] == 3
+        assert expressions[0]["lineEnd"] == 3
 
 
 class TestHtmlWrapper:
@@ -200,6 +201,25 @@ class TestHtmlWrapper:
         html = result["output"][0]["content"]
         assert html.startswith('<div class="markdown-body">')
         assert html.endswith('</div>')
+
+
+class TestChunking:
+    """Tests for markdown chunking behavior."""
+
+    async def test_large_markdown_is_chunked(self, executor):
+        """Multiple blocks should be split into multiple expressions."""
+        script = "# First\n\n# Second"
+        results = await collect_results(executor.execute_script(script))
+
+        expressions_event = results[0]
+        expressions = expressions_event["expressions"]
+        assert len(expressions) == 2
+        assert expressions[0]["lineStart"] == 1
+        assert expressions[0]["lineEnd"] == 2
+        assert expressions[1]["lineStart"] == 3
+        assert expressions[1]["lineEnd"] == 3
+
+        assert len(results) == 1 + len(expressions)
 
 
 if __name__ == "__main__":
