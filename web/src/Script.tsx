@@ -30,6 +30,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
 
   const [isFuzzyFinderOpen, setIsFuzzyFinderOpen] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
+  const isExecutingRef = useRef(false);
   const autorunRef = useRef(false);
   const isProgrammaticUpdate = useRef(false);
   const pendingAutorun = useRef(false);
@@ -164,10 +165,17 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
         return {};
       }
 
+      // Prevent re-entry while execution is in progress
+      if (isExecutingRef.current) {
+        console.warn("Cannot execute: execution already in progress");
+        return {};
+      }
+
       // Extract script name from path (just the filename)
       const scriptName = scriptPath ? scriptPath.split("/").pop() : undefined;
       let lastExecutedLineEnd: number | undefined;
 
+      isExecutingRef.current = true;
       setIsExecuting(true);
       try {
         for await (const event of executeScript(script, {
@@ -214,6 +222,7 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
         console.error("Execution error:", error);
       } finally {
         resetExecutionState();
+        isExecutingRef.current = false;
         setIsExecuting(false);
       }
 
