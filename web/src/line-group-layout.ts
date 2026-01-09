@@ -1,7 +1,8 @@
-import {EditorView, Decoration, WidgetType, DecorationSet} from "@codemirror/view"
-import {StateField, StateEffect, RangeSetBuilder, Facet, Text} from "@codemirror/state"
+import { EditorView, Decoration, WidgetType, DecorationSet } from "@codemirror/view"
+import { StateField, StateEffect, RangeSetBuilder, Facet, Text } from "@codemirror/state"
 import { lineGroupsField, lastExecutedIdsField, staleGroupIdsField } from "./result-grouping-plugin"
-import { LineGroup, LineGroupState } from "./compute-line-groups"
+import { LineGroup } from "./compute-line-groups"
+import { getLineGroupSpacerClass, getLineGroupVisualFlags } from "./line-group-appearance"
 
 // ============================================================================
 // Types
@@ -22,50 +23,25 @@ class Spacer extends WidgetType {
   constructor(
     readonly height: number,
     readonly lineNumber: number,
-    readonly isRecent: boolean,
-    readonly hasError: boolean,
-    readonly state: LineGroupState,
-    readonly isStale: boolean
+    readonly className: string
   ) { super() }
 
   eq(other: Spacer) {
     return this.height == other.height &&
            this.lineNumber == other.lineNumber &&
-           this.isRecent == other.isRecent &&
-           this.hasError == other.hasError &&
-           this.state == other.state &&
-           this.isStale == other.isStale
-  }
-
-  private getClassName(): string {
-    if (this.state === 'pending') {
-      return 'cm-preview-spacer cm-preview-spacer-pending'
-    } else if (this.state === 'executing') {
-      return 'cm-preview-spacer cm-preview-spacer-executing'
-    } else {
-      // Stale groups keep the spacer but drop executed styling.
-      if (this.isStale) {
-        return 'cm-preview-spacer cm-preview-spacer-stale'
-      }
-      if (this.hasError) {
-        return this.isRecent
-          ? 'cm-preview-spacer cm-preview-spacer-error cm-preview-spacer-error-recent'
-          : 'cm-preview-spacer cm-preview-spacer-error'
-      }
-      return this.isRecent ? 'cm-preview-spacer cm-preview-spacer-recent' : 'cm-preview-spacer'
-    }
+           this.className == other.className
   }
 
   toDOM() {
     let elt = document.createElement("div")
     elt.style.height = this.height + "px"
-    elt.className = this.getClassName()
+    elt.className = this.className
     return elt
   }
 
   updateDOM(dom: HTMLElement) {
     dom.style.height = this.height + "px"
-    dom.className = this.getClassName()
+    dom.className = this.className
     return true
   }
 
@@ -174,16 +150,12 @@ function computeSpacers(
       const diff = targetHeight - layout.naturalHeight
       if (diff > 0.01) {
         const endLine = doc.line(group.lineEnd)
-        const isRecent = group.resultIds.some(id => lastExecutedIds.has(id))
-        const isStale = group.state === 'done' && staleGroupIds.has(group.id)
+        const flags = getLineGroupVisualFlags(group, lastExecutedIds, staleGroupIds)
         builder.add(endLine.to, endLine.to, Decoration.widget({
           widget: new Spacer(
             diff,
             group.lineEnd,
-            isRecent,
-            group.hasError || false,
-            group.state,
-            isStale
+            getLineGroupSpacerClass(group, flags)
           ),
           block: true,
           side: 1
@@ -203,10 +175,7 @@ function compareSpacers(a: DecorationSet, b: DecorationSet): boolean {
     const spacerB = iB.value!.spec.widget as Spacer
     if (iA.from != iB.from ||
         Math.abs(spacerA.height - spacerB.height) > 1 ||
-        spacerA.isRecent !== spacerB.isRecent ||
-        spacerA.hasError !== spacerB.hasError ||
-        spacerA.state !== spacerB.state ||
-        spacerA.isStale !== spacerB.isStale)
+        spacerA.className !== spacerB.className)
       return false
     iA.next(); iB.next()
   }

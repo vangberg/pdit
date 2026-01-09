@@ -18,6 +18,11 @@ import {
 import { invertedEffects } from "@codemirror/commands";
 import { LineGroup, LineGroupState } from "./compute-line-groups";
 import { debugPanelState } from "./codemirror-debug-panel";
+import {
+  getLineGroupBackgroundClass,
+  getLineGroupVisualFlags,
+  shouldRenderLineGroupTopBorder,
+} from "./line-group-appearance";
 
 export class GroupValue extends RangeValue {
   // GroupValue carries metadata for a single group range. `resultIds`
@@ -497,41 +502,20 @@ export const lineGroupBackgroundField = StateField.define<DecorationSet>({
 
     const decorations: any[] = [];
 
-    // Get the set of last executed result IDs
     const lastExecutedIds = tr.state.field(lastExecutedIdsField);
 
     for (const group of lineGroups) {
-      const isRecent = group.resultIds.some(id => lastExecutedIds.has(id));
-      const isStale = group.state === 'done' && staleGroupIds.has(group.id);
-
-      // Skip stale and cancelled groups - they should not show visual feedback
-      if (isStale || group.state === 'cancelled') {
+      const flags = getLineGroupVisualFlags(group, lastExecutedIds, staleGroupIds);
+      const bgClass = getLineGroupBackgroundClass(group, flags);
+      if (!bgClass) {
         continue;
-      }
-
-      // Determine class based on group state
-      let bgClass: string;
-      if (group.state === 'pending') {
-        bgClass = 'cm-line-group-pending';
-      } else if (group.state === 'executing') {
-        bgClass = 'cm-line-group-executing';
-      } else if (group.hasError) {
-        bgClass = isRecent
-          ? 'cm-line-group-error cm-line-group-error-recent'
-          : 'cm-line-group-error';
-      } else if (group.allInvisible) {
-        // Done state with invisible output
-        bgClass = isRecent ? 'cm-line-group-invisible cm-line-group-recent' : 'cm-line-group-invisible';
-      } else {
-        // Done state with visible output
-        bgClass = isRecent ? 'cm-line-group-bg cm-line-group-recent' : 'cm-line-group-bg';
       }
 
       for (let lineNum = group.lineStart; lineNum <= group.lineEnd; lineNum++) {
         const line = tr.state.doc.line(lineNum);
         decorations.push(Decoration.line({ class: bgClass }).range(line.from));
         // Add border to first line of each group (skip for invisible and pending/executing groups)
-        if (lineNum === group.lineStart && !group.allInvisible && group.state === 'done') {
+        if (lineNum === group.lineStart && shouldRenderLineGroupTopBorder(group)) {
           decorations.push(Decoration.line({ class: 'cm-line-group-top' }).range(line.from));
         }
       }
