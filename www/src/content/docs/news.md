@@ -1,5 +1,5 @@
 ---
-title: News
+title: Releases
 description: Releases, updates, and announcements
 ---
 

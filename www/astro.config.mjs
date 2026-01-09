@@ -33,9 +33,9 @@ export default defineConfig({
           ],
         },
         {
-          label: 'News',
+          label: 'Releases',
           items: [
-            { label: 'All Posts', slug: 'news' },
+            { label: 'All Releases', slug: 'news' },
           ],
         },
       ],

@@ -1,3 +1,65 @@
 ---
-return Astro.redirect('/guide/getting-started/');
 ---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pdit - Interactive Python Editor</title>
+  <meta name="description" content="Interactive Python editor with inline execution results">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #fff;
+      color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .container {
+      text-align: center;
+      max-width: 600px;
+    }
+    h1 {
+      font-family: ui-monospace, monospace;
+      font-size: 4rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: hsl(140, 70%, 35%);
+    }
+    .tagline {
+      font-size: 1.25rem;
+      color: #555;
+      margin-bottom: 2rem;
+    }
+    .cta {
+      display: inline-block;
+      background: hsl(140, 70%, 35%);
+      color: #fff;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    .cta:hover {
+      background: hsl(140, 70%, 30%);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>pdit</h1>
+    <p class="tagline">Interactive Python editor with inline execution results</p>
+    <a href="/guide/getting-started/" class="cta">Get Started</a>
+  </div>
+</body>
+</html>
