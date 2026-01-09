@@ -384,10 +384,10 @@ class ListFilesResponse(BaseModel):
 
 @app.get("/api/list-files", response_model=ListFilesResponse)
 async def list_files():
-    """List all Python files in the current working directory.
+    """List all Python and Markdown files in the current working directory.
 
     Returns:
-        List of relative paths to .py files
+        List of relative paths to .py and .md files
 
     Note:
         Excludes hidden directories and common virtual environment directories.
@@ -395,7 +395,7 @@ async def list_files():
     import fnmatch
 
     cwd = Path.cwd()
-    py_files: list[str] = []
+    matched_files: list[str] = []
 
     # Directories to skip
     skip_dirs = {".git", ".venv", "venv", "__pycache__", "node_modules", ".tox", ".mypy_cache", ".pytest_cache", "dist", "build", "*.egg-info"}
@@ -405,15 +405,15 @@ async def list_files():
         dirs[:] = [d for d in dirs if not d.startswith('.') and d not in skip_dirs and not any(fnmatch.fnmatch(d, pattern) for pattern in skip_dirs)]
 
         for file in files:
-            if file.endswith('.py'):
+            if file.endswith('.py') or file.endswith('.md'):
                 full_path = Path(root) / file
                 relative_path = full_path.relative_to(cwd)
-                py_files.append(str(relative_path))
+                matched_files.append(str(relative_path))
 
     # Sort by filename (not path) for better UX
-    py_files.sort(key=lambda p: Path(p).name.lower())
+    matched_files.sort(key=lambda p: Path(p).name.lower())
 
-    return ListFilesResponse(files=py_files)
+    return ListFilesResponse(files=matched_files)
 
 
 @app.post("/api/save-file")
