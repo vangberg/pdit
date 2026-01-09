@@ -24,7 +24,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
+from .executor import Executor
 from .ipython_executor import IPythonExecutor
+from .markdown_executor import MarkdownExecutor
 from .file_watcher import FileWatcher
 
 # Global shutdown event for WebSocket connections (threading.Event works across threads)
@@ -33,8 +35,9 @@ shutdown_event = threading.Event()
 
 @dataclass
 class Session:
-    """Represents a session with an IPython executor and state tracking."""
-    executor: IPythonExecutor
+    """Represents a session with an executor and state tracking."""
+    executor: Executor
+    language: str
     is_executing: bool = False
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     file_watcher_task: Optional[asyncio.Task] = None
@@ -45,19 +48,63 @@ class Session:
 _sessions: dict[str, Session] = {}
 _sessions_lock = threading.Lock()  # Thread-safe session creation/deletion
 
+# Supported languages and their file extensions
+LANGUAGE_EXTENSIONS: dict[str, str] = {
+    ".py": "python",
+    ".md": "markdown",
+    ".markdown": "markdown",
+}
 
-def get_or_create_session(session_id: str) -> Session:
+
+def create_executor(language: str) -> Executor:
+    """Create an executor for the given language."""
+    if language == "python":
+        executor = IPythonExecutor()
+        executor.start()  # Start kernel in background immediately
+        return executor
+    elif language == "markdown":
+        return MarkdownExecutor()
+    else:
+        raise ValueError(f"Unsupported language: {language}")
+
+
+def get_language_from_path(path: str) -> str:
+    """Detect language from file path extension."""
+    from pathlib import Path
+    ext = Path(path).suffix.lower()
+    return LANGUAGE_EXTENSIONS.get(ext, "python")
+
+
+def get_or_create_session(session_id: str, language: str = "python") -> Session:
     """Get existing session or create a new one (thread-safe).
 
     The kernel starts immediately in the background so it's ready when the user
     executes code. File watching and other operations don't wait for the kernel.
+
+    If the session exists but with a different language, the old session is
+    replaced with a new one for the requested language.
     """
     with _sessions_lock:
-        if session_id not in _sessions:
-            executor = IPythonExecutor()
-            executor.start()  # Start kernel in background immediately
-            _sessions[session_id] = Session(executor=executor)
+        existing = _sessions.get(session_id)
+        if existing and existing.language == language:
+            return existing
+
+        # Need to create new session (or replace if language changed)
+        if existing:
+            # Schedule cleanup of old session outside the lock
+            asyncio.create_task(_cleanup_old_executor(existing.executor))
+
+        executor = create_executor(language)
+        _sessions[session_id] = Session(executor=executor, language=language)
         return _sessions[session_id]
+
+
+async def _cleanup_old_executor(executor: Executor) -> None:
+    """Clean up an old executor when session language changes."""
+    try:
+        await executor.shutdown()
+    except Exception:
+        pass
 
 
 async def delete_session(session_id: str) -> None:
@@ -156,7 +203,12 @@ app.add_middleware(
 
 # WebSocket endpoint for unified session communication
 @app.websocket("/ws/session")
-async def websocket_session(websocket: WebSocket, sessionId: str, token: Optional[str] = None):
+async def websocket_session(
+    websocket: WebSocket,
+    sessionId: str,
+    token: Optional[str] = None,
+    language: str = "python"
+):
     """Unified WebSocket endpoint for file watching and code execution.
 
     The WebSocket connection lifecycle is tied to the session - when the connection
@@ -165,6 +217,7 @@ async def websocket_session(websocket: WebSocket, sessionId: str, token: Optiona
     Query Parameters:
         sessionId: Unique session identifier
         token: Optional authentication token (required if PDIT_TOKEN env var is set)
+        language: Language for code execution (python, markdown). Default: python
 
     Message Protocol (Client -> Server):
         {"type": "watch", "path": "/absolute/path.py"}
@@ -185,7 +238,7 @@ async def websocket_session(websocket: WebSocket, sessionId: str, token: Optiona
 
     await websocket.accept()
 
-    session = get_or_create_session(sessionId)
+    session = get_or_create_session(sessionId, language)
     execute_task: Optional[asyncio.Task] = None
 
     try:

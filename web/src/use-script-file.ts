@@ -5,6 +5,23 @@ import {
   ServerMessage,
 } from "./websocket-client";
 
+// Map file extensions to language identifiers
+const LANGUAGE_EXTENSIONS: Record<string, string> = {
+  ".py": "python",
+  ".md": "markdown",
+  ".markdown": "markdown",
+};
+
+/**
+ * Detect language from file path extension.
+ * Defaults to "python" for unknown extensions.
+ */
+function getLanguageFromPath(path: string | null): string {
+  if (!path) return "python";
+  const ext = path.substring(path.lastIndexOf(".")).toLowerCase();
+  return LANGUAGE_EXTENSIONS[ext] ?? "python";
+}
+
 interface UseScriptFileOptions {
   onFileChange?: (newContent: string) => void; // Callback when file changes (enables watching)
 }
@@ -17,6 +34,7 @@ interface UseScriptFileResult {
   error: Error | null; // Any errors
   sessionId: string; // Unique session ID for this page load
   wsClient: WebSocketClient | null; // WebSocket client for execution
+  language: string; // Detected language from file extension
 }
 
 /**
@@ -39,6 +57,9 @@ export function useScriptFile(
 
   // Generate stable session ID once on hook init
   const sessionId = useMemo(() => crypto.randomUUID(), []);
+
+  // Detect language from file extension
+  const language = useMemo(() => getLanguageFromPath(scriptPath), [scriptPath]);
 
   const [code, setCode] = useState<string | null>(null);
   const [diskContent, setDiskContent] = useState<string | null>(null);
@@ -122,6 +143,7 @@ export function useScriptFile(
     // Create WebSocket client
     const client = new WebSocketClient({
       sessionId,
+      language,
       onConnectionChange: handleConnectionChange,
       onMessage: handleMessage,
     });
@@ -134,7 +156,7 @@ export function useScriptFile(
       client.close();
       setWsClient(null);
     };
-  }, [sessionId, defaultCode, handleMessage, handleConnectionChange]);
+  }, [sessionId, language, defaultCode, handleMessage, handleConnectionChange]);
 
   // Send watch request when connected and we have a path
   useEffect(() => {
@@ -167,5 +189,6 @@ export function useScriptFile(
     error,
     sessionId,
     wsClient,
+    language,
   };
 }

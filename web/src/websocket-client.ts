@@ -32,6 +32,7 @@ export type ClientMessage =
 
 export interface WebSocketClientOptions {
   sessionId: string;
+  language?: string;
   onConnectionChange?: (state: ConnectionState) => void;
   onMessage?: (message: ServerMessage) => void;
 }
@@ -41,6 +42,7 @@ type MessageHandler = (msg: ServerMessage) => void;
 export class WebSocketClient {
   private ws: WebSocket | null = null;
   private sessionId: string;
+  private language: string;
   private connectionState: ConnectionState = "disconnected";
   private messageHandlers = new Map<string, MessageHandler>();
   private onConnectionChange?: (state: ConnectionState) => void;
@@ -49,6 +51,7 @@ export class WebSocketClient {
 
   constructor(options: WebSocketClientOptions) {
     this.sessionId = options.sessionId;
+    this.language = options.language ?? "python";
     this.onConnectionChange = options.onConnectionChange;
     if (options.onMessage) {
       this.addMessageHandler("default", options.onMessage);
@@ -63,6 +66,7 @@ export class WebSocketClient {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const url = new URL(`${protocol}//${window.location.host}/ws/session`);
     url.searchParams.set("sessionId", this.sessionId);
+    url.searchParams.set("language", this.language);
     if (token) {
       url.searchParams.set("token", token);
     }
