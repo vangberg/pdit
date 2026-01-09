@@ -82,7 +82,7 @@ if (!healthy) {
 
 const vitestArgs = process.argv.slice(2);
 const vitest = spawn("vitest", vitestArgs, {
-  cwd: path.resolve(repoRoot, "web"),
+  cwd: path.resolve(repoRoot, "fe"),
   env: {
     ...process.env,
     VITE_PDIT_BACKEND_PORT: String(port),

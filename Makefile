@@ -2,4 +2,4 @@
 
 test:
 	uv run pytest
-	cd web && npm test -- --run
+	cd fe && npm test -- --run

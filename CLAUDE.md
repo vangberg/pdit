@@ -25,13 +25,13 @@ uv run pytest tests/test_server.py::test_health -v
 uv run honcho start
 
 # Frontend tests
-cd web && npm test
+cd fe && npm test
 
 # Run all tests (backend + frontend)
 make test
 
 # Rebuild frontend assets (required before committing frontend changes)
-cd web && npm install && npm run build
+cd fe && npm install && npm run build
 ```
 
 ## Architecture
@@ -46,11 +46,11 @@ cd web && npm install && npm run build
 
 ### Frontend (TypeScript/React)
 
-- `web/src/Script.tsx` - Main component managing editor, execution, and output state
-- `web/src/Editor.tsx` - CodeMirror 6 editor component
-- `web/src/Output.tsx` - Renders execution results (stdout, errors, dataframes, images)
-- `web/src/compute-line-groups.ts` - Groups results by source lines
-- `web/src/websocket-client.ts` - WebSocket client for file watching and execution streaming
+- `fe/src/Script.tsx` - Main component managing editor, execution, and output state
+- `fe/src/Editor.tsx` - CodeMirror 6 editor component
+- `fe/src/Output.tsx` - Renders execution results (stdout, errors, dataframes, images)
+- `fe/src/compute-line-groups.ts` - Groups results by source lines
+- `fe/src/websocket-client.ts` - WebSocket client for file watching and execution streaming
 
 ### Key Data Flow
 
