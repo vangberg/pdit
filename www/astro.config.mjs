@@ -15,7 +15,7 @@ export default defineConfig({
         {
           label: 'Guide',
           items: [
-            { label: 'Getting Started', slug: '' },
+            { label: 'Getting Started', slug: 'guide/getting-started' },
             { label: 'Installation', slug: 'guide/installation' },
             { label: 'Basic Usage', slug: 'guide/basic-usage' },
             { label: 'Keyboard Shortcuts', slug: 'guide/shortcuts' },
