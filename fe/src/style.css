@@ -97,13 +97,13 @@ body {
    ============================================ */
 
 .top-bar {
-  background: #fff;
+  background: #fafafa;
   padding: 0.5rem 1rem;
   display: flex;
   align-items: center;
   flex-shrink: 0;
   font-family: 'Fira Code', ui-monospace, monospace;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .top-bar-content {
@@ -1352,17 +1352,17 @@ table.dataTable {
   border-collapse: collapse;
   font-size: 13px;
   font-family: ui-monospace, monospace;
-  border: 2px solid var(--color-black);
-  background: var(--color-cream);
+  border: 1px solid #ddd;
+  background: #fff;
   width: 100%;
 }
 
 table.dataTable thead th {
-  background: var(--color-yellow);
-  font-weight: 700;
+  background: #f5f5f5;
+  font-weight: 600;
   color: var(--color-black);
-  border-right: 1px solid var(--color-black);
-  border-bottom: 3px solid var(--color-black);
+  border-right: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
   padding: 8px 8px;
   font-size: 12px;
   text-align: left;
@@ -1374,10 +1374,10 @@ table.dataTable thead th:last-child {
 
 table.dataTable tbody td {
   padding: 6px 8px;
-  border-right: 1px solid #ddd;
-  border-bottom: 1px solid #ddd;
+  border-right: 1px solid #eee;
+  border-bottom: 1px solid #eee;
   color: var(--color-gray);
-  background: var(--color-cream);
+  background: #fff;
 }
 
 table.dataTable tbody td:last-child {
@@ -1389,17 +1389,17 @@ table.dataTable tbody tr:last-child td {
 }
 
 table.dataTable tbody tr:hover td {
-  background: var(--color-warm-hover);
+  background: #f9f9f9;
 }
 
 table.dataTable.stripe tbody tr.odd,
 table.dataTable.display tbody tr.odd {
-  background: var(--color-cream);
+  background: #fff;
 }
 
 table.dataTable.stripe tbody tr.odd:hover,
 table.dataTable.display tbody tr.odd:hover {
-  background: var(--color-warm-hover);
+  background: #f9f9f9;
 }
 
 div.dt-container {
@@ -1419,8 +1419,8 @@ div.dt-layout-cell {
 }
 
 div.dt-search input {
-  background: var(--color-cream);
-  border: 2px solid var(--color-black);
+  background: #fff;
+  border: 1px solid #ddd;
   border-radius: 0;
   padding: 2px 6px;
   font-size: 11px;
@@ -1430,18 +1430,18 @@ div.dt-search input {
 }
 
 div.dt-search input:hover {
-  border-color: var(--color-red);
+  border-color: #bbb;
 }
 
 div.dt-search input:focus {
   outline: none;
-  border-color: var(--color-red);
-  background: var(--color-warm-hover);
+  border-color: #999;
+  background: #fff;
 }
 
 div.dt-length select {
-  background: var(--color-cream);
-  border: 2px solid var(--color-black);
+  background: #fff;
+  border: 1px solid #ddd;
   border-radius: 0;
   padding: 2px 6px;
   font-size: 11px;
@@ -1451,48 +1451,48 @@ div.dt-length select {
 }
 
 div.dt-length select:hover {
-  border-color: var(--color-red);
+  border-color: #bbb;
 }
 
 div.dt-length select:focus {
   outline: none;
-  border-color: var(--color-red);
-  background: var(--color-warm-hover);
+  border-color: #999;
+  background: #fff;
 }
 
 div.dt-paging button {
   background: transparent;
-  border: 2px solid var(--color-black);
+  border: 1px solid #ddd;
   border-radius: 0;
   padding: 2px 8px;
   font-size: 11px;
   cursor: pointer;
-  color: var(--color-black);
+  color: var(--color-gray);
   font-family: ui-monospace, monospace;
   transition: all 0.1s;
   height: 22px;
   margin: 0 1px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 div.dt-paging button:hover:not(.disabled) {
-  background: var(--color-black);
-  border-color: var(--color-black);
-  color: var(--color-yellow);
+  background: #f5f5f5;
+  border-color: #bbb;
+  color: var(--color-black);
 }
 
 div.dt-paging button.disabled {
   cursor: not-allowed;
-  color: var(--color-gray-light);
-  border-color: var(--color-gray-light);
+  color: #ccc;
+  border-color: #eee;
   opacity: 0.5;
 }
 
 div.dt-paging button.current {
-  background: var(--color-red);
-  border-color: var(--color-red);
-  color: var(--color-cream);
-  font-weight: 700;
+  background: #333;
+  border-color: #333;
+  color: #fff;
+  font-weight: 600;
 }
 
 div.dt-info {
@@ -1502,14 +1502,14 @@ div.dt-info {
 }
 
 table.dataTable.no-footer {
-  border-bottom: 2px solid var(--color-black);
+  border-bottom: 1px solid #ddd;
 }
 
 table.dataTable thead th.dt-orderable-asc,
 table.dataTable thead th.dt-orderable-desc,
 table.dataTable thead th.dt-ordering-asc,
 table.dataTable thead th.dt-ordering-desc {
-  background: var(--color-yellow);
+  background: #f0f0f0;
 }
 
 small.itables-dtype {
@@ -1522,13 +1522,12 @@ table tbody td {
 }
 
 table tbody td a {
-  color: var(--color-red);
+  color: #0066cc;
   text-decoration: none;
-  font-weight: 600;
 }
 
 table tbody td a:hover {
-  color: var(--color-blue);
+  color: #004499;
   text-decoration: underline;
 }
 
