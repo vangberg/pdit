@@ -724,6 +724,82 @@ h1 {
   color: var(--color-gray);
 }
 
+/* Headings with color squares */
+.output-text-markdown h1,
+.output-text-markdown h2,
+.output-text-markdown h3,
+.output-text-markdown h4,
+.output-text-markdown h5,
+.output-text-markdown h6 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-black);
+  margin: 1em 0 0.5em 0;
+}
+
+.output-text-markdown h1::before,
+.output-text-markdown h2::before,
+.output-text-markdown h3::before,
+.output-text-markdown h4::before,
+.output-text-markdown h5::before,
+.output-text-markdown h6::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  background: var(--color-red);
+}
+
+.output-text-markdown h2::before { background: var(--color-yellow); }
+.output-text-markdown h3::before { background: var(--color-blue); }
+.output-text-markdown h4::before { background: var(--color-teal); }
+.output-text-markdown h5::before { background: var(--color-orange); }
+.output-text-markdown h6::before { background: var(--color-red); }
+
+/* List items with color bullets */
+.output-text-markdown ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.5em 0;
+}
+
+.output-text-markdown ul li {
+  padding-left: 1.5rem;
+  position: relative;
+  margin: 0.25em 0;
+}
+
+.output-text-markdown ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 8px;
+  height: 8px;
+  background: var(--color-yellow);
+  border: 2px solid var(--color-black);
+}
+
+.output-text-markdown ul li:nth-child(5n+1)::before { background: var(--color-yellow); }
+.output-text-markdown ul li:nth-child(5n+2)::before { background: var(--color-red); }
+.output-text-markdown ul li:nth-child(5n+3)::before { background: var(--color-blue); }
+.output-text-markdown ul li:nth-child(5n+4)::before { background: var(--color-teal); }
+.output-text-markdown ul li:nth-child(5n+5)::before { background: var(--color-orange); }
+
+/* Ordered lists */
+.output-text-markdown ol {
+  padding-left: 1.5rem;
+  margin: 0.5em 0;
+}
+
+.output-text-markdown ol li {
+  margin: 0.25em 0;
+}
+
 .output-text-markdown a {
   color: var(--color-red);
   text-decoration: none;
