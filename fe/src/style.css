@@ -1,12 +1,63 @@
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap');
+
+/* pdit Design System
+ * Inspired by Wohnpark Alterlaa (Vienna brutalist housing) and Waffle House
+ * Colors applied subtly to topbar; main app stays clean white
+ */
 
 :root {
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
-  line-height: 1.4;
+  /* Primary colors */
+  --color-yellow: #FFD700;
+  --color-red: #E63946;
+  --color-blue: #457B9D;
+  --color-teal: #2A9D8F;
+  --color-orange: #F4A261;
+
+  /* Neutrals */
+  --color-black: #1a1a1a;
+  --color-cream: #FFFEF5;
+  --color-warm-hover: #FFF8DC;
+  --color-gray: #555;
+  --color-gray-light: #888;
+
+  /* Semantic */
+  --color-link: var(--color-red);
+  --color-link-hover: var(--color-blue);
+  --color-code-bg: var(--color-black);
+  --color-code-text: var(--color-yellow);
+
+  /* Borders */
+  --border-thick: 3px solid var(--color-black);
+  --border-thin: 1px solid #ddd;
+
+  /* Rainbow gradient */
+  --gradient-rainbow: linear-gradient(90deg,
+    var(--color-red) 25%,
+    var(--color-yellow) 25%, var(--color-yellow) 50%,
+    var(--color-blue) 50%, var(--color-blue) 75%,
+    var(--color-teal) 75%
+  );
+
+  /* Legacy mappings for existing code */
+  --bg-primary: #fff;
+  --bg-secondary: #f8f8f8;
+  --bg-tertiary: #f5f5f5;
+  --border: #ddd;
+  --accent: var(--color-red);
+  --accent-alt: var(--color-blue);
+  --text-primary: var(--color-black);
+  --text-secondary: var(--color-gray);
+  --text-dim: var(--color-gray-light);
+  --error: #cc0000;
+  --error-soft: #d97a7a;
+  --warning: var(--color-orange);
+
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
   font-weight: 400;
 
   color-scheme: light;
-  color: #000;
+  color: var(--color-black);
   background-color: #fff;
 
   font-synthesis: none;
@@ -14,20 +65,6 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
-
-  /* Neobrutal palette - light theme */
-  --bg-primary: #fff;
-  --bg-secondary: #f5f5f5;
-  --bg-tertiary: #efefef;
-  --border: #000;
-  --accent: #ff6b35;
-  --accent-alt: #0088cc;
-  --text-primary: #000;
-  --text-secondary: #333;
-  --text-dim: #666;
-  --error: #cc0000;
-  --error-soft: #d97a7a;
-  --warning: #cc8800;
 }
 
 body {
@@ -35,6 +72,7 @@ body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  background: #fff;
 }
 
 #app {
@@ -54,14 +92,18 @@ body {
   pointer-events: none;
 }
 
+/* ============================================
+   Navigation Bar - Subtle with color accent
+   ============================================ */
+
 .top-bar {
-  background: #2d3748;
+  background: #fafafa;
   padding: 0.5rem 1rem;
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
-  border-bottom: 1px solid #1f2937;
+  font-family: 'Fira Code', ui-monospace, monospace;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .top-bar-content {
@@ -77,17 +119,15 @@ body {
 
 .top-bar-button {
   background: transparent;
-  color: #e5e7eb;
-  border: 1px solid #e5e7eb;
+  color: var(--color-gray);
+  border: 1px solid var(--color-gray-light);
   border-radius: 0;
   padding: 0 0.8rem;
   font-size: 0.75rem;
   cursor: pointer;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: inherit;
   transition: all 0.1s;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -95,14 +135,15 @@ body {
 }
 
 .top-bar-button:hover:not(:disabled) {
-  background: #93c5fd;
-  color: #1f2937;
+  background: var(--color-warm-hover);
+  color: var(--color-black);
+  border-color: var(--color-gray);
 }
 
 .top-bar-button:disabled {
   cursor: not-allowed;
-  color: #6b7280;
-  border-color: #6b7280;
+  color: #bbb;
+  border-color: #ddd;
 }
 
 .top-bar-tooltip {
@@ -110,17 +151,18 @@ body {
   top: calc(100% + 4px);
   left: 50%;
   transform: translateX(-50%);
-  background: #2d3748;
-  color: #e5e7eb;
+  background: var(--color-black);
+  color: var(--color-cream);
   padding: 0.4rem 0.6rem;
   border-radius: 0;
   font-size: 0.7rem;
   font-weight: 500;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: ui-monospace, monospace;
   white-space: nowrap;
-  border: 1px solid #e5e7eb;
+  border: none;
   z-index: 1000;
   pointer-events: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .top-bar-status {
@@ -133,35 +175,35 @@ body {
 .top-bar-status-dot {
   width: 8px;
   height: 8px;
-  border: 1px solid #e5e7eb;
+  border-radius: 50%;
 }
 
 .top-bar-status-dot.ready {
-  background: #93c5fd;
+  background: var(--color-teal);
 }
 
 .top-bar-status-dot.initializing {
-  background: #f97316;
+  background: var(--color-orange);
 }
 
 .top-bar-status-dot.connected {
-  background: #93c5fd;
+  background: var(--color-teal);
 }
 
 .top-bar-status-dot.connecting {
-  background: #f97316;
+  background: var(--color-orange);
 }
 
 .top-bar-status-dot.disconnected {
-  background: #ef4444;
+  background: var(--color-red);
 }
 
 .top-bar-conflict-compact {
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--warning);
+  background: transparent;
+  border: 1px solid var(--color-orange);
   border-radius: 0;
   padding: 0.25rem 0.375rem;
   font-size: 0.7rem;
@@ -169,87 +211,85 @@ body {
 }
 
 .top-bar-conflict-compact-message {
-  color: var(--warning);
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  color: var(--color-orange);
+  font-family: ui-monospace, monospace;
   white-space: nowrap;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .top-bar-conflict-button-primary {
   position: relative;
-  background: var(--accent);
-  color: var(--bg-primary);
-  border: 1px solid var(--accent);
+  background: var(--color-orange);
+  color: white;
+  border: none;
   border-radius: 0;
   padding: 0.25rem 0.5rem;
   font-size: 0.7rem;
   cursor: pointer;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: ui-monospace, monospace;
   transition: all 0.1s;
   font-weight: 600;
 }
 
 .top-bar-conflict-button-primary:hover {
-  background: var(--accent-alt);
-  border-color: var(--accent-alt);
+  background: var(--color-red);
 }
 
 .top-bar-conflict-button-primary:disabled {
   cursor: not-allowed;
-  background: #6b7280;
-  border-color: #6b7280;
+  background: #ccc;
 }
 
 .top-bar-conflict-button-secondary {
   position: relative;
   background: transparent;
-  color: var(--text-primary);
-  border: 1px solid var(--border);
+  color: var(--color-gray);
+  border: 1px solid var(--color-gray-light);
   border-radius: 0;
   padding: 0.25rem 0.5rem;
   font-size: 0.7rem;
   cursor: pointer;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: ui-monospace, monospace;
   transition: all 0.1s;
   font-weight: 500;
 }
 
 .top-bar-conflict-button-secondary:hover {
-  background: var(--accent);
-  color: var(--bg-primary);
+  background: var(--color-warm-hover);
+  color: var(--color-black);
 }
 
 .top-bar-conflict-button-secondary:disabled {
   cursor: not-allowed;
-  color: #6b7280;
-  border-color: #6b7280;
+  color: #ccc;
+  border-color: #ddd;
 }
 
 .top-bar-status-text {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 0.7rem;
   font-weight: 500;
+  color: var(--color-gray-light);
 }
 
 .top-bar-status-text.ready {
-  color: var(--accent);
+  color: var(--color-teal);
 }
 
 .top-bar-status-text.initializing {
-  color: var(--warning);
+  color: var(--color-orange);
 }
 
 .top-bar-status-text.connected {
-  color: #93c5fd;
+  color: var(--color-teal);
 }
 
 .top-bar-status-text.connecting {
-  color: #f97316;
+  color: var(--color-orange);
 }
 
 .top-bar-status-text.disconnected {
-  color: #f87171;
+  color: var(--color-red);
 }
 
 /* Toggle switch styles */
@@ -267,69 +307,68 @@ body {
   align-items: center;
   gap: 0.5rem;
   background: transparent;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-gray-light);
   border-radius: 0;
   padding: 0 0.8rem;
   cursor: pointer;
   font-size: 0.75rem;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: inherit;
   transition: all 0.1s;
   font-weight: 500;
-  color: #e5e7eb;
+  color: var(--color-gray);
   height: 32px;
 }
 
 .top-bar-toggle:hover {
-  background: #93c5fd;
-  color: #1f2937;
+  background: var(--color-warm-hover);
+  color: var(--color-black);
+  border-color: var(--color-gray);
 }
 
 .top-bar-toggle:disabled {
   cursor: not-allowed;
-  color: #6b7280;
-  border-color: #6b7280;
+  color: var(--color-gray-light);
+  border-color: #ddd;
 }
 
 .top-bar-toggle:disabled .top-bar-toggle-switch {
-  background: #6b7280;
-  border-color: #6b7280;
+  background: #ddd;
+  border-color: #ddd;
 }
 
 .top-bar-toggle:disabled .top-bar-toggle-knob {
-  background: #9ca3af;
-  border-color: #9ca3af;
+  background: var(--color-gray-light);
+  border-color: var(--color-gray-light);
 }
 
 .top-bar-toggle.enabled {
-  border-color: #93c5fd;
+  border-color: var(--color-teal);
   background: transparent;
-  color: #93c5fd;
+  color: var(--color-teal);
 }
 
 .top-bar-toggle-label {
   font-size: 0.75rem;
   color: currentColor;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .top-bar-toggle.enabled .top-bar-toggle-label {
-  color: #93c5fd;
+  color: var(--color-teal);
 }
 
 .top-bar-toggle-switch {
   width: 24px;
   height: 12px;
-  background: #6b7280;
-  border: 1px solid #6b7280;
+  background: #ddd;
+  border: 1px solid var(--color-gray-light);
   border-radius: 0;
   position: relative;
   transition: all 0.1s;
 }
 
 .top-bar-toggle.enabled .top-bar-toggle-switch {
-  background: #6b7280;
-  border-color: #93c5fd;
+  background: var(--color-teal);
+  border-color: var(--color-teal);
 }
 
 .top-bar-toggle-knob {
@@ -338,15 +377,20 @@ body {
   left: 1px;
   width: 8px;
   height: 8px;
-  background: #e5e7eb;
-  border: 1px solid #e5e7eb;
+  background: white;
+  border: none;
   border-radius: 0;
   transition: transform 0.1s;
 }
 
 .top-bar-toggle.enabled .top-bar-toggle-knob {
   transform: translateX(12px);
+  background: white;
 }
+
+/* ============================================
+   Layout - Split container
+   ============================================ */
 
 .split-container {
   display: grid;
@@ -355,8 +399,9 @@ body {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  border-top: 1px solid var(--border);
+  border-top: none;
   transition: opacity 0.15s ease-out;
+  background: #fff;
 }
 
 .editor-half {
@@ -364,7 +409,7 @@ body {
   flex-direction: column;
   flex: 0 0 50%;
   min-width: 0;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid #e5e5e5;
 }
 
 .output-half {
@@ -388,28 +433,28 @@ body {
   flex: 1;
 }
 
-.editor-half,
-.output-half {
-  /* Styling handled by parent container */
-}
-
 h1 {
   font-size: 2.5em;
   line-height: 1.1;
   margin-bottom: 1em;
   text-align: center;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
+
+/* ============================================
+   Editor
+   ============================================ */
 
 .editor-container {
   display: flex;
   flex-direction: row;
   width: 100%;
   border: none;
-  border-left: 4px solid var(--border);
   border-radius: 0;
   overflow: hidden;
   box-shadow: none;
-  background: var(--bg-primary);
+  background: #fff;
 }
 
 #editor {
@@ -420,24 +465,29 @@ h1 {
 
 #editor-preview {
   flex: 1;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid #e5e5e5;
   padding-left: 0.5rem;
 }
 
 .cm-editor {
   font-size: 14px;
   min-width: 0;
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  background: #fff;
+  color: var(--color-black);
+  font-family: ui-monospace, monospace;
 }
 
 .cm-focused {
   outline: none;
 }
 
+/* ============================================
+   Output Pane
+   ============================================ */
+
 #output {
   font-size: 13px;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: ui-monospace, monospace;
   width: 100%;
   min-width: 0;
   overflow-x: auto;
@@ -459,7 +509,7 @@ h1 {
 .output-group {
   background: transparent;
   border: none;
-  border-left: 3px solid #93c5fd;
+  border-left: 3px solid #e5e5e5;
   margin: 0;
   padding: 0 6px;
   padding-left: 8px;
@@ -467,7 +517,7 @@ h1 {
 }
 
 .output-group-error {
-  border-left-color: var(--error-soft);
+  border-left-color: var(--color-red);
 }
 
 .output-content.reader-mode .output-group {
@@ -475,7 +525,7 @@ h1 {
   border: none;
   padding-left: 8px;
   padding-right: 8px;
-  border-left: 2px solid var(--border);
+  border-left: 2px solid #ddd;
 }
 
 .output-group-invisible {
@@ -510,19 +560,18 @@ h1 {
   padding: 0;
   font-size: 13px;
   line-height: 1.4;
-  color: var(--text-primary);
+  color: var(--color-black);
+  font-family: ui-monospace, monospace;
 }
 
 .output-item {
-  color: var(--text-primary);
+  color: var(--color-black);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0;
   margin: 0;
 }
-
-
 
 .output-content-wrapper {
   flex: 1;
@@ -534,69 +583,81 @@ h1 {
 .output-debug {
   margin-top: 6px;
   padding-top: 6px;
-  border-top: 1px solid var(--text-dim);
+  border-top: 2px solid var(--color-black);
 }
 
 .output-debug-button {
   font-size: 10px;
   padding: 2px 6px;
   background: transparent;
-  border: 1px solid var(--border);
+  border: 2px solid var(--color-black);
   border-radius: 0;
   cursor: pointer;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
-  color: var(--text-primary);
+  font-family: ui-monospace, monospace;
+  color: var(--color-black);
   transition: all 0.1s;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .output-debug-button:hover {
-  background: var(--accent);
-  color: var(--bg-primary);
-  border-color: var(--accent);
+  background: var(--color-black);
+  color: var(--color-yellow);
 }
 
 .output-debug-info {
   margin-top: 6px;
   padding: 6px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
+  background: var(--color-black);
+  border: 2px solid var(--color-black);
   border-radius: 0;
   max-height: 400px;
   overflow: auto;
+  position: relative;
+}
+
+/* Rainbow stripe on debug info */
+.output-debug-info::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-rainbow);
 }
 
 .output-debug-info pre {
   margin: 0;
+  margin-top: 4px;
   font-size: 11px;
   line-height: 1.4;
-  color: var(--text-secondary);
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  color: var(--color-cream);
+  font-family: ui-monospace, monospace;
 }
 
 .output-item.output-stdout .output-content-wrapper {
-  color: var(--text-primary);
-  font-family: monospace;
+  color: var(--color-black);
+  font-family: ui-monospace, monospace;
 }
 
 .output-item.output-stderr .output-content-wrapper {
-  color: var(--error);
+  color: var(--color-red);
   font-weight: 600;
 }
 
 .output-item.output-error .output-content-wrapper {
-  color: var(--error);
+  color: var(--color-red);
   font-weight: 600;
 }
 
 .output-item.output-warning .output-content-wrapper {
-  color: var(--warning);
+  color: var(--color-orange);
   font-weight: 600;
 }
 
 .output-item pre {
-  color: var(--text-primary);
-  font-family: monospace;
+  color: var(--color-black);
+  font-family: ui-monospace, monospace;
   background: transparent;
   margin: 0;
   padding: 0;
@@ -606,47 +667,126 @@ h1 {
 }
 
 .output-item code {
-  color: var(--text-primary);
-  background: transparent;
-  padding: 0;
-  border: none;
-  font-family: monospace;
+  color: var(--color-yellow);
+  background: var(--color-black);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: ui-monospace, monospace;
 }
 
+/* ============================================
+   Markdown Output
+   ============================================ */
+
 .output-text-markdown code {
-  color: var(--accent);
+  color: var(--color-yellow);
+  background: var(--color-black);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
   font-weight: 600;
 }
 
 .output-text-markdown pre {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  padding: 6px;
+  background: var(--color-black);
+  border: none;
+  padding: 1.25rem;
   overflow-x: auto;
   margin: 0.5em 0;
+  position: relative;
+  border-radius: 0;
+}
+
+/* Rainbow stripe on code blocks */
+.output-text-markdown pre::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-rainbow);
 }
 
 .output-text-markdown pre code {
   background: none;
   padding: 0;
-  color: var(--text-secondary);
+  color: var(--color-cream);
+  border-radius: 0;
 }
 
 .output-text-markdown blockquote {
-  border-left: 2px solid var(--border);
+  border-left: 4px solid var(--color-yellow);
   margin: 0.5em 0;
   padding-left: 1em;
-  color: var(--text-secondary);
+  color: var(--color-gray);
+}
+
+/* Headings */
+.output-text-markdown h1,
+.output-text-markdown h2,
+.output-text-markdown h3,
+.output-text-markdown h4,
+.output-text-markdown h5,
+.output-text-markdown h6 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-black);
+  margin: 1em 0 0.5em 0;
+}
+
+/* List items with color bullets */
+.output-text-markdown ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.5em 0;
+}
+
+.output-text-markdown ul li {
+  padding-left: 1.5rem;
+  position: relative;
+  margin: 0.25em 0;
+}
+
+.output-text-markdown ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  background: var(--color-yellow);
+  border: none;
+}
+
+.output-text-markdown ul li:nth-child(5n+1)::before { background: var(--color-yellow); }
+.output-text-markdown ul li:nth-child(5n+2)::before { background: var(--color-red); }
+.output-text-markdown ul li:nth-child(5n+3)::before { background: var(--color-blue); }
+.output-text-markdown ul li:nth-child(5n+4)::before { background: var(--color-teal); }
+.output-text-markdown ul li:nth-child(5n+5)::before { background: var(--color-orange); }
+
+/* Ordered lists */
+.output-text-markdown ol {
+  padding-left: 1.5rem;
+  margin: 0.5em 0;
+}
+
+.output-text-markdown ol li {
+  margin: 0.25em 0;
 }
 
 .output-text-markdown a {
-  color: var(--accent-alt);
-  text-decoration: underline;
+  color: var(--color-red);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.output-text-markdown a:hover {
+  color: var(--color-blue);
 }
 
 .output-text-markdown strong {
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--color-black);
 }
 
 .output-text-markdown em {
@@ -663,16 +803,20 @@ h1 {
   padding-bottom: 0;
 }
 
+/* ============================================
+   Plots and Images
+   ============================================ */
+
 .output-item.output-plot {
   margin-top: 0.25rem;
 }
 
 .output-plot canvas {
   display: block;
-  background: var(--bg-secondary);
+  background: var(--color-cream);
   width: 400px;
   height: 300px;
-  border: 1px solid var(--border);
+  border: 2px solid var(--color-black);
 }
 
 .output-image {
@@ -680,7 +824,8 @@ h1 {
   max-width: min(100%, 1200px);
   height: auto;
   display: block;
-  background: var(--bg-secondary);
+  background: var(--color-cream);
+  border: 2px solid var(--color-black);
 }
 
 .output-html {
@@ -690,29 +835,37 @@ h1 {
   overflow-x: auto;
 }
 
+/* ============================================
+   Tables
+   ============================================ */
+
 .output-table {
   width: 100%;
   border-collapse: collapse;
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
+  color: var(--color-gray);
+  border: 2px solid var(--color-black);
 }
 
 .output-table td {
   padding: 0.25rem 0.5rem;
-  border: 1px solid var(--text-dim);
-  color: var(--text-secondary);
+  border: 1px solid var(--color-gray);
+  color: var(--color-gray);
 }
 
 .output-table .header-row td {
-  font-weight: 600;
-  color: var(--text-primary);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
+  font-weight: 700;
+  color: var(--color-black);
+  background: var(--color-warm-hover);
+  border-bottom: 3px solid var(--color-black);
 }
 
 .output-table td:last-child {
   text-align: right;
-  font-family: monospace;
+  font-family: ui-monospace, monospace;
+}
+
+.output-table tr:hover td {
+  background: var(--color-warm-hover);
 }
 
 .empty-line {
@@ -728,7 +881,7 @@ h1 {
 
 .plot-bar {
   min-width: 6px;
-  background-color: var(--accent);
+  background-color: var(--color-red);
   opacity: 0.8;
 }
 
@@ -739,12 +892,12 @@ h1 {
 }
 
 .array-item {
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
+  background: var(--color-black);
+  color: var(--color-yellow);
   padding: 2px 4px;
-  border: 1px solid var(--border);
+  border: 2px solid var(--color-black);
   border-radius: 0;
-  font-family: monospace;
+  font-family: ui-monospace, monospace;
 }
 
 .output-spacer-container {
@@ -756,13 +909,17 @@ h1 {
   width: 100%;
 }
 
+/* ============================================
+   Debug Panel
+   ============================================ */
+
 .debug-panel {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border);
+  background: var(--color-cream);
+  border-top: var(--border-thick);
   padding: 1rem;
   max-height: 300px;
   overflow-y: auto;
@@ -778,88 +935,91 @@ h1 {
 
 .debug-header h3 {
   margin: 0;
-  color: var(--text-primary);
+  color: var(--color-black);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  font-weight: 700;
 }
 
 .debug-status {
-  color: var(--text-dim);
+  color: var(--color-gray-light);
   font-size: 0.75rem;
 }
 
 .debug-table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--bg-primary);
+  background: var(--color-cream);
   border-radius: 0;
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 2px solid var(--color-black);
 }
 
 .debug-table th {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+  background: var(--color-yellow);
+  color: var(--color-black);
   padding: 0.5rem 1rem;
   text-align: right;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.75rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 3px solid var(--color-black);
 }
 
 .debug-table td {
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid var(--text-dim);
+  border-bottom: 1px solid #ddd;
   font-size: 0.75rem;
-  color: var(--text-secondary);
+  color: var(--color-gray);
 }
 
 .debug-table tbody tr:hover {
-  background: var(--bg-secondary);
+  background: var(--color-warm-hover);
 }
 
 .line-number {
   font-weight: 600;
-  color: var(--text-dim);
+  color: var(--color-gray-light);
   text-align: center;
   width: 60px;
 }
 
 .height-value {
-  font-family: monospace;
+  font-family: ui-monospace, monospace;
   text-align: right;
-  color: var(--text-primary);
+  color: var(--color-black);
 }
 
 .debug-tabs {
   display: flex;
   gap: 0;
   margin-bottom: 1rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 3px solid var(--color-black);
 }
 
 .debug-tab {
   background: none;
   border: none;
-  border-bottom: 1px solid transparent;
+  border-bottom: 3px solid transparent;
   padding: 0.5rem 1rem;
   cursor: pointer;
   font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--text-dim);
+  font-weight: 600;
+  color: var(--color-gray);
   transition: all 0.1s;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-bottom: -3px;
 }
 
 .debug-tab:hover {
-  color: var(--text-primary);
-  background: var(--bg-secondary);
+  color: var(--color-black);
+  background: var(--color-warm-hover);
 }
 
 .debug-tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+  color: var(--color-black);
+  border-bottom-color: var(--color-red);
+  background: var(--color-yellow);
 }
 
 .debug-tab-content {
@@ -868,25 +1028,28 @@ h1 {
 
 .debug-empty {
   text-align: center;
-  color: var(--text-dim);
+  color: var(--color-gray-light);
   padding: 2rem;
   font-style: italic;
 }
 
 .range-id {
   font-weight: 600;
-  color: var(--text-dim);
+  color: var(--color-gray-light);
   text-align: center;
   width: 60px;
 }
 
 .range-value {
-  font-family: monospace;
+  font-family: ui-monospace, monospace;
   text-align: right;
-  color: var(--text-primary);
+  color: var(--color-black);
 }
 
-/* Split button styles */
+/* ============================================
+   Split Button Styles
+   ============================================ */
+
 .top-bar-split-button-wrapper {
   position: relative;
   display: flex;
@@ -895,18 +1058,16 @@ h1 {
 
 .top-bar-split-button-main {
   background: transparent;
-  color: #e5e7eb;
-  border: 1px solid #e5e7eb;
+  color: var(--color-gray);
+  border: 1px solid var(--color-gray-light);
   border-right: none;
   border-radius: 0;
   padding: 0 0.8rem;
   font-size: 0.75rem;
   cursor: pointer;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: inherit;
   transition: all 0.1s;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -927,14 +1088,14 @@ h1 {
 
 .top-bar-split-button-arrow {
   background: transparent;
-  color: #e5e7eb;
-  border: 1px solid #e5e7eb;
-  border-left: 1px solid rgba(229, 231, 235, 0.5);
+  color: var(--color-gray);
+  border: 1px solid var(--color-gray-light);
+  border-left: 1px solid #ddd;
   border-radius: 0;
   padding: 0 0.4rem;
   font-size: 0.75rem;
   cursor: pointer;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: inherit;
   transition: all 0.1s;
   display: flex;
   align-items: center;
@@ -946,32 +1107,48 @@ h1 {
 .top-bar-split-button-main:hover:not(:disabled),
 .top-bar-split-button-arrow:hover:not(:disabled),
 .top-bar-split-button-arrow.active {
-  background: #93c5fd;
-  color: #1f2937;
+  background: var(--color-warm-hover);
+  color: var(--color-black);
+  border-color: var(--color-gray);
+}
+
+.top-bar-split-button-main:hover:not(:disabled) {
+  border-right: none;
+}
+
+.top-bar-split-button-arrow:hover:not(:disabled),
+.top-bar-split-button-arrow.active {
+  border-left-color: #ddd;
 }
 
 .top-bar-split-button-main:disabled {
   cursor: not-allowed;
-  color: #6b7280;
-  border-color: #6b7280;
+  background: transparent;
+  color: #ccc;
+  border-color: #ddd;
 }
 
 .top-bar-split-button-arrow:disabled {
   cursor: not-allowed;
-  color: #6b7280;
-  border-color: #6b7280;
-  border-left-color: #6b7280;
+  background: transparent;
+  color: #ccc;
+  border-color: #ddd;
+  border-left-color: #ddd;
 }
+
+/* ============================================
+   Dropdown Menu
+   ============================================ */
 
 .top-bar-dropdown-menu {
   position: absolute;
   top: 100%;
   left: 0;
   margin-top: 4px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
+  background: white;
+  border: 1px solid #ddd;
   border-radius: 0;
-  box-shadow: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   min-width: 100%;
   width: max-content;
   display: flex;
@@ -993,14 +1170,12 @@ h1 {
 .top-bar-dropdown-item {
   padding: 8px 12px;
   cursor: pointer;
-  color: var(--text-primary);
+  color: var(--color-gray);
   font-size: 0.75rem;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: inherit;
   border: none;
   background: transparent;
   text-align: left;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   font-weight: 500;
   transition: all 0.1s;
   display: flex;
@@ -1011,19 +1186,19 @@ h1 {
 
 .top-bar-dropdown-item:hover,
 .top-bar-dropdown-item.selected {
-  background: var(--accent);
-  color: var(--bg-primary);
+  background: var(--color-warm-hover);
+  color: var(--color-black);
 }
 
 .top-bar-dropdown-item.disabled {
   cursor: not-allowed;
-  color: #6b7280;
+  color: var(--color-gray);
 }
 
 .top-bar-dropdown-item.disabled:hover,
 .top-bar-dropdown-item.disabled.selected {
   background: transparent;
-  color: #6b7280;
+  color: var(--color-gray);
 }
 
 .top-bar-dropdown-item-shortcut {
@@ -1040,16 +1215,19 @@ h1 {
   }
 }
 
-/* Fuzzy Finder styles */
+/* ============================================
+   Fuzzy Finder
+   ============================================ */
+
 .fuzzy-finder-dropdown {
   position: absolute;
   top: 100%;
   left: 0;
   margin-top: 4px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
+  background: white;
+  border: 1px solid #ddd;
   border-radius: 0;
-  box-shadow: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   width: 320px;
   max-height: 300px;
   display: flex;
@@ -1059,25 +1237,24 @@ h1 {
 }
 
 .fuzzy-finder-input {
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  background: white;
+  color: var(--color-black);
   border: none;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #ddd;
   padding: 8px 10px;
   font-size: 12px;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: inherit;
   outline: none;
   width: 100%;
   box-sizing: border-box;
 }
 
 .fuzzy-finder-input:focus {
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border);
+  background: var(--color-warm-hover);
 }
 
 .fuzzy-finder-input::placeholder {
-  color: var(--text-dim);
+  color: var(--color-gray-light);
 }
 
 .fuzzy-finder-list {
@@ -1091,30 +1268,35 @@ h1 {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  border-bottom: 1px solid var(--text-dim);
+  border-bottom: 1px solid #ddd;
   min-width: 0;
 }
 
+.fuzzy-finder-item:hover {
+  background: var(--color-warm-hover);
+}
+
 .fuzzy-finder-item.selected {
-  background: var(--accent);
-  color: var(--bg-primary);
+  background: var(--color-warm-hover);
+  color: var(--color-black);
 }
 
 .fuzzy-finder-filename {
-  color: var(--text-primary);
+  color: var(--color-black);
   font-size: 12px;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: ui-monospace, monospace;
   flex-shrink: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 200px;
+  font-weight: 600;
 }
 
 .fuzzy-finder-path {
-  color: var(--text-dim);
+  color: var(--color-gray-light);
   font-size: 10px;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: ui-monospace, monospace;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1122,39 +1304,42 @@ h1 {
 }
 
 .fuzzy-match-highlight {
-  color: var(--accent);
+  color: var(--color-red);
   font-weight: 700;
 }
 
 .fuzzy-finder-item.selected .fuzzy-match-highlight {
-  color: #fff;
+  color: var(--color-red);
 }
 
 .fuzzy-finder-empty {
   padding: 12px 10px;
   text-align: center;
-  color: var(--text-dim);
+  color: var(--color-gray-light);
   font-size: 11px;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: ui-monospace, monospace;
   white-space: nowrap;
 }
 
-/* DataTables styling for pandas/polars output - neobrutalism style */
+/* ============================================
+   DataTables - pandas/polars output
+   ============================================ */
+
 table.dataTable {
   border-collapse: collapse;
   font-size: 13px;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
-  border: 2px solid var(--border);
+  font-family: ui-monospace, monospace;
+  border: 1px solid #ddd;
   background: #fff;
   width: 100%;
 }
 
 table.dataTable thead th {
-  background: var(--bg-secondary);
-  font-weight: 700;
-  color: var(--text-primary);
-  border-right: 1px solid var(--border);
-  border-bottom: 2px solid var(--border);
+  background: #f5f5f5;
+  font-weight: 600;
+  color: var(--color-black);
+  border-right: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
   padding: 8px 8px;
   font-size: 12px;
   text-align: left;
@@ -1166,9 +1351,9 @@ table.dataTable thead th:last-child {
 
 table.dataTable tbody td {
   padding: 6px 8px;
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  color: var(--text-secondary);
+  border-right: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+  color: var(--color-gray);
   background: #fff;
 }
 
@@ -1181,7 +1366,7 @@ table.dataTable tbody tr:last-child td {
 }
 
 table.dataTable tbody tr:hover td {
-  background: var(--bg-secondary);
+  background: #f9f9f9;
 }
 
 table.dataTable.stripe tbody tr.odd,
@@ -1191,11 +1376,11 @@ table.dataTable.display tbody tr.odd {
 
 table.dataTable.stripe tbody tr.odd:hover,
 table.dataTable.display tbody tr.odd:hover {
-  background: var(--bg-secondary);
+  background: #f9f9f9;
 }
 
 div.dt-container {
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  font-family: ui-monospace, monospace;
   font-size: 11px;
 }
 
@@ -1211,56 +1396,56 @@ div.dt-layout-cell {
 }
 
 div.dt-search input {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
+  background: #fff;
+  border: 1px solid #ddd;
   border-radius: 0;
   padding: 2px 6px;
   font-size: 11px;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
-  color: var(--text-primary);
+  font-family: ui-monospace, monospace;
+  color: var(--color-black);
   height: 22px;
 }
 
 div.dt-search input:hover {
-  border-color: var(--accent);
+  border-color: #bbb;
 }
 
 div.dt-search input:focus {
   outline: none;
-  border-color: var(--accent);
-  background: var(--bg-secondary);
+  border-color: #999;
+  background: #fff;
 }
 
 div.dt-length select {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
+  background: #fff;
+  border: 1px solid #ddd;
   border-radius: 0;
   padding: 2px 6px;
   font-size: 11px;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
-  color: var(--text-primary);
+  font-family: ui-monospace, monospace;
+  color: var(--color-black);
   height: 22px;
 }
 
 div.dt-length select:hover {
-  border-color: var(--accent);
+  border-color: #bbb;
 }
 
 div.dt-length select:focus {
   outline: none;
-  border-color: var(--accent);
-  background: var(--bg-secondary);
+  border-color: #999;
+  background: #fff;
 }
 
 div.dt-paging button {
   background: transparent;
-  border: 1px solid var(--border);
+  border: 1px solid #ddd;
   border-radius: 0;
   padding: 2px 8px;
   font-size: 11px;
   cursor: pointer;
-  color: var(--text-primary);
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
+  color: var(--color-gray);
+  font-family: ui-monospace, monospace;
   transition: all 0.1s;
   height: 22px;
   margin: 0 1px;
@@ -1268,55 +1453,44 @@ div.dt-paging button {
 }
 
 div.dt-paging button:hover:not(.disabled) {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--bg-primary);
+  background: #f5f5f5;
+  border-color: #bbb;
+  color: var(--color-black);
 }
 
 div.dt-paging button.disabled {
   cursor: not-allowed;
-  color: var(--text-dim);
-  border-color: var(--text-dim);
+  color: #ccc;
+  border-color: #eee;
   opacity: 0.5;
 }
 
 div.dt-paging button.current {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--bg-primary);
-  font-weight: 700;
+  background: #333;
+  border-color: #333;
+  color: #fff;
+  font-weight: 600;
 }
 
 div.dt-info {
-  color: var(--text-secondary);
+  color: var(--color-gray);
   font-size: 11px;
-  font-family: 'Fira Code', Monaco, Consolas, monospace;
-}
-
-div.dt-layout-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 0;
-}
-
-div.dt-layout-cell {
-  padding: 2px;
+  font-family: ui-monospace, monospace;
 }
 
 table.dataTable.no-footer {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #ddd;
 }
 
 table.dataTable thead th.dt-orderable-asc,
 table.dataTable thead th.dt-orderable-desc,
 table.dataTable thead th.dt-ordering-asc,
 table.dataTable thead th.dt-ordering-desc {
-  background: var(--bg-secondary);
+  background: #f0f0f0;
 }
 
 small.itables-dtype {
-  color: var(--text-dim);
+  color: var(--color-gray-light);
   font-size: 10px;
 }
 
@@ -1325,13 +1499,18 @@ table tbody td {
 }
 
 table tbody td a {
-  color: var(--accent-alt);
+  color: #0066cc;
   text-decoration: none;
 }
 
 table tbody td a:hover {
+  color: #004499;
   text-decoration: underline;
 }
+
+/* ============================================
+   Responsive
+   ============================================ */
 
 @media (max-width: 900px) {
   .top-bar-label,

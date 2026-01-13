@@ -108,9 +108,10 @@ export function PathEditor({
         <span
           style={{
             fontSize: "12px",
-            color: disabled ? "#777" : "#ccc",
+            color: disabled ? "#aaa" : "#333",
+            fontWeight: 500,
             cursor: !disabled && onPathChange ? "pointer" : "default",
-            borderBottom: !disabled && onPathChange ? "1px dotted #666" : "none",
+            borderBottom: !disabled && onPathChange ? "1px dotted #999" : "none",
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -131,7 +132,7 @@ export function PathEditor({
         <span
           style={{
             fontSize: "12px",
-            color: disabled ? "#777" : "#888",
+            color: disabled ? "#aaa" : "#666",
             cursor: disabled ? "default" : "pointer",
             whiteSpace: "nowrap",
             overflow: "hidden",

@@ -230,15 +230,15 @@ function RunButton({
     }
   };
 
-  const label = isExecuting ? "STOP" : "RUN CURRENT";
+  const label = isExecuting ? "Stop" : "Run";
   const tooltip = undefined;
   const icon = isExecuting ? <Square size={14} className="top-bar-icon" /> : <Play size={14} className="top-bar-icon" />;
   const isDisabled = disabled || (isExecuting ? !onInterrupt : false);
   const isArrowDisabled = disabled;
 
   return (
-    <div 
-      className="top-bar-split-button-wrapper" 
+    <div
+      className="top-bar-split-button-wrapper"
       onMouseLeave={() => setIsDropdownOpen(false)}
       ref={containerRef}
     >
@@ -253,7 +253,7 @@ function RunButton({
         <span className="top-bar-label top-bar-run-label">
           <span className="top-bar-run-label-text">{label}</span>
           <span className="top-bar-run-label-measure" aria-hidden="true">
-            RUN CURRENT
+            Run
           </span>
         </span>
       </button>
@@ -352,7 +352,7 @@ export function TopBar({
         <ToggleSwitch
           enabled={readerMode ?? false}
           onToggle={onToggleReaderMode || (() => {})}
-          label="READER"
+          label="Reader"
           icon={<BookOpen size={14} />}
           tooltip="Toggle reader mode"
           showTooltip={hoveredButton === "reader"}
@@ -365,7 +365,7 @@ export function TopBar({
           <ToggleSwitch
             enabled={autorun ?? false}
             onToggle={onAutorunToggle}
-            label="AUTORUN"
+            label="Autorun"
             icon={<Zap size={14} />}
             tooltip="Auto-execute script on save or file change"
             showTooltip={hoveredButton === "autorun"}
@@ -377,7 +377,7 @@ export function TopBar({
 
         {scriptPath && (
           <ActionButton
-            label="SAVE"
+            label="Save"
             onClick={onSave || (() => {})}
             disabled={isDisconnected || !(hasUnsavedChanges ?? false)}
             onMouseEnter={() => setHoveredButton("save")}
