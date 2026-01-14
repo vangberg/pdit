@@ -1,0 +1,163 @@
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Base */
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #FFFEF5;
+  color: #1a1a1a;
+  line-height: 1.6;
+}
+
+/* Typography */
+h1, h2, h3 {
+  font-family: 'Fira Mono', ui-monospace, monospace;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 2.5rem 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+h2::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #E63946;
+  flex-shrink: 0;
+}
+
+h2:nth-of-type(2)::before { background: #457B9D; }
+h2:nth-of-type(3)::before { background: #2A9D8F; }
+h2:nth-of-type(4)::before { background: #F4A261; }
+h2:nth-of-type(5)::before { background: #FFD700; }
+
+h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.75rem;
+}
+
+p {
+  margin-bottom: 1rem;
+}
+
+/* Links */
+a {
+  color: #E63946;
+  font-weight: 600;
+}
+
+a:hover {
+  color: #457B9D;
+}
+
+/* Code */
+code {
+  font-family: ui-monospace, monospace;
+  background: #1a1a1a;
+  color: #FFD700;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+pre {
+  background: #1a1a1a;
+  padding: 1.25rem;
+  border-radius: 0;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+pre::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #E63946 25%, #FFD700 25%, #FFD700 50%, #457B9D 50%, #457B9D 75%, #2A9D8F 75%);
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  color: #fff;
+}
+
+/* Lists */
+ul {
+  margin-bottom: 1rem;
+  padding-left: 0;
+  list-style: none;
+}
+
+li {
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.4em;
+  width: 8px;
+  height: 8px;
+  background: #FFD700;
+  border: 2px solid #1a1a1a;
+}
+
+li:nth-child(2)::before { background: #E63946; }
+li:nth-child(3)::before { background: #457B9D; }
+li:nth-child(4)::before { background: #2A9D8F; }
+li:nth-child(5)::before { background: #F4A261; }
+
+/* Layout */
+main {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+th {
+  text-align: left;
+  padding: 0.75rem;
+  border-bottom: 3px solid #1a1a1a;
+  font-weight: 700;
+}
+
+td {
+  text-align: left;
+  padding: 0.75rem;
+  border-bottom: 1px solid #ddd;
+}
+
+tr:hover td {
+  background: #FFF8DC;
+}
