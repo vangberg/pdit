@@ -142,8 +142,8 @@ body {
 
 .top-bar-button:disabled {
   cursor: not-allowed;
-  color: var(--color-gray);
-  border-color: var(--color-gray);
+  color: #bbb;
+  border-color: #ddd;
 }
 
 .top-bar-tooltip {
@@ -721,41 +721,18 @@ h1 {
   color: var(--color-gray);
 }
 
-/* Headings with color squares */
+/* Headings */
 .output-text-markdown h1,
 .output-text-markdown h2,
 .output-text-markdown h3,
 .output-text-markdown h4,
 .output-text-markdown h5,
 .output-text-markdown h6 {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--color-black);
   margin: 1em 0 0.5em 0;
 }
-
-.output-text-markdown h1::before,
-.output-text-markdown h2::before,
-.output-text-markdown h3::before,
-.output-text-markdown h4::before,
-.output-text-markdown h5::before,
-.output-text-markdown h6::before {
-  content: '';
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  flex-shrink: 0;
-  background: var(--color-red);
-}
-
-.output-text-markdown h2::before { background: var(--color-yellow); }
-.output-text-markdown h3::before { background: var(--color-blue); }
-.output-text-markdown h4::before { background: var(--color-teal); }
-.output-text-markdown h5::before { background: var(--color-orange); }
-.output-text-markdown h6::before { background: var(--color-red); }
 
 /* List items with color bullets */
 .output-text-markdown ul {
