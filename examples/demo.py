@@ -43,6 +43,15 @@ df = pl.read_csv("https://raw.githubusercontent.com/mwaskom/seaborn-data/master/
 df
 
 """
+## GreatTables
+
+[GreatTables](https://posit-dev.github.io/great-tables/) renders rich HTML tables.
+"""
+
+from great_tables import GT
+GT(df.head(5))
+
+"""
 ## HTML representation
 
 Classes that implement a `_repr_html_()` function returning HTML are rendered
