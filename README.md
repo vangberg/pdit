@@ -1,4 +1,4 @@
-# pdit 🫛
+# pdit
 
 Output-focused Python editor.
 
