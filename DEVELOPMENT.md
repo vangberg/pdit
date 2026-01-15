@@ -1,54 +1,29 @@
 # Development Guide
 
-## Run locally from git repo
+## Requirements
 
-**Requirement**: [uv](https://github.com/astral-sh/uv) installed
+- [uv](https://github.com/astral-sh/uv) for Python dependencies and tools
+- Node.js + npm for frontend dev/build (optional if you only run the backend; built assets are committed in `pdit/_static/`)
+
+## Setup
 
 ```bash
-# Install dependencies (with dev tools)
 uv sync --dev
+```
 
-# Run pdit
+## Run locally
+
+```bash
 uv run pdit script.py
 ```
 
-Built frontend assets are committed to git in `pdit/_static/`, so you don't need Node.js to run pdit.
+This starts the server on port 8888 and opens the editor.
 
-## Run from GitHub without cloning
-
-**Note**: Requires SSH key configured for GitHub (private repo)
+## Hot reload (backend + frontend)
 
 ```bash
-# Run directly from GitHub
-uvx --from git+https://github.com/vangberg/pdit pdit script.py
-```
-
-## Frontend development
-
-**Before committing frontend changes**, rebuild:
-
-```bash
-cd fe
-npm install
-npm run build  # Outputs to ../pdit/_static/
-cd ..
-git add pdit/_static/ fe/
-```
-
-For hot reloading during development:
-
-```bash
-# With honcho (recommended)
+# Recommended
 uv run honcho start
-
-# Or run separately:
-# Terminal 1: Backend
-uv run uvicorn pdit.server:app --reload --reload-exclude examples/** --port 8888
-
-# Terminal 2: Frontend dev server
-cd fe
-npm run dev
-# Open http://localhost:5173
 ```
 
 ## Testing
@@ -60,4 +35,17 @@ uv run pytest
 # Frontend tests
 cd fe
 npm test  # Starts a backend automatically with token auth disabled
+```
+
+You can also run the combined test suite:
+
+```bash
+make test
+```
+
+## Run without cloning
+
+```bash
+# Pre-built assets via the dist branch
+uvx --from git+https://github.com/vangberg/pdit@dist pdit script.py
 ```

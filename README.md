@@ -1,18 +1,56 @@
 # pdit 🫛
 
-Pythonic live scripting.
+Output-focused Python editor.
+
+pdit lets you write regular Python files and see execution results inline, like a notebook but without cells. Edit in your browser or your favorite editor.
+
+## Quick Start
+
+```bash
+pip install pdit
+pdit script.py
+```
 
 ## Features
 
-- **Local Python execution** - Full filesystem and package access
-- **Interactive editor** - CodeMirror 6-based Python editor
-- **Inline results** - Execution results displayed next to code
-- **Execute with Cmd+Enter** - Quick code execution
-- **Jupyter-like workflow** - Persistent namespace across executions
+- **Output-focused** - Results appear inline next to the code that generated them
+- **Just Python scripts** - No notebooks, no cells, no special format. Work with plain `.py` files
+- **File watching** - Changes to the file on disk automatically reload in the editor
+- **Auto-run** - Execute code automatically when the file changes
+- **Coding agents** - Perfect companion for Claude Code, Cursor, and other AI coding tools that edit files
+
+### Rich Output
+
+- **IPython display** - Rich outputs via [IPython.display](https://ipython.readthedocs.io/en/latest/api/generated/IPython.display.html)
+- **Matplotlib** - Inline plot rendering
+- **Interactive DataFrames** - Sortable, searchable tables
+- **Markdown** - Format text output with Markdown
+
+## Output
+
+### Markdown
+
+Top-level string output renders as Markdown, so headings, lists, and emphasis display cleanly.
+
+### HTML
+
+Rich HTML output is supported for objects that implement `_repr_html_()`; see note: [IPython.display.display](https://ipython.readthedocs.io/en/latest/api/generated/IPython.display.html#IPython.display.display).
+
+### IPython display
+
+IPython display objects render inline; see [IPython.display](https://ipython.readthedocs.io/en/latest/api/generated/IPython.display.html) for details.
+
+### DataFrames
+
+Pandas and Polars DataFrames render as interactive tables automatically.
+
+### Plots
+
+Matplotlib figures display inline. Call `plt.show()`.
 
 ## Installation
 
-**Requirement**: [uv](https://github.com/astral-sh/uv)
+For development installs or running from source, use [uv](https://github.com/astral-sh/uv).
 
 ```bash
 # Install from dist branch (recommended, includes pre-built assets)
@@ -33,7 +71,7 @@ uv run pdit script.py
 Start pdit with a Python file:
 
 ```bash
-uv run pdit script.py
+pdit script.py
 ```
 
 This will:
@@ -41,15 +79,18 @@ This will:
 2. Open your browser automatically
 3. Load the script file in the editor
 
+If you're running from source, use:
+
+```bash
+uv run pdit script.py
+```
+
 ### Options
 
 ```bash
-uv run pdit [OPTIONS] [SCRIPT]
+pdit [OPTIONS] [SCRIPT]
 
 Options:
-  -e, --export        Export script to self-contained HTML file
-  -o, --output PATH   Output file for export (default: script.html)
-  --stdout            Write export to stdout instead of file
   --port INTEGER      Port to run server on (default: 8888)
   --host TEXT         Host to bind to (default: 127.0.0.1)
   --no-browser        Don't open browser automatically
@@ -60,43 +101,17 @@ Options:
 
 ```bash
 # Start with script
-uv run pdit analysis.py
+pdit analysis.py
 
 # Custom port
-uv run pdit --port 9000 script.py
+pdit --port 9000 script.py
 
 # Start without opening browser
-uv run pdit --no-browser script.py
+pdit --no-browser script.py
 
 # Just start the editor (no script)
-uv run pdit
+pdit
 ```
-
-### Exporting
-
-Export a script to a self-contained HTML file:
-
-```bash
-uv run pdit --export script.py
-```
-
-This executes the script and generates `script.html` with the output. The HTML file can be opened in any browser without a server.
-
-## Matplotlib Integration
-
-pdit automatically captures and displays matplotlib plots inline. Always wrap plotting code in a `plt.ioff()` context manager:
-
-```python
-import matplotlib.pyplot as plt
-
-with plt.ioff():
-    plt.plot([1, 2, 3], [1, 4, 9])
-    plt.title("My Plot")
-    plt.show()  # Standard matplotlib display
-```
-
-The `plt.ioff()` context manager disables interactive mode and enables proper plot capture with standard `plt.show()`.
-
 ## Development
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for development setup and testing.

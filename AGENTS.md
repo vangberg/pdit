@@ -10,7 +10,6 @@
 - `uv sync --dev` installs Python dependencies and dev tools.
 - `uv run pdit script.py` runs the server and opens the editor on port 8888.
 - `uv run honcho start` runs backend + frontend with hot reload (recommended).
-- `make dev` runs backend + `npm run dev` in a single shell.
 - `cd fe && npm run build` builds frontend assets into `pdit/_static/` (required before committing frontend changes).
 - `uv run pytest` runs Python tests; `cd fe && npm test` runs Vitest and starts a backend automatically with token auth disabled.
 
