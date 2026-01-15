@@ -53,11 +53,11 @@ Matplotlib figures display inline. Call `plt.show()`.
 For development installs or running from source, use [uv](https://github.com/astral-sh/uv).
 
 ```bash
-# Install from dist branch (recommended, includes pre-built assets)
-uv add git+https://github.com/vangberg/pdit@dist
+# Install from PyPI
+uv add pdit
 
 # Or use directly with uvx
-uvx --from git+https://github.com/vangberg/pdit@dist pdit script.py
+uvx pdit script.py
 
 # From cloned repo (for development)
 git clone git@github.com:vangberg/pdit.git

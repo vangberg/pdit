@@ -58,10 +58,3 @@ make build-frontend
 uv build
 uv publish
 ```
-
-## Run without cloning
-
-```bash
-# Pre-built assets via the dist branch
-uvx --from git+https://github.com/vangberg/pdit@dist pdit script.py
-```

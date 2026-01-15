@@ -66,7 +66,7 @@ Each browser tab gets a unique session ID. Sessions map to IPython kernel instan
 
 ## Frontend Build
 
-Built assets go to `pdit/_static/` and are committed to git. The `@dist` branch contains pre-built assets for end users.
+Built assets go to `pdit/_static/` and are committed to git.
 
 ## Testing Notes
 

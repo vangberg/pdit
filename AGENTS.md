@@ -30,7 +30,6 @@
 
 ## Notes for Contributors
 - Built assets in `pdit/_static/` are versioned; keep them in sync with `fe/` builds.
-- The `@dist` branch is used for pre-built assets; keep changes compatible with that flow.
 ## Ticks
 
 This project uses `tk` for issue tracking. Use ticks for work that spans sessions, has dependencies, or is discovered during other work. Use TodoWrite for simple single-session tasks.
