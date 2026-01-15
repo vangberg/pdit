@@ -38,7 +38,7 @@ dependencies = [
 pdit = "pdit.cli:main"
 
 [project.optional-dependencies]
-examples = [
+demo = [
     "great-tables>=0.20.0",
     "matplotlib>=3.7.5",
     "polars>=1.8.2",

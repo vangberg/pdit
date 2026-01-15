@@ -13,7 +13,6 @@ import Layout from '../layouts/Layout.astro';
     <details class="screenshot">
       <summary>
         <img class="screenshot-thumb" src="/screenshot.png" alt="pdit editor showing inline output, plots, and tables" />
-        <span class="screenshot-hint">Click to expand</span>
       </summary>
       <div class="screenshot-modal">
         <img class="screenshot-full" src="/screenshot.png" alt="pdit editor showing inline output, plots, and tables" />
@@ -21,8 +20,8 @@ import Layout from '../layouts/Layout.astro';
     </details>
 
     <h3>Quick Start</h3>
-    <pre><code>pip install pdit
-pdit script.py</code></pre>
+    <pre><code>pip install "pdit[demo]"
+pdit --demo</code></pre>
 
     <h2>Features</h2>
     <ul>
@@ -91,14 +90,6 @@ pdit script.py</code></pre>
     border: 3px solid #1a1a1a;
     box-shadow: 8px 8px 0 #FFD700;
     background: #fff;
-  }
-  .screenshot-hint {
-    display: inline-block;
-    margin-top: 0.75rem;
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
   }
   .screenshot-modal {
     display: none;
