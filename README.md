@@ -46,7 +46,18 @@ Pandas and Polars DataFrames render as interactive tables automatically.
 
 ### Plots
 
-Matplotlib figures display inline. Call `plt.show()`.
+Matplotlib figures display inline. Call `plt.show()`. To avoid every
+`plt.*` call emitting a plot, wrap plot creation in `with plt.ioff():` and
+call `plt.show()` when you're ready.
+
+```python
+import matplotlib.pyplot as plt
+
+with plt.ioff():
+    plt.figure()
+    plt.plot(x, y)
+    plt.show()
+```
 
 ## Installation
 

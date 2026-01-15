@@ -61,7 +61,13 @@ pdit example.py</code></pre>
       <p>Pandas and Polars DataFrames render as interactive tables automatically.</p>
 
       <h3 id="plots">Plots</h3>
-      <p>Matplotlib figures display inline. Call plt.show().</p>
+      <p>Matplotlib figures display inline. Call <code>plt.show()</code>. To avoid every <code>plt.*</code> call emitting a plot, wrap plot creation in <code>with plt.ioff():</code> and call <code>plt.show()</code> when you're ready.</p>
+      <pre><code>import matplotlib.pyplot as plt
+
+with plt.ioff():
+    plt.figure()
+    plt.plot(x, y)
+    plt.show()</code></pre>
 
       <h2 id="how-to">How-to</h2>
       <h3 id="suppress-output">Suppress output with a trailing semicolon</h3>
