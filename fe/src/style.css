@@ -732,6 +732,12 @@ h1 {
   letter-spacing: -0.02em;
   color: var(--color-black);
   margin: 1em 0 0.5em 0;
+  text-align: left;
+}
+
+.output-text-markdown table {
+  margin-left: 0;
+  margin-right: auto;
 }
 
 /* List items with color bullets */
@@ -833,6 +839,17 @@ h1 {
   background: transparent;
   display: block;
   overflow-x: auto;
+}
+
+.output-html table,
+.output-html .dt-container {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+.output-html .dt-layout-cell {
+  justify-content: flex-start !important;
+  text-align: left !important;
 }
 
 /* ============================================
