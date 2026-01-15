@@ -31,3 +31,37 @@
 ## Notes for Contributors
 - Built assets in `pdit/_static/` are versioned; keep them in sync with `fe/` builds.
 - The `@dist` branch is used for pre-built assets; keep changes compatible with that flow.
+## Ticks
+
+This project uses `tk` for issue tracking. Use ticks for work that spans sessions, has dependencies, or is discovered during other work. Use TodoWrite for simple single-session tasks.
+
+**Essential commands:**
+```
+tk next                  # next ready tick
+tk next EPIC_ID          # next ready tick in epic
+tk create "title"        # create issue
+tk update ID --status in_progress
+tk note ID "message"     # log progress
+tk close ID              # mark done
+```
+
+**Dependencies & epics:**
+```
+tk next --epic           # next ready epic
+tk block ID BLOCKER_ID   # ID is blocked by BLOCKER_ID
+tk create "task" --parent EPIC_ID
+tk update ID --parent EPIC_ID  # move to epic
+```
+
+**Agent-Human workflow:**
+```
+tk update ID --awaiting approval   # hand off to human
+tk update ID --awaiting=           # return to agent queue
+```
+
+Awaiting states: work, approval, input, review, content, escalation, checkpoint.
+Use `--requires approval` at creation for tasks needing sign-off before close.
+
+Commands show your ticks by default. Use `--all` to see everyone's (e.g. `tk next --all`).
+
+All commands support `--help` for options.
