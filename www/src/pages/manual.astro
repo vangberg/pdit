@@ -8,8 +8,7 @@ import Layout from '../layouts/Layout.astro';
       <div class="toc-section">
         <div class="toc-section-title"><span class="num">1.</span> <a href="#getting-started">Getting Started</a></div>
         <div class="toc-items">
-          <a href="#installation">Installation</a>
-          <a href="#basic-usage">Basic Usage</a>
+          <a href="#quick-start">Quick Start</a>
         </div>
       </div>
 
@@ -22,10 +21,6 @@ import Layout from '../layouts/Layout.astro';
           <a href="#dataframes">DataFrames</a>
           <a href="#plots">Plots</a>
         </div>
-      </div>
-
-      <div class="toc-section">
-        <div class="toc-section-title"><span class="num">3.</span> <a href="#questions">FAQ</a></div>
       </div>
 
     </aside>
@@ -41,43 +36,25 @@ import Layout from '../layouts/Layout.astro';
         <li><strong>Like a REPL</strong>: Work with regular .py files</li>
         <li><strong>Unlike both</strong>: No cell management needed</li>
       </ul>
-      <h3>Quick Start</h3>
+      <h3 id="quick-start">Quick Start</h3>
       <pre><code>pip install pdit
 pdit example.py</code></pre>
-      <p>Press Cmd+Enter to execute.</p>
-
-      <h3 id="installation">Installation</h3>
-      <p>Python 3.9+ required.</p>
-      <pre><code>pip install pdit</code></pre>
-      <p>Or with uv:</p>
-      <pre><code>uvx pdit script.py</code></pre>
-
-      <h3 id="basic-usage">Basic Usage</h3>
-      <pre><code>pdit script.py</code></pre>
-      <p>Press Cmd/Ctrl+Enter to execute. Edit in browser or external editor.</p>
 
       <h2 id="output">Output</h2>
-      <pre><code>x = 10
-x + 5  # Shows: 15</code></pre>
       <h3 id="markdown">Markdown</h3>
       <p>Top-level string output renders as Markdown, so headings, lists, and emphasis display cleanly.</p>
 
       <h3 id="html">HTML</h3>
-      <p>Rich HTML output is supported for objects that implement <code>_repr_html_()</code>.</p>
+      <p>Rich HTML output is supported for objects that implement <code>_repr_html_()</code>; see note: <a href="https://ipython.readthedocs.io/en/latest/api/generated/IPython.display.html#IPython.display.display">IPython.display.display</a>.</p>
 
       <h3 id="ipython-display">IPython display</h3>
-      <p>IPython display objects also render inline; see <a href="https://ipython.readthedocs.io/en/latest/api/generated/IPython.display.html">IPython.display</a> for details.</p>
+      <p>IPython display objects render inline; see <a href="https://ipython.readthedocs.io/en/latest/api/generated/IPython.display.html">IPython.display</a> for details.</p>
 
       <h3 id="dataframes">DataFrames</h3>
-      <p>Pandas and Polars DataFrames render as tables automatically.</p>
+      <p>Pandas and Polars DataFrames render as interactive tables automatically.</p>
 
       <h3 id="plots">Plots</h3>
       <p>Matplotlib figures display inline. Call plt.show().</p>
-
-      <h2 id="questions">Common Questions</h2>
-      <p><strong>How is pdit different from Jupyter?</strong> Jupyter uses cells; pdit uses .py files with inline results.</p>
-      <p><strong>Virtual environments?</strong> Yes, activate before running pdit.</p>
-      <p><strong>IPython magics?</strong> Yes, %timeit etc. work.</p>
 
     </main>
   </div>
