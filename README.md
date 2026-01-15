@@ -8,6 +8,7 @@ pdit lets you write regular Python files and see execution results inline, like 
 
 ```bash
 pip install pdit
+pdit --demo
 pdit script.py
 ```
 
@@ -102,6 +103,7 @@ uv run pdit script.py
 pdit [OPTIONS] [SCRIPT]
 
 Options:
+  --demo             Open the bundled demo script
   --port INTEGER      Port to run server on (default: 8888)
   --host TEXT         Host to bind to (default: 127.0.0.1)
   --no-browser        Don't open browser automatically
@@ -113,6 +115,9 @@ Options:
 ```bash
 # Start with script
 pdit analysis.py
+
+# Start with the bundled demo script
+pdit --demo
 
 # Custom port
 pdit --port 9000 script.py

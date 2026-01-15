@@ -52,6 +52,14 @@ def find_available_port(start_port=8888, max_tries=100):
     raise RuntimeError(f"Could not find available port in range {start_port}-{start_port + max_tries}")
 
 
+def resolve_demo_script_path() -> Path:
+    """Resolve the bundled demo script path."""
+    package_demo_path = Path(__file__).resolve().parent / "_demo.py"
+    if not package_demo_path.exists():
+        raise FileNotFoundError("Demo script not found")
+    return package_demo_path
+
+
 class Server(uvicorn.Server):
     """Custom Server class that can run in a background thread."""
 
@@ -188,6 +196,10 @@ def main_command(
         Optional[Path],
         typer.Argument(help="Python script file to open", exists=True, dir_okay=False)
     ] = None,
+    demo: Annotated[
+        bool,
+        typer.Option("--demo", help="Open the bundled demo script")
+    ] = False,
     export: Annotated[
         bool,
         typer.Option("--export", "-e", help="Export script to self-contained HTML file")
@@ -218,6 +230,16 @@ def main_command(
     ] = False,
 ):
     """Start the pdit server, or export a script to HTML with --export."""
+    if demo:
+        if script:
+            typer.echo("Error: --demo cannot be used with a script argument", err=True)
+            raise typer.Exit(1)
+        try:
+            script = resolve_demo_script_path()
+        except FileNotFoundError as e:
+            typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(1)
+
     if export:
         if not script:
             typer.echo("Error: script is required for --export", err=True)
