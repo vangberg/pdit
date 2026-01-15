@@ -60,6 +60,25 @@ def resolve_demo_script_path() -> Path:
     return package_demo_path
 
 
+def ensure_script_exists(script: Path) -> None:
+    """Create a script file if it does not exist."""
+    if script.exists():
+        if script.is_dir():
+            typer.echo(f"Error: {script} is a directory", err=True)
+            raise typer.Exit(1)
+        return
+
+    if not script.parent.exists():
+        typer.echo(f"Error: parent directory does not exist for {script}", err=True)
+        raise typer.Exit(1)
+
+    try:
+        script.touch()
+    except OSError as exc:
+        typer.echo(f"Error: could not create script {script}: {exc}", err=True)
+        raise typer.Exit(1)
+
+
 class Server(uvicorn.Server):
     """Custom Server class that can run in a background thread."""
 
@@ -194,7 +213,7 @@ def start(
 def main_command(
     script: Annotated[
         Optional[Path],
-        typer.Argument(help="Python script file to open", exists=True, dir_okay=False)
+        typer.Argument(help="Python script file to open (created if missing)", dir_okay=False)
     ] = None,
     demo: Annotated[
         bool,
@@ -244,6 +263,12 @@ def main_command(
         if not script:
             typer.echo("Error: script is required for --export", err=True)
             raise typer.Exit(1)
+        if not script.exists():
+            typer.echo(f"Error: script not found: {script}", err=True)
+            raise typer.Exit(1)
+        if script.is_dir():
+            typer.echo(f"Error: {script} is a directory", err=True)
+            raise typer.Exit(1)
 
         from .exporter import export_script
 
@@ -260,6 +285,8 @@ def main_command(
             output_path.write_text(html_output)
             typer.echo(f"Exported to {output_path}")
     else:
+        if script:
+            ensure_script_exists(script)
         start(script, port, host, no_browser, no_token_auth)
 
 
