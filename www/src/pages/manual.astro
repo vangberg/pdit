@@ -46,17 +46,17 @@ import Layout from '../layouts/Layout.astro';
 pdit example.py</code></pre>
       <p>Press Cmd+Enter to execute.</p>
 
-      <h2 id="installation">Installation</h2>
+      <h3 id="installation">Installation</h3>
       <p>Python 3.9+ required.</p>
       <pre><code>pip install pdit</code></pre>
       <p>Or with uv:</p>
       <pre><code>uvx pdit script.py</code></pre>
 
-      <h2 id="basic-usage">Basic Usage</h2>
+      <h3 id="basic-usage">Basic Usage</h3>
       <pre><code>pdit script.py</code></pre>
       <p>Press Cmd/Ctrl+Enter to execute. Edit in browser or external editor.</p>
 
-      <h2 id="output">Inline Output</h2>
+      <h2 id="output">Output</h2>
       <pre><code>x = 10
 x + 5  # Shows: 15</code></pre>
       <h3 id="markdown">Markdown</h3>
@@ -68,10 +68,10 @@ x + 5  # Shows: 15</code></pre>
       <h3 id="ipython-display">IPython display</h3>
       <p>IPython display objects also render inline; see <a href="https://ipython.readthedocs.io/en/latest/api/generated/IPython.display.html">IPython.display</a> for details.</p>
 
-      <h2 id="dataframes">DataFrames</h2>
+      <h3 id="dataframes">DataFrames</h3>
       <p>Pandas and Polars DataFrames render as tables automatically.</p>
 
-      <h2 id="plots">Plots</h2>
+      <h3 id="plots">Plots</h3>
       <p>Matplotlib figures display inline. Call plt.show().</p>
 
       <h2 id="questions">Common Questions</h2>
@@ -176,6 +176,10 @@ x + 5  # Shows: 15</code></pre>
     font-size: 1.1rem;
   }
   h2 {
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin-top: 2.5rem;
     padding-top: 1.5rem;
     border-top: 3px solid #1a1a1a;
   }
@@ -186,7 +190,13 @@ x + 5  # Shows: 15</code></pre>
     padding-top: 0;
   }
   h3 {
-    font-size: 1.2rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #444;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
   }
   ul, ol {
     padding-left: 1.5rem;
