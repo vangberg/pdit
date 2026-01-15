@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `pdit/` contains the FastAPI backend, CLI, and execution engine; `pdit/_static/` holds built frontend assets that are committed to git.
+- `pdit/` contains the FastAPI backend, CLI, and execution engine; `pdit/_static/` holds built frontend assets for local runs.
 - `fe/` contains the Vite/React frontend source (TypeScript).
 - `tests/` contains Python tests; frontend tests live alongside the frontend in `fe/`.
 - `examples/` contains sample scripts for manual runs and demos.
@@ -10,7 +10,7 @@
 - `uv sync --dev` installs Python dependencies and dev tools.
 - `uv run pdit script.py` runs the server and opens the editor on port 8888.
 - `uv run honcho start` runs backend + frontend with hot reload (recommended).
-- `cd fe && npm run build` builds frontend assets into `pdit/_static/` (required before committing frontend changes).
+- `cd fe && npm run build` builds frontend assets into `pdit/_static/` for local verification.
 - `uv run pytest` runs Python tests; `cd fe && npm test` runs Vitest and starts a backend automatically with token auth disabled.
 
 ## Coding Style & Naming Conventions
@@ -29,7 +29,7 @@
 - PRs should include a concise summary, test results, and screenshots for UI changes.
 
 ## Notes for Contributors
-- Built assets in `pdit/_static/` are versioned; keep them in sync with `fe/` builds.
+- Built assets in `pdit/_static/` are not versioned; do not commit build output.
 ## Ticks
 
 This project uses `tk` for issue tracking. Use ticks for work that spans sessions, has dependencies, or is discovered during other work. Use TodoWrite for simple single-session tasks.
