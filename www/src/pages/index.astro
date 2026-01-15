@@ -10,6 +10,15 @@ import Layout from '../layouts/Layout.astro';
 
     <h2>What is pdit?</h2>
     <p>pdit lets you write regular Python files and see execution results inline, like a notebook but without cells. Edit in your browser or your favorite editor.</p>
+    <details class="screenshot">
+      <summary>
+        <img class="screenshot-thumb" src="/screenshot.png" alt="pdit editor showing inline output, plots, and tables" />
+        <span class="screenshot-hint">Click to expand</span>
+      </summary>
+      <div class="screenshot-modal">
+        <img class="screenshot-full" src="/screenshot.png" alt="pdit editor showing inline output, plots, and tables" />
+      </div>
+    </details>
 
     <h3>Quick Start</h3>
     <pre><code>pip install pdit
@@ -32,6 +41,22 @@ pdit script.py</code></pre>
     </ul>
     <p>For Matplotlib, wrap plotting in <code>with plt.ioff():</code> so every <code>plt.*</code> call doesn't emit a plot, then call <code>plt.show()</code> when you're ready.</p>
   </main>
+
+  <script>
+    const screenshot = document.querySelector('.screenshot');
+    if (screenshot instanceof HTMLDetailsElement) {
+      const modal = screenshot.querySelector('.screenshot-modal');
+      const close = () => screenshot.removeAttribute('open');
+
+      modal?.addEventListener('click', () => close());
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && screenshot.hasAttribute('open')) {
+          close();
+        }
+      });
+    }
+  </script>
 </Layout>
 
 <style>
@@ -49,5 +74,64 @@ pdit script.py</code></pre>
     font-size: 1.25rem;
     color: #555;
     margin-bottom: 0;
+  }
+  .screenshot {
+    margin: 2rem 0 3rem;
+  }
+  .screenshot summary {
+    list-style: none;
+    cursor: pointer;
+  }
+  .screenshot summary::-webkit-details-marker {
+    display: none;
+  }
+  .screenshot-thumb {
+    width: 100%;
+    height: auto;
+    display: block;
+    border: 3px solid #1a1a1a;
+    box-shadow: 8px 8px 0 #FFD700;
+    background: #fff;
+  }
+  .screenshot-hint {
+    display: inline-block;
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .screenshot-modal {
+    display: none;
+  }
+  .screenshot[open] summary {
+    display: none;
+  }
+  .screenshot[open] .screenshot-modal {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    padding: 2rem;
+    background: rgba(255, 254, 245, 0.95);
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    cursor: pointer;
+  }
+  .screenshot-full {
+    width: auto;
+    max-width: 96vw;
+    height: auto;
+    max-height: none;
+    margin: 0 auto;
+    border: 3px solid #1a1a1a;
+    box-shadow: 12px 12px 0 #457B9D;
+    background: #fff;
+  }
+  @media (max-width: 700px) {
+    .screenshot[open] .screenshot-modal {
+      padding: 1.25rem;
+    }
   }
 </style>
