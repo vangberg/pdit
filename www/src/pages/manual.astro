@@ -10,16 +10,17 @@ import Layout from '../layouts/Layout.astro';
         <div class="toc-items">
           <a href="#installation">Installation</a>
           <a href="#basic-usage">Basic Usage</a>
-          <a href="#shortcuts">Keyboard Shortcuts</a>
         </div>
       </div>
 
       <div class="toc-section">
-        <div class="toc-section-title"><span class="num">2.</span> <a href="#results">Results</a></div>
+        <div class="toc-section-title"><span class="num">2.</span> <a href="#output">Output</a></div>
         <div class="toc-items">
+          <a href="#markdown">Markdown</a>
+          <a href="#html">HTML</a>
+          <a href="#ipython-display">IPython display</a>
           <a href="#dataframes">DataFrames</a>
           <a href="#plots">Plots</a>
-          <a href="#export">Export</a>
         </div>
       </div>
 
@@ -27,9 +28,6 @@ import Layout from '../layouts/Layout.astro';
         <div class="toc-section-title"><span class="num">3.</span> <a href="#questions">FAQ</a></div>
       </div>
 
-      <div class="toc-section">
-        <div class="toc-section-title"><span class="num">4.</span> <a href="#troubleshooting">Troubleshooting</a></div>
-      </div>
     </aside>
 
     <main>
@@ -58,37 +56,29 @@ pdit example.py</code></pre>
       <pre><code>pdit script.py</code></pre>
       <p>Press Cmd/Ctrl+Enter to execute. Edit in browser or external editor.</p>
 
-      <h2 id="shortcuts">Keyboard Shortcuts</h2>
-      <table>
-        <tr><th>Shortcut</th><th>Action</th></tr>
-        <tr><td><code>Cmd/Ctrl+Enter</code></td><td>Execute</td></tr>
-        <tr><td><code>Cmd/Ctrl+Z</code></td><td>Undo</td></tr>
-        <tr><td><code>Cmd/Ctrl+/</code></td><td>Comment</td></tr>
-      </table>
-
-      <h2 id="results">Inline Results</h2>
+      <h2 id="output">Inline Output</h2>
       <pre><code>x = 10
 x + 5  # Shows: 15</code></pre>
+      <h3 id="markdown">Markdown</h3>
+      <p>Top-level string output renders as Markdown, so headings, lists, and emphasis display cleanly.</p>
+
+      <h3 id="html">HTML</h3>
+      <p>Rich HTML output is supported for objects that implement <code>_repr_html_()</code>.</p>
+
+      <h3 id="ipython-display">IPython display</h3>
+      <p>IPython display objects also render inline; see <a href="https://ipython.readthedocs.io/en/latest/api/generated/IPython.display.html">IPython.display</a> for details.</p>
 
       <h2 id="dataframes">DataFrames</h2>
-      <p>Pandas DataFrames render as tables automatically.</p>
+      <p>Pandas and Polars DataFrames render as tables automatically.</p>
 
       <h2 id="plots">Plots</h2>
       <p>Matplotlib figures display inline. Call plt.show().</p>
-
-      <h2 id="export">Export</h2>
-      <pre><code>pdit export script.py -o output.html</code></pre>
 
       <h2 id="questions">Common Questions</h2>
       <p><strong>How is pdit different from Jupyter?</strong> Jupyter uses cells; pdit uses .py files with inline results.</p>
       <p><strong>Virtual environments?</strong> Yes, activate before running pdit.</p>
       <p><strong>IPython magics?</strong> Yes, %timeit etc. work.</p>
 
-      <h2 id="troubleshooting">Troubleshooting</h2>
-      <p><strong>Browser not opening?</strong> Go to http://localhost:8000 manually.</p>
-      <p><strong>Module not found?</strong> Check your Python environment.</p>
-      <p><strong>Plots not showing?</strong> Call plt.show().</p>
-      <p>Issues? <a href="https://github.com/vangberg/pdit/issues">GitHub</a></p>
     </main>
   </div>
 
