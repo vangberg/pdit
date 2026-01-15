@@ -7,8 +7,23 @@
 import math
 import matplotlib.pyplot as plt
 
+"""
+## Expressions
+
+The result of an expression is printed in the output pane, right next to
+the code that generated it.
+"""
+
 x = [i * 0.1 for i in range(0, 67)]
 y = [math.sin(v) for v in x]
+
+y[1:4]
+
+"""
+## Matplotlib
+
+Easily iterate on plots.
+"""
 
 with plt.ioff():
   plt.figure(figsize=(4, 2))
@@ -17,6 +32,11 @@ with plt.ioff():
   plt.ylabel('sin(x)')
   plt.show()
 
+"""
+## DataFrames
+
+Interactive tables for quick sorting and filtering.
+"""
 import polars as pl
 
 df = pl.read_csv(
