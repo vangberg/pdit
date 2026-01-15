@@ -1,11 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
 ---
-<Layout title="pdit - Interactive Python Editor" description="Interactive Python editor with inline execution results">
+<Layout title="pdit: output-focused Python editor" description="output-focused Python editor">
   <main>
     <div class="hero">
       <h1>pdit</h1>
-      <p class="subtitle">Interactive Python editor with inline execution results</p>
+      <p class="subtitle">Output-focused Python editor</p>
     </div>
 
     <h2>What is pdit?</h2>
@@ -17,12 +17,20 @@ pdit script.py</code></pre>
     <p>Press Cmd+Enter to execute. See the <a href="/docs/">Manual</a> for more.</p>
 
     <h2>Features</h2>
+    <h3>Core</h3>
     <ul>
-      <li><strong>Inline results</strong> - Output appears right next to the code that produced it</li>
-      <li><strong>DataFrames</strong> - Pandas DataFrames render as clean tables</li>
-      <li><strong>Plots</strong> - Matplotlib figures appear inline automatically</li>
-      <li><strong>File watching</strong> - Edit in your favorite editor and see updates in real-time</li>
-      <li><strong>Export</strong> - Share your work as standalone HTML files</li>
+      <li><strong>Output-focused</strong> - Results appear inline next to the code that generated them</li>
+      <li><strong>Just Python scripts</strong> - No notebooks, no cells, no special format. Work with plain <code>.py</code> files</li>
+      <li><strong>File watching</strong> - Changes to the file on disk automatically reload in the editor</li>
+      <li><strong>Auto-run on save</strong> - Execute code automatically when the file changes</li>
+      <li><strong>Works with coding agents</strong> - Perfect companion for Claude Code, Cursor, and other AI coding tools that edit files</li>
+    </ul>
+    <h3>Rich Output</h3>
+    <ul>
+      <li><strong>IPython display</strong> - Rich outputs via <a href="https://ipython.readthedocs.io/en/latest/api/generated/IPython.display.html">IPython.display</a></li>
+      <li><strong>Matplotlib</strong> - Inline plot rendering</li>
+      <li><strong>Interactive DataFrames</strong> - Sortable, searchable tables</li>
+      <li><strong>Markdown</strong> - Format text output with Markdown</li>
     </ul>
 
     <h2>Why pdit?</h2>
