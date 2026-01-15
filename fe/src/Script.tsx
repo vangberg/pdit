@@ -393,9 +393,12 @@ export function Script({ scriptPath, onPathChange }: ScriptProps) {
   }
 
   const isLoading = isLoadingScript || initialCode === null;
+  const appClassName = ["has-topbar", isLoading ? "loading" : ""]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <div id="app" className={isLoading ? "loading" : ""}>
+    <div id="app" className={appClassName}>
       <TopBar
         onRunAll={handleRunAll}
         onRunCurrent={handleRunCurrent}
