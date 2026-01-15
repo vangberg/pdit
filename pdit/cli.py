@@ -17,14 +17,18 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-from typing_extensions import Annotated
 import uvicorn
+from rich import box
+from rich.console import Console
+from rich.panel import Panel
+from typing_extensions import Annotated
 
 
 # Flag for graceful shutdown on SIGTERM
 _shutdown_requested = False
 
 app = typer.Typer(add_completion=False)
+_console = Console()
 
 
 def find_available_port(start_port=8888, max_tries=100):
@@ -189,9 +193,15 @@ def start(
     # Run server in thread, open browser when ready
     with server.run_in_thread():
         # Server is guaranteed to be ready here
+        panel = Panel.fit(
+            f"[bold]Open in browser[/bold]\n{url}",
+            box=box.ROUNDED,
+            padding=(1, 2),
+        )
+        _console.print(panel)
         if not no_browser:
             webbrowser.open(url)
-            typer.echo(f"Opening browser to {url}")
+            typer.echo("Opening browser...")
 
         # Set up SIGTERM handler for graceful shutdown
         def handle_sigterm(signum, frame):
