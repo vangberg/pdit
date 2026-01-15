@@ -43,6 +43,22 @@ You can also run the combined test suite:
 make test
 ```
 
+## Release (PyPI)
+
+Build the frontend assets, build the package, and publish with uv:
+
+```bash
+make release
+```
+
+If you prefer to run each step manually:
+
+```bash
+make build-frontend
+uv build
+uv publish
+```
+
 ## Run without cloning
 
 ```bash
