@@ -138,6 +138,20 @@ main {
   padding: 3rem 2rem;
 }
 
+/* Footer */
+.site-footer {
+  background: #FFFEF5;
+  border-top: 1px solid rgba(26, 26, 26, 0.12);
+}
+
+.site-footer p {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem 2.5rem;
+  font-size: 0.85rem;
+  color: rgba(26, 26, 26, 0.6);
+}
+
 /* Tables */
 table {
   width: 100%;
