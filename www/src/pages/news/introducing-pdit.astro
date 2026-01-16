@@ -1,0 +1,60 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+export const title = "Introducing pdit";
+export const date = "January 2024";
+---
+<Layout title={`${title} - pdit`} description="Introducing pdit, an interactive Python editor with inline execution results">
+  <main>
+    <a href="/news/" class="back-link">← News</a>
+    <h1>{title}</h1>
+    <p class="date">{date}</p>
+
+    <p>We're excited to introduce <strong>pdit</strong>, an interactive Python editor that displays execution results inline.</p>
+
+    <h2>Why pdit?</h2>
+    <p>Jupyter notebooks are great for exploration, but they can feel heavy for quick scripts. Traditional REPLs are fast but don't preserve your work. pdit sits in between: you write regular Python files, but see results inline like a notebook.</p>
+
+    <h2>Key Features</h2>
+    <ul>
+      <li><strong>Inline results</strong> - Output appears right next to the code that produced it</li>
+      <li><strong>DataFrames</strong> - Pandas DataFrames render as clean tables</li>
+      <li><strong>Plots</strong> - Matplotlib figures appear inline automatically</li>
+      <li><strong>File watching</strong> - Edit in your favorite editor and see updates in real-time</li>
+      <li><strong>Export</strong> - Share your work as standalone HTML files</li>
+    </ul>
+    <p>For Matplotlib, wrap plotting in <code>with plt.ioff():</code> so every <code>plt.*</code> call doesn't emit a plot, then call <code>plt.show()</code> when you're ready.</p>
+
+    <h2>Getting Started</h2>
+    <p>Install with pip and run on any Python file:</p>
+    <pre><code>pip install pdit
+pdit script.py</code></pre>
+    <p>Check out the <a href="/manual/">Getting Started</a> guide for more details.</p>
+  </main>
+</Layout>
+
+<style>
+  h1 {
+    margin-bottom: 0.5rem;
+  }
+  .back-link {
+    display: inline-block;
+    font-size: 0.9rem;
+    color: #888;
+    text-decoration: none;
+    margin-bottom: 0.5rem;
+  }
+  .back-link:hover {
+    color: #E63946;
+  }
+  .date {
+    color: #888;
+    font-size: 0.9rem;
+    margin-bottom: 2rem;
+    font-weight: 600;
+  }
+  h2 {
+    font-size: 1.25rem;
+    margin: 2rem 0 0.75rem;
+  }
+</style>

@@ -155,22 +155,26 @@ function RunButton({
   const arrowRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const isActionDisabled = Boolean(disabled);
+  const isMainDisabled = isActionDisabled || (isExecuting ? !onInterrupt : false);
+  const isMenuDisabled = isActionDisabled || !!isExecuting;
+
   const options = useMemo(() => [
     {
       id: "current",
       label: "Run Current",
       shortcut: shortcuts.current,
       action: onRunCurrent,
-      disabled: !onRunCurrent || !!isExecuting
+      disabled: isMenuDisabled || !onRunCurrent
     },
     {
       id: "all",
       label: "Run All",
       shortcut: shortcuts.all,
       action: onRunAll,
-      disabled: !!isExecuting
+      disabled: isMenuDisabled
     },
-  ], [onRunAll, onRunCurrent, shortcuts.current, shortcuts.all, isExecuting]);
+  ], [onRunAll, onRunCurrent, shortcuts.current, shortcuts.all, isMenuDisabled]);
 
   const handleOptionSelect = (option: typeof options[0]) => {
      if (option.disabled) return;
@@ -213,7 +217,7 @@ function RunButton({
   }, [isDropdownOpen, lastRunMode, setSelectedIndex]);
 
   const handleMainClick = () => {
-    if (disabled) {
+    if (isMainDisabled) {
       return;
     }
     if (isExecuting) {
@@ -233,8 +237,6 @@ function RunButton({
   const label = isExecuting ? "Stop" : "Run";
   const tooltip = undefined;
   const icon = isExecuting ? <Square size={14} className="top-bar-icon" /> : <Play size={14} className="top-bar-icon" />;
-  const isDisabled = disabled || (isExecuting ? !onInterrupt : false);
-  const isArrowDisabled = disabled;
 
   return (
     <div
@@ -245,7 +247,7 @@ function RunButton({
       <button
         className="top-bar-split-button-main"
         onClick={handleMainClick}
-        disabled={isDisabled}
+        disabled={isMainDisabled}
         onMouseEnter={() => setHoveredPart("main")}
         onMouseLeave={() => setHoveredPart(null)}
       >
@@ -264,7 +266,7 @@ function RunButton({
         className={`top-bar-split-button-arrow ${isDropdownOpen ? "active" : ""}`}
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         onKeyDown={handleArrowKeyDown}
-        disabled={isArrowDisabled}
+        disabled={isActionDisabled}
         onMouseEnter={() => setHoveredPart("arrow")}
         onMouseLeave={() => setHoveredPart(null)}
         aria-haspopup="true"
@@ -336,6 +338,9 @@ export function TopBar({
     disconnected: "disconnected"
   };
   const isDisconnected = connectionState === "disconnected";
+  const hasUnsaved = Boolean(hasUnsavedChanges);
+  const saveDisabled = isDisconnected || !hasUnsaved;
+  const disabledProps = { disabled: isDisconnected };
 
   return (
     <div className="top-bar">
@@ -346,7 +351,7 @@ export function TopBar({
           onInterrupt={onInterrupt}
           isExecuting={isExecuting}
           shortcuts={shortcuts}
-          disabled={isDisconnected}
+          {...disabledProps}
         />
 
         <ToggleSwitch
@@ -358,7 +363,7 @@ export function TopBar({
           showTooltip={hoveredButton === "reader"}
           onMouseEnter={() => setHoveredButton("reader")}
           onMouseLeave={() => setHoveredButton(null)}
-          disabled={isDisconnected}
+          {...disabledProps}
         />
 
         {onAutorunToggle && (
@@ -371,7 +376,7 @@ export function TopBar({
             showTooltip={hoveredButton === "autorun"}
             onMouseEnter={() => setHoveredButton("autorun")}
             onMouseLeave={() => setHoveredButton(null)}
-            disabled={isDisconnected}
+            {...disabledProps}
           />
         )}
 
@@ -379,11 +384,11 @@ export function TopBar({
           <ActionButton
             label="Save"
             onClick={onSave || (() => {})}
-            disabled={isDisconnected || !(hasUnsavedChanges ?? false)}
+            disabled={saveDisabled}
             onMouseEnter={() => setHoveredButton("save")}
             onMouseLeave={() => setHoveredButton(null)}
             tooltip={saveShortcut}
-            showTooltip={hoveredButton === "save" && (hasUnsavedChanges ?? false)}
+            showTooltip={hoveredButton === "save" && hasUnsaved}
             icon={<Save size={14} />}
           />
         )}
@@ -393,7 +398,7 @@ export function TopBar({
           onPathChange={onPathChange}
           isFuzzyFinderOpen={isFuzzyFinderOpen}
           onFuzzyFinderOpenChange={onFuzzyFinderOpenChange}
-          disabled={isDisconnected}
+          {...disabledProps}
         />
 
         {hasStatus && connectionState && (
@@ -427,7 +432,7 @@ export function TopBar({
             <button
               className="top-bar-conflict-button-primary"
               onClick={onReloadFromDisk}
-              disabled={isDisconnected}
+              {...disabledProps}
               onMouseEnter={() => setHoveredButton("reload")}
               onMouseLeave={() => setHoveredButton(null)}
             >
@@ -437,7 +442,7 @@ export function TopBar({
             <button
               className="top-bar-conflict-button-secondary"
               onClick={onKeepChanges}
-              disabled={isDisconnected}
+              {...disabledProps}
               onMouseEnter={() => setHoveredButton("keep")}
               onMouseLeave={() => setHoveredButton(null)}
             >
