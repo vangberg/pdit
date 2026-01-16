@@ -4,6 +4,8 @@ Output-focused Python editor.
 
 pdit lets you write regular Python files and see execution results inline, right next to the code that produced them. Edit in your browser or your favorite editor.
 
+![pdit editor screenshot](www/public/screenshot.png)
+
 ## Quick Start
 
 ```bash
