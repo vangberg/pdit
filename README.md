@@ -2,7 +2,7 @@
 
 Output-focused Python editor.
 
-pdit lets you write regular Python files and see execution results inline, like a notebook but without cells. Edit in your browser or your favorite editor.
+pdit lets you write regular Python files and see execution results inline, right next to the code that produced them. Edit in your browser or your favorite editor.
 
 ## Quick Start
 
@@ -15,7 +15,7 @@ pdit script.py
 ## Features
 
 - **Output-focused** - Results appear inline next to the code that generated them
-- **Just Python scripts** - No notebooks, no cells, no special format. Work with plain `.py` files
+- **Just Python scripts** - Work with plain `.py` files using standard tooling
 - **File watching** - Changes to the file on disk automatically reload in the editor
 - **Auto-run** - Execute code automatically when the file changes
 - **Coding agents** - Perfect companion for Claude Code, Cursor, and other AI coding tools that edit files
