@@ -203,4 +203,16 @@ df = pd.read_csv("data.csv");</code></pre>
   li {
     margin-bottom: 0.5rem;
   }
+  @media (max-width: 720px) {
+    .layout {
+      flex-direction: column;
+      gap: 2rem;
+      padding: 2.5rem 1.5rem;
+    }
+    aside {
+      width: 100%;
+      position: static;
+      order: 0;
+    }
+  }
 </style>
