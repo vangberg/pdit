@@ -97,4 +97,4 @@ are supported, e.g. images.
 
 from IPython.display import Image
 
-Image('pea.png')
+Image('https://pdit.dev/pea.png')
