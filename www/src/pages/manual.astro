@@ -50,13 +50,12 @@ pdit example.py</code></pre>
 
       <h2 id="output">Output</h2>
       <h3 id="plots">Plots</h3>
-      <p>Matplotlib figures display inline. Call <code>plt.show()</code>. To avoid every <code>plt.*</code> call emitting a plot, wrap plot creation in <code>with plt.ioff():</code> and call <code>plt.show()</code> when you're ready.</p>
+      <p>Matplotlib figures display inline. Call <code>plt.show()</code> when you're ready to emit a plot.</p>
       <pre><code>import matplotlib.pyplot as plt
 
-with plt.ioff():
-    plt.figure()
-    plt.plot(x, y)
-    plt.show()</code></pre>
+plt.figure()
+plt.plot(x, y)
+plt.show()</code></pre>
 
       <h3 id="dataframes">DataFrames</h3>
       <p>Pandas and Polars DataFrames render as interactive tables automatically.</p>

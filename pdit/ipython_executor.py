@@ -28,6 +28,7 @@ class IPythonExecutor:
         self.km: Optional[AsyncKernelManager] = None
         self.kc = None  # AsyncKernelClient
         self._startup_task: Optional[asyncio.Task] = None
+        self._runtime_hooks_registered = False
 
     def start(self) -> None:
         """Start IPython kernel in the background.
@@ -110,6 +111,53 @@ _register_pdit_formatter()
 del _register_pdit_formatter
 """
         await self._execute_silent(formatter_code)
+
+    async def _register_runtime_hooks(self) -> None:
+        """Register runtime hooks for kernel behavior."""
+        if self._runtime_hooks_registered:
+            return
+        hook_code = """
+def _register_pdit_runtime_hooks():
+    import sys
+    import IPython
+
+    def _pdit_disable_matplotlib_interactive():
+        mpl = sys.modules.get("matplotlib")
+        if mpl is None:
+            return
+        try:
+            mpl.interactive(False)
+        except Exception:
+            pass
+        plt = sys.modules.get("matplotlib.pyplot")
+        if plt is not None:
+            try:
+                plt.ioff()
+            except Exception:
+                pass
+
+    ip = IPython.get_ipython()
+    if not ip:
+        _pdit_disable_matplotlib_interactive()
+        return
+
+    if not getattr(ip, "_pdit_mpl_guard_installed", False):
+        def _pdit_post_run_cell(result):
+            _pdit_disable_matplotlib_interactive()
+
+        try:
+            ip.events.register("post_run_cell", _pdit_post_run_cell)
+            ip._pdit_mpl_guard_installed = True
+        except Exception:
+            _pdit_disable_matplotlib_interactive()
+            return
+        _pdit_disable_matplotlib_interactive()
+
+_register_pdit_runtime_hooks()
+del _register_pdit_runtime_hooks
+"""
+        await self._execute_silent(hook_code)
+        self._runtime_hooks_registered = True
 
     def _parse_script(self, script: str) -> list[dict]:
         """Parse Python script into statement dicts using AST."""
@@ -233,6 +281,7 @@ del _register_pdit_formatter
         """
         # Wait for kernel to be ready
         await self.wait_ready()
+        await self._register_runtime_hooks()
 
         # Parse script
         try:
@@ -307,6 +356,7 @@ del _register_pdit_formatter
             await self.kc.wait_for_ready(timeout=30)
             await self._drain_iopub()
             await self._register_display_formatters()
+            self._runtime_hooks_registered = False
 
     async def _drain_iopub(self) -> None:
         """Drain any pending messages from iopub channel."""
@@ -333,6 +383,7 @@ del _register_pdit_formatter
             except asyncio.CancelledError:
                 pass
         self._startup_task = None
+        self._runtime_hooks_registered = False
 
         if self.kc:
             self.kc.stop_channels()

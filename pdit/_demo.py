@@ -22,14 +22,11 @@ import matplotlib.pyplot as plt
 x = [i * 0.1 for i in range(0, 63)]
 y = [math.sin(v) for v in x]
 
-# Wrap in `with plt.ioff():` to avoid every call to `plt.*` rendering a
-# plot.
-with plt.ioff():
-  plt.figure()
-  plt.plot(x, y)
-  plt.xlabel('x')
-  plt.ylabel('sin(x)')
-  plt.show()
+plt.figure()
+plt.plot(x, y)
+plt.xlabel('x')
+plt.ylabel('sin(x)')
+plt.show()
 
 """
 ## Polars/Pandas
