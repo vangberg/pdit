@@ -8,6 +8,7 @@ import Layout from '../layouts/Layout.astro';
       <div class="toc-section">
         <div class="toc-section-title"><span class="num">1.</span> <a href="#getting-started">Getting Started</a></div>
         <div class="toc-items">
+          <a href="#quickstart">Quickstart</a>
           <a href="#installation">Installation</a>
         </div>
       </div>
@@ -38,6 +39,11 @@ import Layout from '../layouts/Layout.astro';
 
       <h2 id="getting-started">Getting Started</h2>
       <p>pdit is an interactive Python editor that displays execution results inline.</p>
+      <h3 id="quickstart">Quickstart</h3>
+      <pre><code>pip install pdit
+pdit --demo</code></pre>
+      <p>With <a href="https://docs.astral.sh/uv/">uv</a>:</p>
+      <pre><code>uvx --with "pdit[demo]" pdit --demo</code></pre>
       <h3 id="installation">Installation</h3>
       <pre><code>pip install pdit
 pdit example.py</code></pre>

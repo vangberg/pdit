@@ -7,9 +7,16 @@ pdit lets you write regular Python files and see execution results inline, right
 ## Quick Start
 
 ```bash
-pip install pdit
+pip install "pdit[demo]"
 pdit --demo
 ```
+
+With [uv](https://docs.astral.sh/uv/):
+
+```bash
+uvx --with "pdit[demo]" pdit --demo
+```
+
 
 ## Manual
 
