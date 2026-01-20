@@ -309,14 +309,17 @@ body {
 }
 
 .top-bar-toggle-icon {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  line-height: 0;
 }
 
 .top-bar-toggle {
-  display: flex;
+  display: inline-grid;
+  grid-auto-flow: column;
   align-items: center;
-  gap: 0.5rem;
+  column-gap: 0.5rem;
   background: transparent;
   border: 1px solid var(--color-gray-light);
   border-radius: 0;
@@ -328,6 +331,7 @@ body {
   font-weight: 500;
   color: var(--color-gray);
   height: 32px;
+  line-height: 1;
 }
 
 .top-bar-toggle:hover {
@@ -342,14 +346,13 @@ body {
   border-color: #ddd;
 }
 
-.top-bar-toggle:disabled .top-bar-toggle-switch {
+.top-bar-toggle:disabled .top-bar-toggle-rail {
   background: #ddd;
   border-color: #ddd;
 }
 
-.top-bar-toggle:disabled .top-bar-toggle-knob {
+.top-bar-toggle:disabled .top-bar-toggle-rail::after {
   background: var(--color-gray-light);
-  border-color: var(--color-gray-light);
 }
 
 .top-bar-toggle.enabled {
@@ -361,41 +364,44 @@ body {
 .top-bar-toggle-label {
   font-size: 0.75rem;
   color: currentColor;
+  line-height: 1;
 }
 
 .top-bar-toggle.enabled .top-bar-toggle-label {
   color: var(--color-teal);
 }
 
-.top-bar-toggle-switch {
+.top-bar-toggle-rail {
   width: 24px;
-  height: 12px;
+  height: 14px;
   background: #ddd;
   border: 1px solid var(--color-gray-light);
   border-radius: 0;
   position: relative;
   transition: all 0.1s;
+  box-sizing: border-box;
 }
 
-.top-bar-toggle.enabled .top-bar-toggle-switch {
+.top-bar-toggle-rail::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 0;
+  transform: translateY(-50%);
+  transition: transform 0.1s;
+}
+
+.top-bar-toggle.enabled .top-bar-toggle-rail {
   background: var(--color-teal);
   border-color: var(--color-teal);
 }
 
-.top-bar-toggle-knob {
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 8px;
-  height: 8px;
-  background: white;
-  border: none;
-  border-radius: 0;
-  transition: transform 0.1s;
-}
-
-.top-bar-toggle.enabled .top-bar-toggle-knob {
-  transform: translateX(12px);
+.top-bar-toggle.enabled .top-bar-toggle-rail::after {
+  transform: translate(10px, -50%);
   background: white;
 }
 

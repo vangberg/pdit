@@ -119,13 +119,13 @@ function ToggleSwitch({
         onClick={() => onToggle(!enabled)}
         role="switch"
         aria-checked={enabled}
+        aria-label={label}
         disabled={disabled}
+        type="button"
       >
         {icon && <span className="top-bar-toggle-icon">{icon}</span>}
         <span className="top-bar-toggle-label">{label}</span>
-        <span className="top-bar-toggle-switch">
-          <span className="top-bar-toggle-knob" />
-        </span>
+        <span className="top-bar-toggle-rail" aria-hidden="true" />
       </button>
       {showTooltip && tooltip && <Tooltip text={tooltip} />}
     </div>
