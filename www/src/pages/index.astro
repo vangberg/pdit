@@ -1,5 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { Image } from 'astro:assets';
+import screenshotImage from '../assets/screenshot.png';
 ---
 <Layout title="pdit: output-focused Python editor" description="output-focused Python editor">
   <main>
@@ -12,10 +14,22 @@ import Layout from '../layouts/Layout.astro';
     <p>pdit lets you write regular Python files and see execution results inline, right next to the code that produced them. Edit in your browser or your favorite editor.</p>
     <details class="screenshot">
       <summary>
-        <img class="screenshot-thumb" src="/screenshot.png" alt="pdit editor showing inline output, plots, and tables" />
+        <Image
+          class="screenshot-thumb"
+          src={screenshotImage}
+          alt="pdit editor showing inline output, plots, and tables"
+          widths={[640, 800, 1200]}
+          sizes="(max-width: 900px) 100vw, 800px"
+        />
       </summary>
       <div class="screenshot-modal">
-        <img class="screenshot-full" src="/screenshot.png" alt="pdit editor showing inline output, plots, and tables" />
+        <Image
+          class="screenshot-full"
+          src={screenshotImage}
+          alt="pdit editor showing inline output, plots, and tables"
+          widths={[900, 1200, 1600]}
+          sizes="(max-width: 1200px) 100vw, 1200px"
+        />
       </div>
     </details>
 
