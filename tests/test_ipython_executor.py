@@ -448,6 +448,26 @@ result"""
         assert results[2]["isInvisible"] is True  # assignment
         assert "7" in results[3]["output"][0]["content"]
 
+    async def test_function_decorator_applied(self, executor):
+        """Test that function decorators are applied."""
+        script = """from functools import wraps
+
+def add_one(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        return fn(*args, **kwargs) + 1
+    return wrapper
+
+@add_one
+def add(a, b):
+    return a + b
+
+add(2, 3)"""
+        results = await collect_results(executor.execute_script(script))
+
+        final_result = results[-1]
+        assert "6" in final_result["output"][0]["content"]
+
     async def test_list_comprehension(self, executor):
         """Test list comprehension execution."""
         script = "[x**2 for x in range(5)]"

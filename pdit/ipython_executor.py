@@ -167,6 +167,9 @@ del _register_pdit_runtime_hooks
 
         for node in tree.body:
             line_start = node.lineno
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                if node.decorator_list:
+                    line_start = min(dec.lineno for dec in node.decorator_list)
             line_end = node.end_lineno or node.lineno
 
             # Extract source
