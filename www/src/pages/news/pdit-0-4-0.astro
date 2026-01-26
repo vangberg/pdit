@@ -1,0 +1,32 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { Image } from 'astro:assets';
+import decoratorsImage from '../../assets/news/pdit-0-4-0-decorators.png';
+
+export const title = "pdit 0.4.0: Decorators";
+export const date = "January 26, 2026";
+---
+<Layout title={`${title} - pdit`} description="pdit 0.4.0 fixes decorator handling for functions and classes.">
+  <main>
+    <a href="/news/" class="back-link">← News</a>
+    <h1>{title}</h1>
+    <p class="date">{date}</p>
+
+    <h2>Decorator-aware parsing</h2>
+    <p>Decorators are now included when pdit executes a statement, so decorated functions and classes behave as expected.</p>
+    <p>
+      <Image
+        src={decoratorsImage}
+        alt="pdit showing a tiny decorator example with inline output"
+        widths={[640, 800, 1200]}
+        sizes="(max-width: 900px) 100vw, 800px"
+        style="max-width: 100%; height: auto; display: block;"
+        loading="lazy"
+      />
+    </p>
+
+    <h2>Upgrade</h2>
+    <p>Install or upgrade with:</p>
+    <pre><code>pip install -U pdit</code></pre>
+  </main>
+</Layout>
