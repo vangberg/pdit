@@ -197,7 +197,7 @@ del _register_pdit_runtime_hooks
         """Process MIME bundle data into output dicts.
 
         Passes through MIME types directly instead of translating to custom types.
-        Uses priority order: image > html > json > plain text.
+        Uses priority order: image > html > markdown > json > plain text.
         """
         output: list[dict] = []
 
@@ -210,6 +210,8 @@ del _register_pdit_runtime_hooks
             output.append({"type": mime_type, "content": data[mime_type]})
         elif 'text/html' in data:
             output.append({"type": "text/html", "content": data['text/html']})
+        elif 'text/markdown' in data:
+            output.append({"type": "text/markdown", "content": data['text/markdown']})
         elif 'application/json' in data:
             json_data = data['application/json']
             output.append({"type": "application/json", "content": json.dumps(json_data)})

@@ -361,6 +361,15 @@ class TestMimeTypeProcessing:
         result = results[1]
         assert result["output"][0]["type"] == "text/plain"
 
+    async def test_ipython_display_markdown(self, executor):
+        """Test IPython.display.Markdown renders as text/markdown."""
+        script = 'from IPython.display import Markdown\nMarkdown("# Hej")'
+        results = await collect_results(executor.execute_script(script))
+
+        result = results[-1]
+        assert result["output"][0]["type"] == "text/markdown"
+        assert "# Hej" in result["output"][0]["content"]
+
     async def test_none_result(self, executor):
         """Test that None results produce no output."""
         script = "None"
