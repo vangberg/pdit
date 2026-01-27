@@ -71,7 +71,7 @@ export const OutputPane: React.FC<OutputPaneProps> = ({
         childList: true,
         subtree: true,
         attributes: true,
-        attributeFilter: ["style", "class"],
+        attributeFilter: ["style", "class", "open", "hidden"],
       });
       // Single ResizeObserver on the container catches all internal size changes
       resizeObserver.observe(containerRef.current);
