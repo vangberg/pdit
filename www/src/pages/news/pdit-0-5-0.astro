@@ -1,0 +1,43 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { Image } from 'astro:assets';
+import markdownImage from '../../assets/news/pdit-0-5-0-markdown.png';
+
+export const title = "pdit 0.5.0: Markdown rendering";
+export const date = "January 27, 2026";
+---
+<Layout title={`${title} - pdit`} description="pdit 0.5.0 adds support for rendering IPython.display.Markdown as formatted markdown.">
+  <main>
+    <a href="/news/" class="back-link">← News</a>
+    <h1>{title}</h1>
+    <p class="date">{date}</p>
+
+    <h2>Markdown output</h2>
+    <p><code>IPython.display.Markdown</code> objects now render as formatted markdown instead of plain text.</p>
+    <p>
+      <Image
+        src={markdownImage}
+        alt="pdit showing IPython.display.Markdown rendering with formatted output"
+        widths={[640, 800, 1200]}
+        sizes="(max-width: 900px) 100vw, 800px"
+        style="max-width: 100%; height: auto; display: block;"
+        loading="lazy"
+      />
+    </p>
+    <pre><code>from IPython.display import Markdown
+
+Markdown("""
+## Features
+
+- **Bold text**
+- *Italic text*
+- `inline code`
+
+> Blockquotes work too!
+""")</code></pre>
+
+    <h2>Upgrade</h2>
+    <p>Install or upgrade with:</p>
+    <pre><code>pip install -U pdit</code></pre>
+  </main>
+</Layout>
