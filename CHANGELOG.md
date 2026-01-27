@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 - 2026-01-27
 
 ### Fixed
 - `IPython.display.Markdown` now renders as markdown instead of plain text.
