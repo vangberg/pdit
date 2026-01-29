@@ -1,0 +1,27 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+export const title = "pdit 0.6.0: F-string markdown and image sizing";
+export const date = "January 29, 2026";
+---
+<Layout title={`${title} - pdit`} description="pdit 0.6.0 adds f-string markdown rendering and fixes image sizing.">
+  <main>
+    <a href="/news/" class="back-link">← News</a>
+    <h1>{title}</h1>
+    <p class="date">{date}</p>
+
+    <h2>F-string markdown</h2>
+    <p>F-strings now render as markdown, just like regular string literals. This means you can use markdown formatting in your f-strings and see the rendered output inline.</p>
+    <pre><code>name = "pdit"
+f"Welcome to **{'{name}'}**!"</code></pre>
+
+    <h2>Image sizing</h2>
+    <p><code>IPython.display.Image</code> now respects <code>width</code> and <code>height</code> parameters, giving you control over image dimensions in the output.</p>
+    <pre><code>from IPython.display import Image
+Image("photo.png", width=400)</code></pre>
+
+    <h2>Upgrade</h2>
+    <p>Install or upgrade with:</p>
+    <pre><code>pip install -U pdit</code></pre>
+  </main>
+</Layout>
