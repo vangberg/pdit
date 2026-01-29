@@ -18,7 +18,11 @@ const ImageOutput: React.FC<{
   height?: number;
 }> = ({ content, mimeType, width, height }) => {
   const dataUrl = `data:${mimeType};base64,${content}`;
-  return <img src={dataUrl} className="output-image" alt="Plot output" width={width} height={height} />;
+  // Use inline styles to override CSS defaults when dimensions are specified
+  const style: React.CSSProperties = {};
+  if (width !== undefined) style.width = width;
+  if (height !== undefined) style.height = height;
+  return <img src={dataUrl} className="output-image" alt="Plot output" style={style} />;
 };
 
 // Component for rendering HTML output (from _repr_html_())
