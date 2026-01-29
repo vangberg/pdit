@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0a1 - 2026-01-29
 
 ### Fixed
 - `<details>` elements in `_repr_html_` output now trigger line group resize when toggled.
