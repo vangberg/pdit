@@ -10,6 +10,9 @@ export interface OutputItem {
   // Stream types: 'stdout', 'stderr', 'error'
   type: string;
   content: string;
+  // Optional dimensions for image types (from IPython.display.Image width/height)
+  width?: number;
+  height?: number;
 }
 
 export type ExpressionState = "pending" | "executing" | "done" | "cancelled";

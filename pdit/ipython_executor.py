@@ -193,13 +193,18 @@ del _register_pdit_runtime_hooks
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
         return ansi_escape.sub('', text)
 
-    def _process_mime_data(self, data: dict) -> list[dict]:
+    def _process_mime_data(self, data: dict, metadata: dict | None = None) -> list[dict]:
         """Process MIME bundle data into output dicts.
 
         Passes through MIME types directly instead of translating to custom types.
         Uses priority order: image > html > markdown > json > plain text.
+
+        Args:
+            data: MIME bundle data dict
+            metadata: Optional metadata dict (keyed by MIME type, contains width/height for images)
         """
         output: list[dict] = []
+        metadata = metadata or {}
 
         # Priority order for MIME types - pass through directly
         # Check for any image type
@@ -207,7 +212,14 @@ del _register_pdit_runtime_hooks
         if image_types:
             # Use first image type found (they're usually in priority order)
             mime_type = image_types[0]
-            output.append({"type": mime_type, "content": data[mime_type]})
+            item: dict[str, Any] = {"type": mime_type, "content": data[mime_type]}
+            # Include width/height from metadata if present
+            mime_metadata = metadata.get(mime_type, {})
+            if 'width' in mime_metadata:
+                item['width'] = mime_metadata['width']
+            if 'height' in mime_metadata:
+                item['height'] = mime_metadata['height']
+            output.append(item)
         elif 'text/html' in data:
             output.append({"type": "text/html", "content": data['text/html']})
         elif 'text/markdown' in data:
@@ -254,11 +266,13 @@ del _register_pdit_runtime_hooks
             elif msg_type == 'execute_result':
                 # Expression result
                 data = content['data']
-                output.extend(self._process_mime_data(data))
+                metadata = content.get('metadata', {})
+                output.extend(self._process_mime_data(data, metadata))
             elif msg_type == 'display_data':
                 # Display output (plots, etc.)
                 data = content['data']
-                output.extend(self._process_mime_data(data))
+                metadata = content.get('metadata', {})
+                output.extend(self._process_mime_data(data, metadata))
             elif msg_type == 'error':
                 # Exception - strip ANSI codes from traceback
                 tb = '\n'.join(content['traceback'])

@@ -11,9 +11,14 @@ interface OutputProps {
 
 // Component for rendering a single image output item
 // content is base64-encoded data (not a data URL)
-const ImageOutput: React.FC<{ content: string; mimeType: string }> = ({ content, mimeType }) => {
+const ImageOutput: React.FC<{
+  content: string;
+  mimeType: string;
+  width?: number;
+  height?: number;
+}> = ({ content, mimeType, width, height }) => {
   const dataUrl = `data:${mimeType};base64,${content}`;
-  return <img src={dataUrl} className="output-image" alt="Plot output" />;
+  return <img src={dataUrl} className="output-image" alt="Plot output" width={width} height={height} />;
 };
 
 // Component for rendering HTML output (from _repr_html_())
@@ -73,7 +78,7 @@ export const Output: React.FC<OutputProps> = ({ expression, ref, allInvisible })
                 {item.type === 'text/markdown' ? (
                   <Markdown>{item.content}</Markdown>
                 ) : item.type.startsWith('image/') ? (
-                  <ImageOutput content={item.content} mimeType={item.type} />
+                  <ImageOutput content={item.content} mimeType={item.type} width={item.width} height={item.height} />
                 ) : item.type === 'text/html' ? (
                   <HtmlOutput html={item.content} />
                 ) : (

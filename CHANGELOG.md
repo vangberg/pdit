@@ -4,6 +4,7 @@
 
 ### Fixed
 - `<details>` elements in `_repr_html_` output now trigger line group resize when toggled.
+- `IPython.display.Image` now respects `width` and `height` parameters.
 
 ## 0.5.0 - 2026-01-27
 
