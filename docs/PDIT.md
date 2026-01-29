@@ -60,7 +60,7 @@ result  # Only see final result
 
 ## Markdown Cells
 
-Standalone triple-quoted strings are rendered as markdown. Use them for documentation:
+Standalone strings are rendered as markdown. Use them for documentation:
 
 ```python
 """
@@ -82,6 +82,20 @@ Remove null values and outliers.
 
 df_clean = df.drop_nulls()
 df_clean.shape
+```
+
+F-strings also render as markdown, allowing dynamic content:
+
+```python
+name = "Analysis"
+f"# {name} Results"
+
+items = ["Clean data", "Run model", "Plot results"]
+f"""
+## Steps
+
+{chr(10).join(f'- {item}' for item in items)}
+"""
 ```
 
 ## DataFrames

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- F-strings now render as markdown, like regular string literals.
+
 ## 0.6.0a1 - 2026-01-29
 
 ### Fixed

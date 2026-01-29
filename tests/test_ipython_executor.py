@@ -349,6 +349,32 @@ This is a paragraph.
         assert "# Title" in result["output"][0]["content"]
         assert "This is a paragraph." in result["output"][0]["content"]
 
+    async def test_markdown_fstring(self, executor):
+        """Test that f-strings are treated as markdown."""
+        script = 'name = "World"\nf"# Hello {name}"'
+        results = await collect_results(executor.execute_script(script))
+
+        result = results[-1]
+        assert result["output"][0]["type"] == "text/markdown"
+        assert "# Hello World" in result["output"][0]["content"]
+
+    async def test_markdown_fstring_multiline(self, executor):
+        """Test multi-line f-string markdown."""
+        script = '''items = ["one", "two"]
+f"""
+## List
+
+- {items[0]}
+- {items[1]}
+"""'''
+        results = await collect_results(executor.execute_script(script))
+
+        result = results[-1]
+        assert result["output"][0]["type"] == "text/markdown"
+        assert "## List" in result["output"][0]["content"]
+        assert "- one" in result["output"][0]["content"]
+        assert "- two" in result["output"][0]["content"]
+
 
 class TestMimeTypeProcessing:
     """Tests for MIME type output processing."""

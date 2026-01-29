@@ -60,7 +60,13 @@ plt.show()</code></pre>
       <p>Pandas and Polars DataFrames render as interactive tables automatically.</p>
 
       <h3 id="markdown">Markdown</h3>
-      <p>Top-level string output renders as Markdown, so headings, lists, and emphasis display cleanly.</p>
+      <p>Top-level strings render as Markdown, including f-strings for dynamic content.</p>
+      <pre><code>"""
+# Static heading
+"""
+
+name = "pdit"
+f"Welcome to **{name}**"</code></pre>
 
       <h3 id="html">HTML</h3>
       <p>Rich HTML output is supported for objects that implement <code>_repr_html_()</code>; see note: <a href="https://ipython.readthedocs.io/en/latest/api/generated/IPython.display.html#IPython.display.display">IPython.display.display</a>.</p>

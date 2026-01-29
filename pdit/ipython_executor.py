@@ -177,13 +177,15 @@ del _register_pdit_runtime_hooks
             source = '\n'.join(source_lines)
 
             is_expr = isinstance(node, ast.Expr)
-            is_markdown_cell = is_expr and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)
+            is_string_literal = is_expr and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)
+            is_fstring = is_expr and isinstance(node.value, ast.JoinedStr)
 
             statements.append({
                 "lineStart": line_start,
                 "lineEnd": line_end,
                 "source": source,
-                "isMarkdownCell": is_markdown_cell
+                "isMarkdownCell": is_string_literal,
+                "isFStringMarkdown": is_fstring
             })
 
         return statements
@@ -349,6 +351,10 @@ del _register_pdit_runtime_hooks
                     output = [{"type": "text/markdown", "content": str(value).strip()}]
                 except (ValueError, SyntaxError):
                     output = await self._execute_code(stmt["source"])
+            elif stmt["isFStringMarkdown"]:
+                # Wrap f-string in Markdown() so it returns text/markdown directly
+                wrapper_code = f"__import__('IPython').display.Markdown({stmt['source']})"
+                output = await self._execute_code(wrapper_code)
             else:
                 output = await self._execute_code(stmt["source"])
 
