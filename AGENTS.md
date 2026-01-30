@@ -28,6 +28,13 @@
 - Use `jj` for version control workflows (git-compatible).
 - PRs should include a concise summary, test results, and screenshots for UI changes.
 
+## Change Reports
+- Generate a standalone HTML report in `change-reports/` that documents recent code changes.
+- Use `jj diff` (or `jj diff --from main` on feature branches); include full contents for any new files.
+- Write a narrative covering the problem, solution approach, and why each file changed.
+- Embed per-file diffs with GitHub-style colors (adds #e6ffec, removes #ffebe9, context gray), and use a light theme with monospace code blocks.
+- Include architecture overview and trade-offs/notes when relevant; use simple box → box → box flow diagrams if helpful.
+
 ## Notes for Contributors
 - Built assets in `pdit/_static/` are not versioned; do not commit build output.
 ## Ticks
