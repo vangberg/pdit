@@ -18,6 +18,7 @@ import Layout from '../layouts/Layout.astro';
         <div class="toc-items">
           <a href="#plots">Plots</a>
           <a href="#dataframes">DataFrames</a>
+          <a href="#streaming-output">Streaming output</a>
           <a href="#markdown">Markdown</a>
           <a href="#html">HTML</a>
           <a href="#ipython-display">IPython display</a>
@@ -58,6 +59,14 @@ plt.show()</code></pre>
 
       <h3 id="dataframes">DataFrames</h3>
       <p>Pandas and Polars DataFrames render as interactive tables automatically.</p>
+
+      <h3 id="streaming-output">Streaming output</h3>
+      <p>Stdout and stderr stream inline while a statement runs, so long-running loops can show live progress.</p>
+      <pre><code>import time
+
+for i in range(3):
+    print(f"step {i + 1}", flush=True)
+    time.sleep(1)</code></pre>
 
       <h3 id="markdown">Markdown</h3>
       <p>Top-level strings render as Markdown, including f-strings for dynamic content.</p>

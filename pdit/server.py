@@ -174,7 +174,7 @@ async def websocket_session(websocket: WebSocket, sessionId: str, token: Optiona
 
     Message Protocol (Server -> Client):
         File events: {"type": "initial/fileChanged/fileDeleted", "path": "...", "content": "...", "timestamp": N}
-        Execution: {"type": "expressions/result/cancelled/complete/busy", ...}
+        Execution: {"type": "expressions/result/stream/cancelled/complete/busy", ...}
         Errors: {"type": "error", "message": "..."}
     """
     # Validate token if configured
@@ -290,7 +290,26 @@ async def _handle_ws_execute(websocket: WebSocket, session: Session, data: dict)
         expressions: list[dict] = []
         executed_count = 0
 
-        async for event in session.executor.execute_script(script, line_range, script_name):
+        async def _send_stream_update(line_start: int, line_end: int, output: list[dict]) -> None:
+            if shutdown_event.is_set():
+                return
+            try:
+                await websocket.send_json({
+                    "type": "stream",
+                    "lineStart": line_start,
+                    "lineEnd": line_end,
+                    "output": output,
+                })
+            except Exception:
+                # Connection may have closed; ignore streaming failures
+                pass
+
+        async for event in session.executor.execute_script(
+            script,
+            line_range,
+            script_name,
+            on_stream=_send_stream_update,
+        ):
             # Add type field to result messages (executor yields without type)
             if "output" in event and "type" not in event:
                 event = {"type": "result", **event}

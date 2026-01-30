@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { Expression, ExecutionEvent } from "./execution";
+import { Expression, ExecutionEvent, OutputItem } from "./execution";
 import { computeLineGroups, LineGroup } from "./compute-line-groups";
 
 /** Key for looking up expressions by line range */
@@ -151,6 +151,29 @@ function handleDoneEvent(
 }
 
 /**
+ * Handle a 'stream' event: update output for the executing expression.
+ */
+function handleStreamEvent(
+  state: ExecutionState,
+  event: { lineStart: number; lineEnd: number; output: OutputItem[] }
+): void {
+  const key = lineRangeKey(event.lineStart, event.lineEnd);
+  const existing = state.expressionsByRange.get(key);
+  if (!existing) {
+    return;
+  }
+
+  state.expressionsByRange.set(key, {
+    ...existing,
+    state: existing.state === 'pending' ? 'executing' : existing.state,
+    result: {
+      output: event.output,
+      isInvisible: event.output.length === 0,
+    },
+  });
+}
+
+/**
  * Custom hook to manage expression store and line groups.
  */
 export function useResults() {
@@ -193,6 +216,8 @@ export function useResults() {
 
       if (event.type === 'expressions') {
         handleExpressionsEvent(state, event.expressions, currentExpressions);
+      } else if (event.type === 'stream') {
+        handleStreamEvent(state, event);
       } else if (event.type === 'done') {
         handleDoneEvent(state, event.expression);
       }

@@ -38,6 +38,7 @@ export interface CancelledExpression {
 // Events yielded by executeScript
 export type ExecutionEvent =
   | { type: "expressions"; expressions: Expression[] }
+  | { type: "stream"; lineStart: number; lineEnd: number; output: OutputItem[] }
   | { type: "done"; expression: Expression }
   | { type: "cancelled"; expressions: CancelledExpression[] };
 
@@ -113,6 +114,16 @@ export class PythonServerBackend {
             })
           );
           yield { type: "cancelled", expressions: cancelled };
+          continue;
+        }
+
+        if (msg.type === "stream") {
+          yield {
+            type: "stream",
+            lineStart: msg.lineStart,
+            lineEnd: msg.lineEnd,
+            output: msg.output,
+          };
           continue;
         }
 

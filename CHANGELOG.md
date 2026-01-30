@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Streaming output updates inline while statements run (stdout/stderr updates live).
+
 ## 0.6.0 - 2026-01-29
 
 ### Added

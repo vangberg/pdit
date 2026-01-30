@@ -12,7 +12,7 @@ import json
 import logging
 import re
 import traceback
-from typing import Any, AsyncGenerator, Optional
+from typing import Any, AsyncGenerator, Awaitable, Callable, Optional
 
 from jupyter_client import AsyncKernelManager
 
@@ -234,8 +234,17 @@ del _register_pdit_runtime_hooks
 
         return output
 
-    async def _execute_code(self, code: str) -> list[dict]:
-        """Execute code in kernel and collect output."""
+    async def _execute_code(
+        self,
+        code: str,
+        on_stream: Callable[[list[dict]], Awaitable[None]] | None = None,
+    ) -> list[dict]:
+        """Execute code in kernel and collect output.
+
+        Args:
+            code: Python source to execute in the kernel.
+            on_stream: Optional callback invoked when stdout/stderr updates arrive.
+        """
         if self.kc is None:
             return [{"type": "error", "content": "Kernel not started"}]
 
@@ -265,6 +274,8 @@ del _register_pdit_runtime_hooks
                     output[-1] = {"type": stream_name, "content": output[-1]["content"] + text}
                 else:
                     output.append({"type": stream_name, "content": text})
+                if on_stream:
+                    await on_stream(output)
             elif msg_type == 'execute_result':
                 # Expression result
                 data = content['data']
@@ -291,7 +302,8 @@ del _register_pdit_runtime_hooks
         self,
         script: str,
         line_range: tuple[int, int] | None = None,
-        script_name: str | None = None
+        script_name: str | None = None,
+        on_stream: Callable[[int, int, list[dict]], Awaitable[None]] | None = None,
     ) -> AsyncGenerator[dict, None]:
         """Execute Python script, yielding event dicts as each statement completes.
 
@@ -299,6 +311,7 @@ del _register_pdit_runtime_hooks
             First: {"type": "expressions", "expressions": [{"lineStart": N, "lineEnd": N}, ...]}
             Then for each statement: {"lineStart": N, "lineEnd": N, "output": [...], "isInvisible": bool}
             On error during execution, the final result dict will have output with type="error"
+            If on_stream is provided, it is invoked on stdout/stderr updates with the current output list.
         """
         # Wait for kernel to be ready
         await self.wait_ready()
@@ -344,19 +357,27 @@ del _register_pdit_runtime_hooks
 
         # Execute each statement
         for stmt in statements:
+            stream_cb = None
+            if on_stream is not None:
+                line_start = stmt["lineStart"]
+                line_end = stmt["lineEnd"]
+
+                async def stream_cb(updated_output: list[dict]) -> None:
+                    await on_stream(line_start, line_end, updated_output)
+
             if stmt["isMarkdownCell"]:
                 # For markdown cells, just return the string content
                 try:
                     value = ast.literal_eval(stmt["source"])
                     output = [{"type": "text/markdown", "content": str(value).strip()}]
                 except (ValueError, SyntaxError):
-                    output = await self._execute_code(stmt["source"])
+                    output = await self._execute_code(stmt["source"], on_stream=stream_cb)
             elif stmt["isFStringMarkdown"]:
                 # Wrap f-string in Markdown() so it returns text/markdown directly
                 wrapper_code = f"__import__('IPython').display.Markdown({stmt['source']})"
-                output = await self._execute_code(wrapper_code)
+                output = await self._execute_code(wrapper_code, on_stream=stream_cb)
             else:
-                output = await self._execute_code(stmt["source"])
+                output = await self._execute_code(stmt["source"], on_stream=stream_cb)
 
             yield {
                 "lineStart": stmt["lineStart"],

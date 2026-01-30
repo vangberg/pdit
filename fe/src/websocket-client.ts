@@ -17,6 +17,7 @@ export type ServerMessage =
   | { type: "fileChanged"; path: string; content: string; timestamp: number }
   | { type: "fileDeleted"; path: string; timestamp: number }
   | { type: "expressions"; expressions: Array<{ lineStart: number; lineEnd: number }> }
+  | { type: "stream"; lineStart: number; lineEnd: number; output: OutputItem[] }
   | { type: "result"; lineStart: number; lineEnd: number; output: OutputItem[]; isInvisible: boolean }
   | { type: "cancelled"; expressions: Array<{ lineStart: number; lineEnd: number }> }
   | { type: "complete" }
@@ -132,6 +133,7 @@ export class WebSocketClient {
       // Filter to execution-related messages
       if (
         msg.type === "expressions" ||
+        msg.type === "stream" ||
         msg.type === "result" ||
         msg.type === "cancelled" ||
         msg.type === "complete" ||
