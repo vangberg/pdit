@@ -2,13 +2,13 @@
 
 ## Unreleased
 
-### Fixed
-- CLI `--export` now runs scripts correctly after the async executor changes.
-
-## 0.7.0a1 - 2026-01-30
+## 0.7.0 - 2026-02-02
 
 ### Added
 - Streaming output updates inline while statements run (stdout/stderr updates live).
+
+### Fixed
+- CLI `--export` now runs scripts correctly after the async executor changes.
 
 ## 0.6.0 - 2026-01-29
 
