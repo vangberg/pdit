@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- CLI `--export` now runs scripts correctly after the async executor changes.
+
 ## 0.7.0a1 - 2026-01-30
 
 ### Added

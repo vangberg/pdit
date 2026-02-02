@@ -1,13 +1,15 @@
 """Export functionality for pdit scripts."""
 
+import asyncio
 import json
 from pathlib import Path
-from typing import Any
+from threading import Thread
+from typing import Any, Callable, Coroutine
 
 from .ipython_executor import IPythonExecutor
 
 
-def execute_script(script_content: str, script_name: str) -> list[dict[str, Any]]:
+async def _execute_script_async(script_content: str, script_name: str) -> list[dict[str, Any]]:
     """Execute a script and return expressions in frontend format.
 
     Args:
@@ -22,7 +24,7 @@ def execute_script(script_content: str, script_name: str) -> list[dict[str, Any]
     expression_id = 0
 
     try:
-        for event in executor.execute_script(script_content, script_name=script_name):
+        async for event in executor.execute_script(script_content, script_name=script_name):
             # Skip the expressions list event
             if event.get("type") == "expressions":
                 continue
@@ -40,9 +42,42 @@ def execute_script(script_content: str, script_name: str) -> list[dict[str, Any]
                 })
                 expression_id += 1
     finally:
-        executor.shutdown()
+        await executor.shutdown()
 
     return expressions
+
+
+def _run_async(
+    async_fn: Callable[..., Coroutine[Any, Any, Any]],
+    *args: Any,
+    **kwargs: Any,
+) -> Any:
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(async_fn(*args, **kwargs))
+
+    result: dict[str, Any] = {}
+    error: dict[str, BaseException] = {}
+
+    def runner() -> None:
+        try:
+            result["value"] = asyncio.run(async_fn(*args, **kwargs))
+        except BaseException as exc:
+            error["value"] = exc
+
+    thread = Thread(target=runner, daemon=True)
+    thread.start()
+    thread.join()
+
+    if "value" in error:
+        raise error["value"]
+    return result["value"]
+
+
+def execute_script(script_content: str, script_name: str) -> list[dict[str, Any]]:
+    """Execute a script and return expressions in frontend format."""
+    return _run_async(_execute_script_async, script_content, script_name)
 
 
 def generate_html(script_content: str, expressions: list[dict[str, Any]]) -> str:
