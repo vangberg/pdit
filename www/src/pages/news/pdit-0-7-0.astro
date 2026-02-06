@@ -1,0 +1,34 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import streamingResponseGif from '../../assets/news/pdit-0-7-0-streaming-response.gif';
+
+export const title = "pdit 0.7.0: Streaming output";
+export const date = "February 2, 2026";
+---
+<Layout title={`${title} - pdit`} description="pdit 0.7.0 adds live streaming stdout/stderr updates.">
+  <main>
+    <a href="/news/" class="back-link">← News</a>
+    <h1>{title}</h1>
+    <p class="date">{date}</p>
+
+    <h2>What changed</h2>
+    <p>Stdout and stderr now stream inline while a statement runs, so long-running code shows progress immediately instead of waiting for completion.</p>
+    <p>
+      <img
+        src={streamingResponseGif.src}
+        alt="pdit streaming stdout updates inline while code is running"
+        style="max-width: 100%; height: auto; display: block;"
+        loading="lazy"
+      />
+    </p>
+    <pre><code>import time
+
+for i in range(3):
+    print(f"step {'{i + 1}'}", flush=True)
+    time.sleep(1)</code></pre>
+
+    <h2>Upgrade</h2>
+    <p>Install or upgrade with:</p>
+    <pre><code>pip install -U pdit</code></pre>
+  </main>
+</Layout>
