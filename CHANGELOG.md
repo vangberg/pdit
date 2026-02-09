@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.0a1 - 2026-02-09
 
 ### Added
 - CLI `--agent-guide` flag to print the bundled coding agent guide and exit.
