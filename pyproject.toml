@@ -59,6 +59,7 @@ exclude = ["tests*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.html", "*.js", "*.css"]
+pdit = ["docs/*.md"]
 
 [dependency-groups]
 dev = [

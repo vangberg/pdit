@@ -5,6 +5,7 @@ Provides the `pdit` command to start the server and open the web interface.
 """
 
 import contextlib
+from importlib.resources import files
 import signal
 import socket
 import sys
@@ -53,7 +54,9 @@ def find_available_port(start_port=8888, max_tries=100):
                 return port
         except OSError:
             continue
-    raise RuntimeError(f"Could not find available port in range {start_port}-{start_port + max_tries}")
+    raise RuntimeError(
+        f"Could not find available port in range {start_port}-{start_port + max_tries}"
+    )
 
 
 def resolve_demo_script_path() -> Path:
@@ -62,6 +65,15 @@ def resolve_demo_script_path() -> Path:
     if not package_demo_path.exists():
         raise FileNotFoundError("Demo script not found")
     return package_demo_path
+
+
+def get_agent_guide_text() -> str:
+    """Load bundled agent guide markdown content."""
+    agent_guide_path = files("pdit").joinpath("docs", "agent-guide.md")
+    try:
+        return agent_guide_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise FileNotFoundError("Bundled agent guide not found") from exc
 
 
 def ensure_script_exists(script: Path) -> None:
@@ -103,6 +115,7 @@ class Server(uvicorn.Server):
         finally:
             # Signal WebSocket connections to close before shutting down server
             from .server import signal_shutdown
+
             signal_shutdown()
 
             # Give connections a moment to close
@@ -114,6 +127,7 @@ class Server(uvicorn.Server):
             if thread.is_alive():
                 # Force exit if shutdown takes too long
                 import sys
+
                 sys.exit(1)
 
 
@@ -159,6 +173,7 @@ def start(
 
     # Pass port/token to server via environment variables for CORS and auth
     import os
+
     os.environ["PDIT_PORT"] = str(actual_port)
     token = None
     if no_token_auth:
@@ -182,12 +197,7 @@ def start(
     typer.echo(f"Starting pdit server on {host}:{actual_port}")
 
     # Configure and create server
-    config = uvicorn.Config(
-        "pdit.server:app",
-        host=host,
-        port=actual_port,
-        log_level="info"
-    )
+    config = uvicorn.Config("pdit.server:app", host=host, port=actual_port, log_level="info")
     server = Server(config=config)
 
     # Run server in thread, open browser when ready
@@ -223,42 +233,67 @@ def start(
 def main_command(
     script: Annotated[
         Optional[Path],
-        typer.Argument(help="Python script file to open (created if missing)", dir_okay=False)
+        typer.Argument(help="Python script file to open (created if missing)", dir_okay=False),
     ] = None,
-    demo: Annotated[
-        bool,
-        typer.Option("--demo", help="Open the bundled demo script")
+    agent_guide: Annotated[
+        bool, typer.Option("--agent-guide", help="Print the bundled coding agent guide and exit")
     ] = False,
+    demo: Annotated[bool, typer.Option("--demo", help="Open the bundled demo script")] = False,
     export: Annotated[
-        bool,
-        typer.Option("--export", "-e", help="Export script to self-contained HTML file")
+        bool, typer.Option("--export", "-e", help="Export script to self-contained HTML file")
     ] = False,
     output: Annotated[
         Optional[Path],
-        typer.Option("-o", "--output", help="Output file for export (default: script.html)")
+        typer.Option("-o", "--output", help="Output file for export (default: script.html)"),
     ] = None,
     stdout: Annotated[
-        bool,
-        typer.Option("--stdout", help="Write export to stdout instead of file")
+        bool, typer.Option("--stdout", help="Write export to stdout instead of file")
     ] = False,
     port: Annotated[
-        Optional[int],
-        typer.Option(help="Port to run server on (default: 8888, or next available)")
+        Optional[int], typer.Option(help="Port to run server on (default: 8888, or next available)")
     ] = None,
-    host: Annotated[
-        str,
-        typer.Option(help="Host to bind to")
-    ] = "127.0.0.1",
+    host: Annotated[str, typer.Option(help="Host to bind to")] = "127.0.0.1",
     no_browser: Annotated[
-        bool,
-        typer.Option("--no-browser", help="Don't open browser automatically")
+        bool, typer.Option("--no-browser", help="Don't open browser automatically")
     ] = False,
     no_token_auth: Annotated[
-        bool,
-        typer.Option("--no-token-auth", help="Disable token authentication for API access")
+        bool, typer.Option("--no-token-auth", help="Disable token authentication for API access")
     ] = False,
 ):
     """Start the pdit server, or export a script to HTML with --export."""
+    if agent_guide:
+        incompatible_args = []
+        if script:
+            incompatible_args.append("a script argument")
+        if demo:
+            incompatible_args.append("--demo")
+        if export:
+            incompatible_args.append("--export")
+        if output:
+            incompatible_args.append("--output")
+        if stdout:
+            incompatible_args.append("--stdout")
+        if port is not None:
+            incompatible_args.append("--port")
+        if host != "127.0.0.1":
+            incompatible_args.append("--host")
+        if no_browser:
+            incompatible_args.append("--no-browser")
+        if no_token_auth:
+            incompatible_args.append("--no-token-auth")
+
+        if incompatible_args:
+            formatted_args = ", ".join(incompatible_args)
+            typer.echo(f"Error: --agent-guide cannot be combined with {formatted_args}", err=True)
+            raise typer.Exit(1)
+
+        try:
+            typer.echo(get_agent_guide_text())
+        except FileNotFoundError as exc:
+            typer.echo(f"Error: {exc}", err=True)
+            raise typer.Exit(1)
+        return
+
     if demo:
         if script:
             typer.echo("Error: --demo cannot be used with a script argument", err=True)
@@ -291,7 +326,7 @@ def main_command(
         if stdout:
             typer.echo(html_output)
         else:
-            output_path = output if output else script.with_suffix('.html')
+            output_path = output if output else script.with_suffix(".html")
             output_path.write_text(html_output)
             typer.echo(f"Exported to {output_path}")
     else:

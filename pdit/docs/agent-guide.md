@@ -1,4 +1,4 @@
-# Writing Code for pdit
+# pdit Agent Guide
 
 This guide helps coding agents write Python code that works well with pdit's inline execution model.
 

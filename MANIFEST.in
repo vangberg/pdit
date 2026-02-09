@@ -1,3 +1,4 @@
 recursive-include pdit/_static *
+recursive-include pdit/docs *.md
 global-exclude *.pyc
 global-exclude __pycache__
