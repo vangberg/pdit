@@ -852,6 +852,7 @@ h1 {
   max-width: min(100%, 1200px);
   height: auto;
   display: block;
+  box-sizing: border-box;
   background: var(--color-cream);
   border: 2px solid var(--color-black);
 }

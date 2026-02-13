@@ -9,6 +9,26 @@ interface OutputProps {
   allInvisible?: boolean;
 }
 
+export function getImageStyle(width?: number, height?: number): React.CSSProperties {
+  const style: React.CSSProperties = {};
+
+  if (width !== undefined) {
+    style.width = "100%";
+    style.maxWidth = width;
+  }
+
+  if (height !== undefined) {
+    if (width !== undefined) {
+      style.height = "auto";
+      style.aspectRatio = `${width} / ${height}`;
+    } else {
+      style.maxHeight = height;
+    }
+  }
+
+  return style;
+}
+
 // Component for rendering a single image output item
 // content is base64-encoded data (not a data URL)
 const ImageOutput: React.FC<{
@@ -18,10 +38,7 @@ const ImageOutput: React.FC<{
   height?: number;
 }> = ({ content, mimeType, width, height }) => {
   const dataUrl = `data:${mimeType};base64,${content}`;
-  // Use inline styles to override CSS defaults when dimensions are specified
-  const style: React.CSSProperties = {};
-  if (width !== undefined) style.width = width;
-  if (height !== undefined) style.height = height;
+  const style = getImageStyle(width, height);
   return <img src={dataUrl} className="output-image" alt="Plot output" style={style} />;
 };
 

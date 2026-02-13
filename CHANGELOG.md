@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Matplotlib and plotnine image outputs now scale down with the output pane on smaller windows instead of causing horizontal scrollbars.
+
 ## 0.8.0a1 - 2026-02-09
 
 ### Added
