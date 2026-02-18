@@ -3,15 +3,15 @@ import Layout from '../layouts/Layout.astro';
 import { Image } from 'astro:assets';
 import screenshotImage from '../assets/screenshot.png';
 ---
-<Layout title="pdit: output-focused Python editor" description="output-focused Python editor">
+<Layout title="pdit: The Python Un-Notebook | Output-focused Python editor" description="The Python Un-Notebook: an output-focused Python editor for plain .py files.">
   <main>
     <div class="hero">
       <h1>pdit</h1>
-      <p class="subtitle">Output-focused Python editor</p>
+      <p class="subtitle">The Python Un-Notebook. An output-focused Python editor for plain <code>.py</code> files.</p>
     </div>
 
     <h2>What is pdit?</h2>
-    <p>pdit lets you write regular Python files and see execution results inline, right next to the code that produced them. Edit in your browser or your favorite editor.</p>
+    <p>pdit is a Python un-notebook: an output-focused editor built directly on plain scripts. Run regular <code>.py</code> files statement by statement and see output inline next to the exact code that produced it, with notebook-like iteration but no notebook cells, no notebook file format, and no conversion step.</p>
     <details class="screenshot">
       <summary>
         <Image
@@ -33,19 +33,25 @@ import screenshotImage from '../assets/screenshot.png';
       </div>
     </details>
 
+    <h2>Why Un-Notebook?</h2>
+    <ul>
+      <li><strong>Expressions, not cells</strong> - Top-level expressions render by default, so intermediate values stay visible</li>
+      <li><strong>Just Python files</strong> - Use standard tooling, version control, and editor workflows on plain <code>.py</code> scripts</li>
+      <li><strong>Output beside source</strong> - Tables, plots, Markdown, and rich displays stay anchored to the lines that produced them</li>
+    </ul>
+
     <h3>Quick Start</h3>
     <pre><code>pip install "pdit[demo]"
 pdit --demo</code></pre>
     <p>With <a href="https://docs.astral.sh/uv/">uv</a>:</p>
     <pre><code>uvx --with "pdit[demo]" pdit --demo</code></pre>
 
-    <h2>Features</h2>
+    <h2>Workflow Features</h2>
     <ul>
-      <li><strong>Output-focused</strong> - Results appear inline next to the code that generated them</li>
-      <li><strong>Just Python scripts</strong> - Work with plain <code>.py</code> files using standard tooling</li>
       <li><strong>File watching</strong> - Changes to the file on disk automatically reload in the editor</li>
       <li><strong>Auto-run</strong> - Execute code automatically when the file changes</li>
-      <li><strong>Coding agents</strong> - Perfect companion for Claude Code, Cursor, and other AI coding tools that edit files</li>
+      <li><strong>Suppress output</strong> - End a statement with <code>;</code> to hide inline output when needed</li>
+      <li><strong>Agent workflows</strong> - Keep pdit open while Claude Code, Cursor, or similar tools edit your script</li>
     </ul>
     <h3>Rich Output</h3>
     <ul>
