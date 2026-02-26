@@ -1,6 +1,5 @@
 ---
 import Nav from '../components/Nav.astro';
-import Analytics from '@vercel/analytics/astro';
 import '../styles/global.css';
 
 interface Props {
@@ -27,6 +26,5 @@ const { title, description } = Astro.props;
   <footer class="site-footer">
     <p>A project by <a href="https://harry.vangberg.name">Harry Vangberg</a>.</p>
   </footer>
-  <Analytics />
 </body>
 </html>
